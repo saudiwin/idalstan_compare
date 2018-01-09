@@ -1,0 +1,246 @@
+---
+title: "Introducing Idealstan, an R Package for Bayesian Inference of Ideal Point Models"
+author: "Robert Kubinec"
+date: "January 7, 2018"
+output: 
+  revealjs::revealjs_presentation:
+    incremental: true
+
+---
+
+```{r setup, include=FALSE}
+require(dplyr)
+require(ggplot2)
+require(forcats)
+require(tidyr)
+require(readr)
+require(idealstan)
+knitr::opts_chunk$set(echo = TRUE,fig.align = 'center',fig.width=8,fig.height=6)
+```
+
+## Latent Variable Models
+
+- Latent variable: an unobserved quantity
+- Data: indicators that have a relationship to the latent variable
+- Uncertainty in the latent variable never goes away
+
+## Diagram
+
+
+```{r diagram,echo=F,out.width='80%'}
+knitr::include_graphics('C:/Users/bobku/Documents/R projects/idealstan_compare/latent_variables.png')
+
+```
+
+
+## Latent Variables = Many Names
+
+- Factor Analysis
+- Principal Component Analysis
+- Structural Equation Modeling
+- Item-Response Theory
+- Heckman Selection Models (Also Tobit)
+- Hidden-Markov Models
+- Ideal Point Models
+- Multi-Dimensional Scaling
+- Latent Space Models
+- Or even just Missing Data (Rubin & Friends)
+
+## How Do We Compare Latent Variable Models?
+
+- Different latent variable models make different assumptions about how the observed indicators (the data) are
+related to the unobserved latent quantity
+
+## Example: Multi-dimensional scaling:
+- Latent variable: coordinates on a 2-Dimensional Plane (i.e., two latent variables, $x$ and $y$)
+- Observed indicators: distances $d_{ij}$ for each $i$th row and $j$th column in the matrix
+- Each indicator is related to the latent variable equally: i.e., every row and column has its own position in the latent $(x,y)$ space relative to every other point
+- Equation expressing relationship: $d_{ij} = \sqrt((x_i-x_j)^2 - (y_i - y_j)^2)$
+- Most network models make this assumption
+
+## Ideal Point Modeling: A Hierarchical Latent Variable Model
+
+- Ideal Point models and item-response theory are similar in that they don't treat the rows and columns the same
+- In IRT speak, the rows are "persons" and the columns are "items".
+- The items are used to discriminate between the persons along the scale of the latent variable
+- IRT and ideal point models differ in how they understand how to place the persons along the latent scale
+- In IRT, higher values of the observable indicators = higher values of the latent variable, but in ideal point models this is not necessarily true.
+
+## Ideal Point Model Graphic
+
+```{r ideal_graph, echo=F, warn=F}
+data_frame(x=c(-5,5)) %>% 
+  ggplot(aes(x=x)) +
+  theme_minimal() +
+  theme(panel.grid=element_blank()) +
+  ylab('Utility') +
+  xlab('Ideal Points') +
+  stat_function(fun=dnorm,args=list(mean=1),linetype=1,size=1) +
+  geom_vline(xintercept = 3,linetype=3) +
+    geom_vline(xintercept = -3,linetype=3) +
+  geom_vline(xintercept=0,linetype=4) +
+  annotate('text',x=c(-3.5,-.8,1,3.5),
+           y=c(0.2,0.3,0.05,0.2),
+           label=c('No',
+                   'Indifference',
+                   'italic(x_i)',
+                   'Yes'),
+           parse=T)
+```
+
+## Using IRT as an Estimation
+
+- We can represent this theory using IRT:
+
+$$
+Y_{ij} = \alpha_j x_i - \beta_j
+$$
+
+- $\alpha_j =$ Discrimination parameters
+- $x_i =$ Ideal points
+- $\beta_j$ Difficulty parameters
+- $\frac{\beta_j}{\alpha_j}$ Line of indifference
+
+## But it's not IDENTIFIED!!!1!!!!1!
+
+- These models are a serious problem for maximum likelihood estimation: we have a non-linear model with unobserved covariates, so how do you reach a single maximum?
+- All IRT/ideal point models put restrictions to identify the model; MLE has to put restrictions on the likelihood while Bayesian models can also put restrictions in the prior. 
+
+## We Can... Guess?
+
+
+```{r batman,out.width='50%',echo=F}
+knitr::include_graphics('C:/Users/bobku/Documents/R projects/idealstan_compare/batman_robin.jpg')
+
+```
+
+## Enter Idealstan
+
+- Currently offers binary and ordinal IRT ideal point models.
+- Missing-data inference is built in.
+- Plotting functions for ideal points + predictive posterior checking + LOO-CV with `loo`
+- Identification either pre-specified or through variational inference (`vb`)
+
+## Example: Coffee
+
+- I used an existing corpus of [Amazon food reviews from 2013 by McAuley and Leskovec](https://snap.stanford.edu/data/web-FineFoods.html). 
+- Each review has a 5-star ranking: ordinal outcome.
+- I kept all reviews that mentioned coffee at least a few times.
+
+## How Does Coffee Divide People?
+
+```{r starbucks,out.width='50%',echo=F}
+knitr::include_graphics('C:/Users/bobku/Documents/R projects/idealstan_compare/starbucks_via.jpg')
+
+```
+
+## Result: Coffee Reviewers Ideal Point Distribution
+
+```{r load_coffee, echo=F}
+just_coffee <- readRDS('just_coffee.rds')
+
+coffee_count_prod <- group_by(just_coffee,ProductId) %>% summarize(tot_unique=length(unique(UserId))) %>% 
+  filter(tot_unique<30)
+coffee_count_user <- group_by(just_coffee,UserId) %>% summarize(tot_unique=length(unique(ProductId))) %>% 
+  filter(tot_unique<3)
+just_coffee <- anti_join(just_coffee,coffee_count_prod,by='ProductId') %>% 
+  anti_join(coffee_count_user,by='UserId')
+
+coffee_matrix <- select(just_coffee,
+                        ProductId,
+                        UserId,
+                        Score) %>% 
+  group_by(ProductId,UserId) %>% 
+  summarize(mean_score=round(mean(Score))) %>% 
+  ungroup %>% 
+  mutate(ProductId=fct_relevel(factor(ProductId),'B003GTR8IO'),
+         UserId=as.numeric(factor(UserId))) %>% 
+  spread(key = ProductId,value = mean_score)
+
+coffee_matrix_ready <- as.matrix(select(coffee_matrix,-UserId))
+
+row.names(coffee_matrix_ready) <- coffee_matrix$UserId 
+
+coffee_data <- id_make(score_data=coffee_matrix_ready,
+                       person_data=data_frame(person.names=1:nrow(coffee_matrix),
+                                             group=rep("O",nrow(coffee_matrix))),
+                        ordinal=T,
+                       inflate=F,
+                       low_val=1,
+                       high_val=5,
+                       middle_val=c(2,3,4),
+                       outcome_label_type='none')
+
+coffee_model <- id_estimate(idealdata=coffee_data,
+                            model_type=3,
+                            fixtype='vb',
+                            restrict_ind_high = 1,
+                            restrict_params='person',
+                            auto_id = F,
+                            use_vb=T)
+
+id_plot_legis(coffee_model,group_color=F,group_overlap = T,
+              person_labels=F,person_ci_alpha = .05,
+              item_plot=365,
+              group_labels=F,
+              point_size=2,
+              show_score = c('1','2','3','4','5'),
+              text_size_group = 4)
+```
+
+
+## Most Polarizing Coffees
+
+```{r pos_discrim,message=F,echo=F}
+read_csv('high_coffee_discrim_coded.csv') %>% 
+  mutate(Discrimination=value) %>% 
+  select(`Product Description`=Description, Discrimination) %>% 
+  distinct %>% 
+  DT::datatable()
+```
+
+## Maybe Pick a More... Moderate Coffee
+
+
+
+## But Wait... Missing Data?
+
+```{r heat_coffee_miss,echo=F}
+
+coffee_data <- id_make(score_data=coffee_matrix_ready,
+                       person_data=data_frame(person.names=1:nrow(coffee_matrix),
+                                             group=rep("O",nrow(coffee_matrix))),
+                        ordinal=T,
+                       inflate=T,
+                       miss_val=NA,
+                       low_val=1,
+                       high_val=5,
+                       middle_val=c(2,3,4),
+                       outcome_label_type='none')
+
+coffee_model_inflate <- id_estimate(idealdata=coffee_data,
+                            model_type=4,
+                            fixtype='vb',
+                            restrict_ind_high = 1,
+                            restrict_params='person',
+                            auto_id = F,
+                            use_vb=T)
+coffee_1 <- id_plot_legis(coffee_model,group_color=F,group_overlap = T,
+              person_labels=F,person_ci_alpha = .05,
+              item_plot=429,
+              group_labels=F,
+              point_size=2,
+              show_score = c('1','2','3','4','5'),
+              text_size_group = 4)
+
+coffee_2 <- id_plot_legis(coffee_model_inflate,group_color=F,group_overlap = T,
+              person_labels=F,person_ci_alpha = .05,
+              item_plot=429,
+              group_labels=F,
+              point_size=2,
+              text_size_group = 4)
+
+gridExtra::grid.arrange(coffee_1,coffee_2)
+```
+
+
