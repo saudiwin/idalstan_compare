@@ -11,10 +11,6 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE,warning=FALSE)
 
-#package is only on Github currently
-if(!require(idealstan)) {
-  devtools::install_github('saudiwin/idealstan',branch='develop')
-}
 require(idealstan)
 require(dplyr)
 require(ggplot2)

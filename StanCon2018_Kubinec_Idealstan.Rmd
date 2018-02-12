@@ -1,7 +1,7 @@
 ---
 title: "Introducing Idealstan, an R Package for Bayesian Inference of Ideal Point Models"
-author: "Robert Kubinec"
-date: "January 7, 2018"
+author: Robert Kubinec<br>PhD Candidate<br>Department of Politics<br>University of Virginia
+date: "January 11, 2018"
 output: 
   revealjs::revealjs_presentation:
     incremental: true
@@ -15,7 +15,7 @@ require(forcats)
 require(tidyr)
 require(readr)
 require(idealstan)
-knitr::opts_chunk$set(echo = TRUE,fig.align = 'center',fig.width=8,fig.height=6)
+knitr::opts_chunk$set(echo = TRUE,fig.align = 'center',fig.width=8,fig.height=6,echo=F,warn=F,message=F)
 ```
 
 ## Latent Variable Models
@@ -24,17 +24,9 @@ knitr::opts_chunk$set(echo = TRUE,fig.align = 'center',fig.width=8,fig.height=6)
 - Data: indicators that have a relationship to the latent variable
 - Uncertainty in the latent variable never goes away
 
-## Diagram
-
-
-```{r diagram,echo=F,out.width='80%'}
-knitr::include_graphics('C:/Users/bobku/Documents/R projects/idealstan_compare/latent_variables.png')
-
-```
-
-
 ## Latent Variables = Many Names
 
+- Measurement Models
 - Factor Analysis
 - Principal Component Analysis
 - Structural Equation Modeling
@@ -45,18 +37,6 @@ knitr::include_graphics('C:/Users/bobku/Documents/R projects/idealstan_compare/l
 - Multi-Dimensional Scaling
 - Latent Space Models
 - Or even just Missing Data (Rubin & Friends)
-
-## How Do We Compare Latent Variable Models?
-
-- Different latent variable models make different assumptions about how the observed indicators (the data) are
-related to the unobserved latent quantity
-
-## Example: Multi-dimensional scaling:
-- Latent variable: coordinates on a 2-Dimensional Plane (i.e., two latent variables, $x$ and $y$)
-- Observed indicators: distances $d_{ij}$ for each $i$th row and $j$th column in the matrix
-- Each indicator is related to the latent variable equally: i.e., every row and column has its own position in the latent $(x,y)$ space relative to every other point
-- Equation expressing relationship: $d_{ij} = \sqrt((x_i-x_j)^2 - (y_i - y_j)^2)$
-- Most network models make this assumption
 
 ## Ideal Point Modeling: A Hierarchical Latent Variable Model
 
@@ -99,17 +79,18 @@ $$
 - $\alpha_j =$ Discrimination parameters
 - $x_i =$ Ideal points
 - $\beta_j$ Difficulty parameters
+- *BUT* $\alpha_j \in \mathbb{R}$ *not* $\alpha_j \in \mathbb{R}^{+}$
 - $\frac{\beta_j}{\alpha_j}$ Line of indifference
 
 ## But it's not IDENTIFIED!!!1!!!!1!
 
-- These models are a serious problem for maximum likelihood estimation: we have a non-linear model with unobserved covariates, so how do you reach a single maximum?
-- All IRT/ideal point models put restrictions to identify the model; MLE has to put restrictions on the likelihood while Bayesian models can also put restrictions in the prior. 
+- Bayesian modeling is much more naturally able to handle latent variables of this kind. 
+- Maximum Likelihood solutions exist, but they tend to be ad hoc.
 
-## We Can... Guess?
+## We Can... Find a Local Maximum?
 
 
-```{r batman,out.width='50%',echo=F}
+```{r batman,out.width='60%',echo=F}
 knitr::include_graphics('C:/Users/bobku/Documents/R projects/idealstan_compare/batman_robin.jpg')
 
 ```
@@ -117,7 +98,7 @@ knitr::include_graphics('C:/Users/bobku/Documents/R projects/idealstan_compare/b
 ## Enter Idealstan
 
 - Currently offers binary and ordinal IRT ideal point models.
-- Missing-data inference is built in.
+- Missing-data inference is built in (using a particular parametric form--see paper).
 - Plotting functions for ideal points + predictive posterior checking + LOO-CV with `loo`
 - Identification either pre-specified or through variational inference (`vb`)
 
@@ -126,6 +107,7 @@ knitr::include_graphics('C:/Users/bobku/Documents/R projects/idealstan_compare/b
 - I used an existing corpus of [Amazon food reviews from 2013 by McAuley and Leskovec](https://snap.stanford.edu/data/web-FineFoods.html). 
 - Each review has a 5-star ranking: ordinal outcome.
 - I kept all reviews that mentioned coffee at least a few times.
+- We have 11,269 rows (raters-persons-$x_i$) and 429 columns (coffee products-items-$\alpha_j$ and $\beta_j$)
 
 ## How Does Coffee Divide People?
 
@@ -136,7 +118,7 @@ knitr::include_graphics('C:/Users/bobku/Documents/R projects/idealstan_compare/s
 
 ## Result: Coffee Reviewers Ideal Point Distribution
 
-```{r load_coffee, echo=F}
+```{r load_coffee, echo=F,eval=F}
 just_coffee <- readRDS('just_coffee.rds')
 
 coffee_count_prod <- group_by(just_coffee,ProductId) %>% summarize(tot_unique=length(unique(UserId))) %>% 
@@ -179,6 +161,16 @@ coffee_model <- id_estimate(idealdata=coffee_data,
                             auto_id = F,
                             use_vb=T)
 
+saveRDS(coffee_model,'coffee_model1.rds')
+
+```
+
+```{r load_coffee_model,include=F}
+coffee_model <- readRDS('coffee_model1.rds')
+```
+
+```{r plot_coffee}
+
 id_plot_legis(coffee_model,group_color=F,group_overlap = T,
               person_labels=F,person_ci_alpha = .05,
               item_plot=365,
@@ -199,13 +191,11 @@ read_csv('high_coffee_discrim_coded.csv') %>%
   DT::datatable()
 ```
 
-## Maybe Pick a More... Moderate Coffee
-
 
 
 ## But Wait... Missing Data?
 
-```{r heat_coffee_miss,echo=F}
+```{r heat_coffee_miss,echo=F,fig.width=9,include=F,eval=F}
 
 coffee_data <- id_make(score_data=coffee_matrix_ready,
                        person_data=data_frame(person.names=1:nrow(coffee_matrix),
@@ -225,6 +215,10 @@ coffee_model_inflate <- id_estimate(idealdata=coffee_data,
                             restrict_params='person',
                             auto_id = F,
                             use_vb=T)
+saveRDS(coffee_model_inflate,'coffee_model2.rds')
+```
+```{r coffee_plot2,fig.width=9}
+
 coffee_1 <- id_plot_legis(coffee_model,group_color=F,group_overlap = T,
               person_labels=F,person_ci_alpha = .05,
               item_plot=429,
@@ -233,14 +227,25 @@ coffee_1 <- id_plot_legis(coffee_model,group_color=F,group_overlap = T,
               show_score = c('1','2','3','4','5'),
               text_size_group = 4)
 
+coffee_model_inflate <- readRDS('coffee_model2.rds')
+
 coffee_2 <- id_plot_legis(coffee_model_inflate,group_color=F,group_overlap = T,
+                          sample_persons=.1,
               person_labels=F,person_ci_alpha = .05,
               item_plot=429,
               group_labels=F,
               point_size=2,
-              text_size_group = 4)
+              text_size_group = 4,abs_and_reg='Vote Points')
 
-gridExtra::grid.arrange(coffee_1,coffee_2)
+gridExtra::grid.arrange(coffee_1,coffee_2,ncol=2)
 ```
 
+## Coming Next
+
+- V0.2 (first stable release) on [Github](https://github.com/saudiwin/idealstan), CRAN version coming soon.
+- Hierarchical models (latent regression)
+- Time-series IRT
+- Marginal `loo`
+- True vs. actual identification
+- Whatever we can dream up
 
