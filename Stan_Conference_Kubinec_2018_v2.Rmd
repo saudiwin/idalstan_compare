@@ -1,7 +1,7 @@
 ---
 title: 'idealstan: an R Package for Ideal Point Modeling with Stan'
 author: "Robert Kubinec"
-date: "February 12, 2018"
+date: "December 13, 2017"
 output:
   html_document: default
   html_notebook: default
@@ -11,18 +11,16 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE,warning=FALSE)
 
-# please install this version of idealstan on github to ensure compatibility with this document
-
-# devtools::install_github('saudiwin/idealstan',
-#                           ref='cf3cb51fb620fa48d49fb602ad6a747782e964af')
-
+#package is only on Github currently
+if(!require(idealstan)) {
+  devtools::install_github('saudiwin/idealstan',branch='develop')
+}
 require(idealstan)
 require(dplyr)
 require(ggplot2)
 require(readr)
 require(tidyr)
 require(RefManageR)
-require(googledrive)
 require(RSQLite)
 require(forcats)
 require(stringr)
@@ -34,7 +32,7 @@ myopts <- BibOptions(check.entries = FALSE, style = "markdown", cite.style = "au
 
 ## Introduction
 
-This notebook introduces [`idealstan`](https://cran.r-project.org/package=idealstan), a new R package front-end to [`Stan`](http://www.mc-stan.org) that allows for flexible modeling of a class of latent variable models known as ideal point models. Ideal point modeling is a form of dimension reduction, and shares similarities with multi-dimensional scaling, factor analysis and item-response theory. While the parameterization employed by `idealstan` is a derivation based on item-response theory, it is important to note that several other parameterizations are possible `r AutoCite(bib, c('carroll2013','armstrong2014'))`.
+This notebook introduces [`idealstan`](https://github.com/saudiwin/idealstan), a new R package front-end to [`Stan`](http://www.mc-stan.org) that allows for flexible modeling of a class of latent variable models known as ideal point models. Ideal point modeling is a form of dimension reduction, and shares similarities with multi-dimensional scaling, factor analysis and item-response theory. While the parameterization employed by `idealstan` is a derivation based on item-response theory, it is important to note that several other parameterizations are possible `r AutoCite(bib, c('carroll2013','armstrong2014'))`.
 
 What distinguishes ideal point modeling from other latent space models is that the latent factor is bi-directional: in other words, the unobserved latent construct that underlies the data could increase or decrease as the observed stimuli either increase or decrease. This type of latent variable is very useful when the aim is to cluster units around a polarizing dimension, such as the left-right axis in politics or the $p$-value debate in statistics. While many of the applications of ideal point models are in political science and economics, it certainly can be applied more broadly, especially as the approach is related to latent space models more generally, such as in `r Citet(bib, c("hoff2002"))`.
 
@@ -213,7 +211,7 @@ just_coffee <- anti_join(just_coffee,coffee_count_prod,by='ProductId') %>%
 
 The data is currently in long format. To bring the data into `idealstan`, it first must be translated to wide format in which each item (product) is a column and each person (user) is a row. For this model, we will drop missing data as we will focus solely on the model's ordinal rankings without accounting for the fact that users do not have reviews for all products.
 
-```{r heat_coffee,echo=F}
+```{r heat_coffee}
 
 coffee_matrix <- select(just_coffee,
                         ProductId,
@@ -266,7 +264,7 @@ To gain a sense of how polarizing these products, we can plot the product mid-po
 ```{r high_pos_discrim}
 id_plot_legis(coffee_model,group_color=F,group_overlap = T,
               person_labels=F,person_ci_alpha = .05,
-              item_plot=429,
+              bill_plot=429,
               group_labels=F,
               point_size=2,
               show_score = c('1','2','3','4','5'),
@@ -279,7 +277,7 @@ Finally, I include here the top 10 most polarizing (highly discriminative) produ
 
 First, the top 10 most positive discrimination:
 
-```{r pos_discrim,message=F,echo=F,warning=F}
+```{r pos_discrim,message=F,echo=F}
 read_csv('high_coffee_discrim_coded.csv') %>% 
   mutate(Discrimination=value) %>% 
   select(`Product Description`=Description, Discrimination) %>% 
@@ -290,7 +288,7 @@ read_csv('high_coffee_discrim_coded.csv') %>%
 Second, the top 10 least positive negative discrimination:
 
 
-```{r neg_discrim,echo=F,message=F,warning=F}
+```{r neg_discrim,echo=F}
 read_csv('low_coffee_discrim_coded.csv') %>% 
   mutate(Discrimination=value) %>% 
   select(`Product Description`=Description, Discrimination) %>% 
@@ -328,8 +326,13 @@ rownames(to_use) <- rownames(senate114$legis.data)
 # Need to drop Obama
 senate_data <-
   id_make(
-    senate114,
-    ordinal = F
+    score_data = to_use[-1,],
+    person_data = person_data,
+    miss_val = 3,
+    high_val = 2,
+    low_val = 1,
+    ordinal = F,
+    exclude_level = c(3,7)
   )
 
 data_frame(votes=c(senate_data@score_matrix)) %>% 
@@ -364,14 +367,13 @@ sen_est <- id_estimate(senate_data,
                  fixtype='constrained',
             seed=84520,
             refresh=500)
-id_plot_legis(sen_est,person_ci_alpha=.1,group_labels=T) + scale_colour_brewer(type='qual')
+id_plot_legis(sen_est,person_ci_alpha=0.7) + scale_colour_brewer(type='qual')
 ```
 
 We can also plot the bill (item) midpoints as a line of indifference that we overlay on top of the ideal points.
 
 ```{r bill_plot}
-id_plot(sen_est,person_ci_alpha=.1,item_plot=205,
-        group_labels=T,
+id_plot(sen_est,person_ci_alpha=0.1,bill_plot=205,
         abs_and_reg='Vote Points') + scale_colour_brewer(type='qual')
 ```
 
@@ -381,8 +383,7 @@ We can similarly examine the absence midpoint for the same bill, which signifies
 
 ```{r abs_bill_plot,echo=F}
 
-id_plot(sen_est,person_ci_alpha=.1,item_plot=205,
-        group_labels=T,
+id_plot(sen_est,person_ci_alpha=0.1,bill_plot=205,
         abs_and_reg='Absence Points') + scale_colour_brewer(type='qual')
 ```
 

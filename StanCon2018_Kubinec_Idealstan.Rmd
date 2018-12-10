@@ -9,6 +9,12 @@ output:
 ---
 
 ```{r setup, include=FALSE}
+
+# please install this version of idealstan on github to ensure compatibility with this document
+
+# devtools::install_github('saudiwin/idealstan',
+#                           ref='cf3cb51fb620fa48d49fb602ad6a747782e964af')
+
 require(dplyr)
 require(ggplot2)
 require(forcats)
@@ -112,7 +118,7 @@ knitr::include_graphics('C:/Users/bobku/Documents/R projects/idealstan_compare/b
 ## How Does Coffee Divide People?
 
 ```{r starbucks,out.width='50%',echo=F}
-knitr::include_graphics('C:/Users/bobku/Documents/R projects/idealstan_compare/starbucks_via.jpg')
+knitr::include_graphics('starbucks_via.jpg')
 
 ```
 
