@@ -162,7 +162,7 @@ To demonstrate the package, I first generate data from this data-generating proc
 ```{r sim_data, echo=F}
 
 ord_ideal_sim <- id_sim_gen()
-DT::datatable(as_data_frame(head(ord_ideal_sim@score_matrix[,1:10])))
+DT::datatable(head(ord_ideal_sim@score_matrix))
 ```
 
 In this matrix, the legislators (persons) are represented by the rows and the bills (items) by the columns. The ordinal vote outcomes are numbered 1 to 3 (1=No,2=Abstain,3=Yes) and 4 represents absence. 
@@ -176,10 +176,9 @@ low_leg <- sort(true_legis,index.return=T)
 
 ord_ideal_est <- id_estimate(idealdata=ord_ideal_sim,
                              model_type=4,
-                             fixtype='constrained',
-                             restrict_type='constrain_twoway',
-                             restrict_ind_high = high_leg$ix[1:2],
-                             restrict_ind_low=low_leg$ix[1:2],
+                             fixtype='vb_partial',
+                             restrict_ind_high = high_leg$ix[1],
+                             restrict_ind_low=low_leg$ix[1],
                              refresh=500)
 ```
 
@@ -223,21 +222,12 @@ coffee_matrix <- select(just_coffee,
   summarize(mean_score=round(mean(Score))) %>% 
   ungroup %>% 
   mutate(ProductId=fct_relevel(factor(ProductId),'B003GTR8IO'),
-         UserId=as.numeric(factor(UserId))) %>% 
-  spread(key = ProductId,value = mean_score)
+         UserId=as.numeric(factor(UserId)))
 
-coffee_matrix_ready <- as.matrix(select(coffee_matrix,-UserId))
-
-row.names(coffee_matrix_ready) <- coffee_matrix$UserId 
-coffee_data <- idealstan::id_make(score_data=coffee_matrix_ready,
-                       person_data=data_frame(person.names=1:nrow(coffee_matrix),
-                                             group=rep("O",nrow(coffee_matrix))),
-                        ordinal=T,
-                       inflate=F,
-                       low_val=1,
-                       high_val=5,
-                       middle_val=c(2,3,4),
-                       outcome_label_type='none')
+coffee_data <- idealstan::id_make(score_data = coffee_matrix,
+                                  person_id='UserId',
+                                  item_id='ProductId',
+                                  outcome='mean_score')
 
 ```
 
@@ -247,10 +237,7 @@ Even with inactive users removed from the data, this model is quite large with `
 
 coffee_model <- id_estimate(idealdata=coffee_data,
                             model_type=3,
-                            fixtype='vb',
-                            restrict_ind_high = 1,
-                            restrict_params='person',
-                            auto_id = F,
+                            fixtype='vb_full',
                             use_vb=T)
 
 ```
