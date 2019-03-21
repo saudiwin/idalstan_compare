@@ -620,104 +620,119 @@ Instead of testing overall polarization as H2 proposes, we can see if the moveme
 
 ```{r preparecong}
 
-rm(county_series)
+# UNCOMMENT TO RUN FROM SCRATCH
 
-# need Congress rollcall info
+# rm(county_series)
+# 
+# # need Congress rollcall info
+# 
+# rollinfo <- read_csv('data/Hall_rollcalls.csv')
+# 
+# unam_roll <- filter(rollinfo,
+#                     yea_count==0|nay_count==0)
+# 
+# # member votes
+# 
+# rollcalls <- read_csv('data/Hall_votes.csv') %>% 
+#   filter(congress>100)
+# 
+# #remove unanmous votes
+# 
+# rollcalls <- anti_join(rollcalls,
+#                        unam_roll,
+#                        by=c("congress",
+#                             "rollnumber"))
+# 
+# # need member info
+# 
+# meminfo <- read_csv('data/Hall_members.csv')
+# 
+# # merge member info with rollcall data
+# 
+# rollcalls <- left_join(select(rollcalls,-prob,-chamber),
+#                           select(meminfo,
+#                                  -chamber,
+#                                  -occupancy,
+#                                  -last_means,
+#                                  -bioguide_id,
+#                                  -born,
+#                                  -(died:nokken_poole_dim2)),
+#                           by=c('icpsr','congress'))
+# 
+# 
+# rollcalls <- left_join(rollcalls,
+#                         select(rollinfo,
+#                                congress,
+#                                rollnumber,
+#                                date),
+#                        by=c("congress",
+#                             "rollnumber"))
+# 
+# 
+# # need to recode DISTRICT in over_states from 0 to 1 (at-large is coded as 1 in rollcall data)
+# 
+# over_states <- mutate(over_states,DISTRICT=if_else(DISTRICT==0,DISTRICT+1,DISTRICT))
+# 
+# # there were a series of votes held on Jan. 1st, 2013 that really belonged to the old 2012 
+# # Congress. To avoid a mismatch, I recode those votes to December 31st, 2012.
+# 
+# rollcalls <- mutate(rollcalls,
+#                     date=if_else(date==ymd('2013-01-01'),date-1,date),
+#                     year=year(date),
+#                     month=month(date,label=T,abbr=F)) %>% 
+#             left_join(over_states,
+#                        by=c(district_code="DISTRICT",
+#                             state_abbrev="state",
+#                             "year",
+#                             month="period"))
+# 
+# # check for missing
+# 
+# lookat <- filter(rollcalls,district_code!=0,year>1989,year<2019,is.na(unemp_rate))
+# 
+# # remove remaining missing data (not relevant and prior/post unemployment data is recorded)
+# 
+# rollcalls <- filter(rollcalls,!is.na(unemp_rate))
+# 
+# # not present in legislature = missing data
+# 
+# rollcalls <- mutate(rollcalls,
+#                  cast_code=factor(cast_code,exclude=0L),
+#                  cast_code=fct_collapse(cast_code,
+#                                         Yes=c("1","2","3"),
+#                                         Nay=c("4","5","6"),
+#                                         Abstention=c("7","8","9")),
+#                  cast_code=fct_relevel(cast_code,"Nay","Yes","Abstention"),
+#                  party_code=factor(party_code,
+#                                    labels=c("D",
+#                                             "R",
+#                                             "I"))) %>% 
+#   distinct
+# 
+# rollcalls$date_month <- rollcalls$date
+# day(rollcalls$date_month) <- 1
 
-rollinfo <- read_csv('data/Hall_rollcalls.csv')
-
-unam_roll <- filter(rollinfo,
-                    yea_count==0|nay_count==0)
-
-# member votes
-
-rollcalls <- read_csv('data/Hall_votes.csv') %>% 
-  filter(congress>100)
-
-#remove unanmous votes
-
-rollcalls <- anti_join(rollcalls,
-                       unam_roll,
-                       by=c("congress",
-                            "rollnumber"))
-
-# need member info
-
-meminfo <- read_csv('data/Hall_members.csv')
-
-# merge member info with rollcall data
-
-rollcalls <- left_join(select(rollcalls,-prob,-chamber),
-                          select(meminfo,
-                                 -chamber,
-                                 -occupancy,
-                                 -last_means,
-                                 -bioguide_id,
-                                 -born,
-                                 -(died:nokken_poole_dim2)),
-                          by=c('icpsr','congress'))
-
-
-rollcalls <- left_join(rollcalls,
-                        select(rollinfo,
-                               congress,
-                               rollnumber,
-                               date),
-                       by=c("congress",
-                            "rollnumber"))
-
-
-# need to recode DISTRICT in over_states from 0 to 1 (at-large is coded as 1 in rollcall data)
-
-over_states <- mutate(over_states,DISTRICT=if_else(DISTRICT==0,DISTRICT+1,DISTRICT))
-
-# there were a series of votes held on Jan. 1st, 2013 that really belonged to the old 2012 
-# Congress. To avoid a mismatch, I recode those votes to December 31st, 2012.
-
-rollcalls <- mutate(rollcalls,
-                    date=if_else(date==ymd('2013-01-01'),date-1,date),
-                    year=year(date),
-                    month=month(date,label=T,abbr=F)) %>% 
-            left_join(over_states,
-                       by=c(district_code="DISTRICT",
-                            state_abbrev="state",
-                            "year",
-                            month="period"))
-
-# check for missing
-
-lookat <- filter(rollcalls,district_code!=0,year>1989,year<2019,is.na(unemp_rate))
-
-# remove remaining missing data (not relevant and prior/post unemployment data is recorded)
-
-rollcalls <- filter(rollcalls,!is.na(unemp_rate))
+# saveRDS(rollcalls,'data/rollcalls.rds')
 
 # remove unnecesssary objects
 
-rm(over_states,rollinfo,meminfo)
-                       
+# rm(over_states,rollinfo,meminfo)
+
+rollcalls <- readRDS('data/rollcalls.rds') 
+
+# use a sample of rollcall data for now
+
+# rollcalls <- filter(rollcalls,bioname %in% c("BARTON, Joe Linus",
+#                                              "DUNCAN, John J., Jr.",
+#                                              "LEVIN, Sander Martin",
+#                                              "NEAL, Richard Edmund")) %>%
+#   mutate(party_code=factor(party_code,levels=c("D","R")))
+
+rm(county_series,over_states)
 
 ```
 
 ```{r runcong1}
-
-# not present in legislature = missing data
-
-rollcalls <- mutate(rollcalls,
-                 cast_code=factor(cast_code,exclude=0L),
-                 cast_code=fct_collapse(cast_code,
-                                        Yes=c("1","2","3"),
-                                        Nay=c("4","5","6"),
-                                        Abstention=c("7","8","9")),
-                 cast_code=fct_relevel(cast_code,"Nay","Yes","Abstention"),
-                 party_code=factor(party_code,
-                                   labels=c("D",
-                                            "R",
-                                            "I"))) %>% 
-  distinct
-
-rollcalls$date_month <- rollcalls$date
-day(rollcalls$date_month) <- 1
 
 unemp1 <- rollcalls %>% 
   select(cast_code,rollnumber,
@@ -731,7 +746,68 @@ unemp1 <- rollcalls %>%
                   time_id = "date_month",
                   high_val="Yes",
                   low_val="Nay",
+                  remove_cov_int = F,
                   person_cov = ~unemp_rate*party_code)
+
+# remove original data
+
+rm(rollcalls)
+
+unemp1_fit <- id_estimate(unemp1,model_type=2,vary_ideal_pts = 'AR1',
+                          fixtype='vb_partial',
+                          restrict_ind_high = "BARTON, Joe Linus",
+                          restrict_ind_low="NEAL, Richard Edmund",
+                          use_vb=T,
+                          tol_rel_obj=0.001,
+                          output_samples=100,
+                          pars=c("steps_votes_grm",
+                                 "steps_votes",
+                                 "B_int_free",
+                                 "A_int_free"),
+                          include=F,
+                          id_refresh=100)
+
+saveRDS(unemp1_fit,'data/unemp1_fit.rds')
+
+rm(unemp1_fit)
+
+```
+
+```{r fitgp}
+rm(unemp1)
+rollcalls <- readRDS('data/rollcalls.rds')
+unemp2 <- rollcalls %>% 
+  select(cast_code,rollnumber,
+         bioname,party_code,date_month,unemp_rate) %>% 
+  distinct %>% 
+                 id_make(outcome="cast_code",
+                         item_id="rollnumber",
+                         miss_val="Abstention",
+                  person_id="bioname",
+                  group_id="party_code",
+                  time_id = "date_month",
+                  high_val="Yes",
+                  low_val="Nay",
+                  remove_cov_int = T,
+                  person_cov = ~unemp_rate*party_code)
+rm(rollcalls)
+unemp2_fit <- id_estimate(unemp2,model_type=2,vary_ideal_pts = 'GP',
+                          fixtype='vb_partial',
+                          restrict_ind_high = "R",
+                          restrict_ind_low="D",
+                          use_vb=T,
+                          use_groups = T,
+                          tol_rel_obj=0.001,
+                          output_samples=100,
+                          gp_m_sd_par = c(0.15,10),
+                          pars=c("steps_votes_grm",
+                                 "steps_votes",
+                                 "B_int_free",
+                                 "A_int_free"),
+                          include=F,
+                          id_refresh=100)
+
+saveRDS(unemp2_fit,'data/unemp2_fit.rds')
 
 ```
 
