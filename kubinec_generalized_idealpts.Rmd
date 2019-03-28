@@ -6,7 +6,7 @@ output:
   bookdown::pdf_document2:
     includes:
       in_header: preamble.tex
-abstract: 'The increasing importance paid to measurement in political science makes the ideal point model a helpful framework for estimating latent concepts with diverse data. This  paper presents an item-response theory parameterization of ideal points that unifies existing approaches to ideal point models while also extending them in a unified framework. For time-varying inference, the model permits ideal points to vary in a random walk, in a stationary autoregressive process, or in a semi-parametric Gaussian process. For missing data, the model implements a two-stage selection adjustment to account for non-ignorable missingness. In addition, the ideal point model is extended to handle diverse outcomes, including ordinal, count, continuous, and positive-continuous distributions. To address limitations in estimating very large datasets, variational Bayesian inference is included as an alternative to full Markov Chain Monte Carlo inference.'
+abstract: 'This  paper presents an item-response theory parameterization of ideal points that unifies existing approaches to ideal point models while also extending them. For time-varying inference, the model permits ideal points to vary in a random walk, in a stationary autoregressive process, or in a semi-parametric Gaussian process. For missing data, the model implements a two-stage selection adjustment to account for non-ignorable missingness. In addition, the ideal point model is extended to handle new distributions, including continuous, positive-continuous and ordinal data. To enable modeling of datasets with mixed data (discrete and continuous), I incorporate joint modeling of different distributions. Finally, I also address ways of implementing Bayesian inference with big data sets, including variational inference and within-chain MCMC parallelization.'
 bibliography: "C:/Users/rkubinec/Documents/firmbook/BibTexDatabase.bib"
 citation_package: biblatex
 classoption: 12pt
@@ -832,14 +832,15 @@ rm(unemp1)
 rollcalls <- readRDS('data/rollcalls.rds')
 unemp2 <- rollcalls %>% 
   select(cast_code,rollnumber,
-         bioname,party_code,date_month,unemp_rate) %>% 
+         bioname,party_code,date,unemp_rate) %>% 
   distinct %>% 
+  filter(date<lubridate::ymd("1991-01-01")) %>% 
                  id_make(outcome="cast_code",
                          item_id="rollnumber",
                          miss_val="Abstention",
                   person_id="bioname",
                   group_id="party_code",
-                  time_id = "date_month",
+                  time_id = "date",
                   high_val="Yes",
                   low_val="Nay",
                   remove_cov_int = T,
@@ -858,6 +859,7 @@ unemp2_fit <- id_estimate(unemp2,model_type=2,vary_ideal_pts = 'GP',
                                  "steps_votes",
                                  "B_int_free",
                                  "A_int_free"),
+                          gp_num_diff = c(10,0.01),
                           include=F,
                           id_refresh=100)
 
