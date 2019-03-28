@@ -778,14 +778,15 @@ rm(unemp1)
 rollcalls <- readRDS('data/rollcalls.rds')
 unemp2 <- rollcalls %>% 
   select(cast_code,rollnumber,
-         bioname,party_code,date_month,unemp_rate) %>% 
+         bioname,party_code,date,unemp_rate) %>% 
   distinct %>% 
+  filter(date<lubridate::ymd("1991-01-01")) %>% 
                  id_make(outcome="cast_code",
                          item_id="rollnumber",
                          miss_val="Abstention",
                   person_id="bioname",
                   group_id="party_code",
-                  time_id = "date_month",
+                  time_id = "date",
                   high_val="Yes",
                   low_val="Nay",
                   remove_cov_int = T,
@@ -804,6 +805,7 @@ unemp2_fit <- id_estimate(unemp2,model_type=2,vary_ideal_pts = 'GP',
                                  "steps_votes",
                                  "B_int_free",
                                  "A_int_free"),
+                          gp_num_diff = c(10,0.01),
                           include=F,
                           id_refresh=100)
 
