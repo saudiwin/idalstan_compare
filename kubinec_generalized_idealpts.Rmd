@@ -239,7 +239,61 @@ The GP model is significantly more difficult to identify. Its greatest strength,
 
 # Diverse Distributions
 
-Up to this point, I have followed convention in assuming that the observed data $Y_{ij}$ is a binary outcome. Virtually any distribution for $Y_{ij}$ is possible, especially with the flexibility of Bayesian modeling. In this section I incorporate existing distributions used for ideal points while also introducing the reader to distributions, especially ordinal models, that have been rarely employed for this purpose but could have considerable utility. 
+Up to this point, I have followed convention in assuming that the observed data $Y_{ij}$ is a binary outcome (Bernoulli distribution). Virtually any distribution for $Y_{ij}$ is possible, especially with the flexibility of Bayesian modeling. In this section I incorporate existing distributions used for ideal points while also introducing the reader to distributions, especially ordinal models, that have been rarely employed for this purpose but could have considerable utility. Furthermore, I implement the @kropko2013 method to combine distributions into one joint posterior distribution, permitting models to use mixed datasets, such as both discrete and continuous variables. This method is especially useful for buiding time-varying indices incorporating measurement indicators that could be binary, ordinal, continuous or count variables. 
+
+There are two possible ordinal models that can be implemented in the ideal point framework. The first is known as a rating-scale model in the IRT framework and is structurally similar to the ordered logit model. @imai2016 are the first to implement this model for ideal points, though within an EM algorithm that is unfortunately vulnerable to issues of perfect separation, which occur frequently in legislative data if certain vote categories, such as abstentions, do not occur very often. By contrast, a fully Bayesian approach to ordinal models permits very sparse distributions of responses across persons. 
+
+Following the notation I introduced, a rating-scale model for $k \in K$ outcomes can be modeled as follows for observed data:
+
+\[
+	L(Y_{ijtk}|\alpha_{it},\gamma_j,\beta_j) =  \prod_{i-1}^{I} \prod_{j=1}^{J} \prod_{t=1}^{T}
+	\begin{cases} 
+	1 -  \zeta(\gamma_j \alpha_i - \beta_j - c_1) & \text{if } K = 0 \\
+	\zeta(\gamma_j \alpha_i - \beta_j - c_{k-1}) - \zeta(\gamma_j \alpha_i - \beta_j - c_{k})       & \text{if } 0 < k < K, \text{ and} \\
+	\zeta(\gamma_j \alpha_i - \beta_j - c_{k-1}) - 0 & \text{if } k=K
+	\end{cases}
+\]
+
+where again $\zeta(\cdot)$ represents the logit function. In this version, each ordinal category $k$ less one is assigned a cutpoint $c_k$. In ideal point terms, these cutpoints divide the ideal point space discrete decisions over categories. Suppose that we used this model for legislators voting on three possible outcomes over votes: No, Abstain and Yes. This model would create two cutting planes in the ideal point space such that one end of the spectrum would vote No, the opposite end of the spectrum would vote Yes, and those in between would vote Abstain. As the polarity of items switches, Abstain will always remain in the center of the ideal point distribution, but the Yes and No positions can flip sides. 
+
+A different parameterization is known as the graded response model in IRT. This model allows the cutpoints $c_k$ to vary by bill. As a result, instead of including separate cutpoints, we can change the model by indexing each item-specific intercept for each category $k$:
+
+\[
+	L(Y_{ijtk}|\alpha_{it},\gamma_j,\beta_j) =  \prod_{i-1}^{I} \prod_{j=1}^{J} \prod_{t=1}^{T}
+	\begin{cases} 
+	1 -  \zeta(\gamma_j \alpha_i - \beta_{jk-1}) & \text{if } K = 0 \\
+	\zeta(\gamma_j \alpha_i - \beta_{jk-1}) - \zeta(\gamma_j \alpha_i - \beta_{jk-1})       & \text{if } 0 < k < K, \text{ and} \\
+	\zeta(\gamma_j \alpha_i - \beta_{jk-1}) - 0 & \text{if } k=K
+	\end{cases}
+\]
+
+Though not employed in political science to any great extent, this alternative formulation to ordered logit permits more flexible inference on the cutpoints. Allowing cutpoints to vary by item will enable much more accurate prediction of categories with fewer numbers of observations. It also increases information about the items/bills, though of course at a cost of including $K$ additional parameters per item. My intention in including it here is not to suggest that it is a superior model to the standard rating-scale approach, but rather as an alternative that may be useful in some situations.
+
+I do not review the distributions for the Poisson count model as that has been widely applied in political science [@slapin2008]. However, I do include two other distributions that have not been widely used in the ideal point literature: the Normal distribution for continuous and the log-normal distribution for positive-continuous outcomes. While @kropko2013 employed the Normal distribution in a traditional IRT framework, no one has yet used the log-Normal distribution to my knowledge. 
+
+For a normal distribution, the ideal point model is used to predict the mean of $Y_{ijt}$ given residual standard deviation $\sigma_N$:
+
+\[
+  L(Y_{ijt}|\alpha_{it},\gamma_j,\beta_j) =  \prod_{i-1}^{I} \prod_{j=1}^{J} \prod_{t=1}^{T} \frac{1}{ \sqrt{2\pi \sigma_N^2 }} e^{-\frac{(Y_{ijt}-(\gamma_j\alpha_{it}-\beta_j)^2}{2\sigma_N^2}}
+\]
+
+The log-normal distribution is the same distribution except that the domain of the distribution is on $log(Y_{ijt})$ rather than $log(Y_{ijt})$:
+
+\[
+  L(Y_{ijt}|\alpha_{it},\gamma_j,\beta_j) =  \prod_{i-1}^{I} \prod_{j=1}^{J} \prod_{t=1}^{T} \frac{1}{ \sqrt{2\pi \sigma_N^2 }} e^{-\frac{(log(Y_{ijt})-(\gamma_j\alpha_{it}-\beta_j)^2}{2\sigma_N^2}}
+\]
+
+The log-normal parameterization is useful for continuous variables that are only defined on positive real numbers. For variables with substantial skew, such as income, this parameterization has a more useful interpretation than the more general Normal distribution. With both of these distributions, most continuous distributions can be modeled with reasonable accuracy.
+
+The utility of including all of these kinds of distributions, besides granting scholars more options with which data to use for ideal point estimation, is to permit modeling of different distributions in the same data. It is very common to have panel data sets and survey data with mixed data types, such as binary, ordinal, counts and continuous variables. Other than @kropko2013 who worked within a traditional IRT framework (i.e., fixed polarity of items), no one has attempted to implement this kind of joint modeling. It promises to offer scholars the ability to easily build time-varying indices such as those employed by V-DEM [@vdem2017] and the transparency index with ease [@jrv2018].
+
+It is again straightforward to combine different distributions using our Bayesian framework. We simply index $Y_{ij}$ by $m$ for the $M$ models that each relate to a distinct outcome. These outcomes could be binary, ordinal, counts, continuous or positive-continuous per the notation presented:
+
+\[
+  L(Y_{ijtm}|\alpha_{it},\gamma_j,\beta_j) =  \prod_{i-1}^{I} \prod_{j=1}^{J} \prod_{t=1}^{T} \prod_{m=1}^{M} L_m(\gamma_j\alpha_{it}-\beta_j)
+\]
+
+where $L_m$ represents the likelihood function for the $m$th distribution. While I suppressed notation for missing data for the sake of brevity, all of these models can also be estimated marginal of missing data $r$ using the notation presented earlier.
 
 # Big Data Inference
 
@@ -732,7 +786,7 @@ rm(county_series,over_states)
 
 ```
 
-```{r runcong1}
+```{r runcong1,eval=F}
 
 unemp1 <- rollcalls %>% 
   select(cast_code,rollnumber,
@@ -773,7 +827,7 @@ rm(unemp1_fit)
 
 ```
 
-```{r fitgp}
+```{r fitgp,eval=F}
 rm(unemp1)
 rollcalls <- readRDS('data/rollcalls.rds')
 unemp2 <- rollcalls %>% 
