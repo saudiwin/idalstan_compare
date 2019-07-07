@@ -734,6 +734,8 @@ rm(county_series,over_states)
 
 ```{r runcong1}
 
+rollcalls <- readRDS('data/rollcalls.rds')
+
 unemp1 <- rollcalls %>% 
   select(cast_code,rollnumber,
          bioname,party_code,date_month,unemp_rate) %>% 
@@ -756,7 +758,7 @@ rm(rollcalls)
 unemp1_fit <- id_estimate(unemp1,model_type=2,vary_ideal_pts = 'AR1',
                           fixtype='vb_partial',
                           restrict_ind_high = "BARTON, Joe Linus",
-                          restrict_ind_low="NEAL, Richard Edmund",
+                          restrict_ind_low="DeFAZIO, Peter Anthony",
                           use_vb=T,
                           tol_rel_obj=0.001,
                           output_samples=100,
@@ -780,7 +782,7 @@ unemp2 <- rollcalls %>%
   select(cast_code,rollnumber,
          bioname,party_code,date,unemp_rate) %>% 
   distinct %>% 
-  filter(date<lubridate::ymd("1991-01-01")) %>% 
+  filter(date>lubridate::ymd("2008-06-01")) %>% 
                  id_make(outcome="cast_code",
                          item_id="rollnumber",
                          miss_val="Abstention",
@@ -805,7 +807,7 @@ unemp2_fit <- id_estimate(unemp2,model_type=2,vary_ideal_pts = 'GP',
                                  "steps_votes",
                                  "B_int_free",
                                  "A_int_free"),
-                          gp_num_diff = c(10,0.01),
+                          gp_num_diff = c(20,0.01),
                           include=F,
                           id_refresh=100)
 
