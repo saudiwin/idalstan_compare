@@ -807,6 +807,13 @@ rm(county_series,over_states)
 ```{r runcong1,eval=T}
 if(run_all) {
   unemp1 <- rollcalls %>% 
+=======
+```{r runcong1}
+
+rollcalls <- readRDS('data/rollcalls.rds')
+
+unemp1 <- rollcalls %>% 
+>>>>>>> 046c3319e115984da8c76b06749d27075713b641
   select(cast_code,rollnumber,
          bioname,party_code,date_month,unemp_rate) %>% 
   distinct %>% 
@@ -858,7 +865,7 @@ unemp2 <- rollcalls %>%
   select(cast_code,rollnumber,
          bioname,party_code,date,unemp_rate) %>% 
   distinct %>% 
-  filter(date<lubridate::ymd("1991-01-01")) %>% 
+  filter(date>lubridate::ymd("2008-06-01")) %>% 
                  id_make(outcome="cast_code",
                          item_id="rollnumber",
                          miss_val="Abstention",
@@ -883,7 +890,7 @@ unemp2_fit <- id_estimate(unemp2,model_type=2,vary_ideal_pts = 'GP',
                                  "steps_votes",
                                  "B_int_free",
                                  "A_int_free"),
-                          gp_num_diff = c(10,0.01),
+                          gp_num_diff = c(20,0.01),
                           include=F,
                           id_refresh=100)
 
