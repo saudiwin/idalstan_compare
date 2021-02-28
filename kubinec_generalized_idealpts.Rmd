@@ -843,7 +843,7 @@ rm(rollcalls)
 
 unemp1_fit <- id_estimate(unemp1,model_type=2,vary_ideal_pts = 'AR1',niters=300,
                           warmup=300,
-                          within_chain="threads",nchains=1,ncores=4,
+                          within_chain="threads",nchains=1,ncores=parallel::detectCores(),
                           restrict_ind_high = "BARTON, Joe Linus",
                           restrict_ind_low="DeFAZIO, Peter Anthony",
                           restrict_sd_low = 3,
@@ -888,20 +888,18 @@ unemp2 <- rollcalls %>%
                   person_cov = ~unemp_rate*party_code)
 rm(rollcalls)
 unemp2_fit <- id_estimate(unemp2,model_type=2,vary_ideal_pts = 'GP',
-                          fixtype='vb_partial',
+                          niters=300,
+                          warmup=300,gpu=T,
+                          ncores=2,
+                          fixtype="prefix",
                           restrict_ind_high = "R",
-                          restrict_ind_low="D",
-                          use_vb=T,
                           use_groups = T,
-                          tol_rel_obj=0.001,
+                          within_chain="threads",
                           output_samples=100,
-                          gp_m_sd_par = c(0.15,10),
                           pars=c("steps_votes_grm",
                                  "steps_votes",
                                  "B_int_free",
                                  "A_int_free"),
-                          gp_num_diff = c(20,0.01),
-                          include=F,
                           id_refresh=100)
 
 saveRDS(unemp2_fit,'data/unemp2_fit.rds')
