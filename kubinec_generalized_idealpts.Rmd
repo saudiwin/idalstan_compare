@@ -36,10 +36,10 @@ require(idealstan)
 require(forcats)
 
 # set to true to run all models (will take a long time)
-run_all <- F
+run_all <- T
 
 # set to true to create congressional datasets (will take a long time)
-create_data <- T
+create_data <- F
 ```
 
 
@@ -824,34 +824,36 @@ rollcalls <- readRDS('data/rollcalls.rds')
 unemp1 <- rollcalls %>% 
   select(cast_code,rollnumber,
          bioname,party_code,date_month,unemp_rate) %>% 
+  mutate(cast_code=recode_factor(cast_code,Abstention=NA_character_)) %>% 
+  filter(bioname %in% c("BARTON, Joe Linus",
+                        "DeFAZIO, Peter Anthony",
+                        "LEVIN, Sander Martin",
+                        "ROGERS, Harold Dallas (Hal)")) %>% 
   distinct %>% 
-                 id_make(outcome="cast_code",
+                 id_make(outcome_disc="cast_code",
                          item_id="rollnumber",
-                         miss_val="Abstention",
                   person_id="bioname",
                   group_id="party_code",
-                  time_id = "date_month",
-                  high_val="Yes",
-                  low_val="Nay",
-                  remove_cov_int = F,
-                  person_cov = ~unemp_rate*party_code)
+                  time_id = "date_month")
+                  #person_cov = ~unemp_rate*party_code)
 
 # remove original data
 
 rm(rollcalls)
 
-unemp1_fit <- id_estimate(unemp1,model_type=2,vary_ideal_pts = 'AR1',
-                          fixtype='vb_partial',
+unemp1_fit <- id_estimate(unemp1,model_type=2,vary_ideal_pts = 'AR1',niters=300,
+                          warmup=300,
+                          within_chain="threads",nchains=1,ncores=4,
                           restrict_ind_high = "BARTON, Joe Linus",
                           restrict_ind_low="DeFAZIO, Peter Anthony",
-                          use_vb=T,
-                          tol_rel_obj=0.001,
-                          output_samples=100,
-                          pars=c("steps_votes_grm",
-                                 "steps_votes",
-                                 "B_int_free",
-                                 "A_int_free"),
-                          include=F,
+                          restrict_sd_low = 3,
+                          fix_low=0,
+                          fixtype="prefix",
+                          # pars=c("steps_votes_grm",
+                          #        "steps_votes",
+                          #        "B_int_free",
+                          #        "A_int_free"),
+                          #include=F,
                           id_refresh=100)
 
 saveRDS(unemp1_fit,'data/unemp1_fit.rds')
