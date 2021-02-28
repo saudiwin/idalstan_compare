@@ -35,6 +35,8 @@ require(missRanger)
 require(idealstan)
 require(forcats)
 
+.libPaths("/home/rmk7/other_R_libs")
+
 # set to true to run all models (will take a long time)
 run_all <- T
 
