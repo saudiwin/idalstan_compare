@@ -24,6 +24,8 @@ options(tinytex.verbose = TRUE)
 
 .libPaths("/home/rmk7/other_R_libs")
 
+cmdstanr::set_cmdstan_path("/home/rmk7/cmdstan/cmdstan-2.26.1")
+
 require(dplyr)
 require(ggplot2)
 require(tidyr)
