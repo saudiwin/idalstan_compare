@@ -24,7 +24,7 @@ options(tinytex.verbose = TRUE)
 
 .libPaths("/home/rmk7/other_R_libs")
 
-cmdstanr::set_cmdstan_path("/home/rmk7/cmdstan/cmdstan-2.26.1")
+cmdstanr::set_cmdstan_path("/home/rmk7/cmdstan")
 
 require(dplyr)
 require(ggplot2)
@@ -853,7 +853,7 @@ unemp1_fit <- id_estimate(unemp1,model_type=2,vary_ideal_pts = 'AR1',niters=300,
                           restrict_sd_low = 3,
                           fix_low=0,
                           fixtype="prefix",
-                          cmdstan_path_user="/home/rmk7/cmdstan/cmdstan-2.26.1",
+                          #cmdstan_path_user="/home/rmk7/cmdstan/cmdstan-2.26.1",
                           # pars=c("steps_votes_grm",
                           #        "steps_votes",
                           #        "B_int_free",
@@ -900,7 +900,7 @@ unemp2_fit <- id_estimate(unemp2,model_type=2,vary_ideal_pts = 'GP',
                          restrict_sd_low = 3,
                           fix_low=0,
                           use_groups = T,
-                         cmdstan_path_user="/home/rmk7/cmdstan/cmdstan-2.26.1",
+                         #cmdstan_path_user="/home/rmk7/cmdstan/cmdstan-2.26.1",
                           within_chain="threads",
                           output_samples=100,
                           pars=c("steps_votes_grm",
@@ -958,7 +958,7 @@ china_fit <- id_estimate(china_data,vary_ideal_pts = 'AR1',
                           restrict_ind_high = "R",
                          restict_ind_low="D",
                          restrict_sd_low = 3,
-                         cmdstan_path_user="/home/rmk7/cmdstan/cmdstan-2.26.1",
+                         #cmdstan_path_user="/home/rmk7/cmdstan/cmdstan-2.26.1",
                           fix_low=0,
                           use_groups = T,
                           within_chain="threads",
