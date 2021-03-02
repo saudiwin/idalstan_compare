@@ -830,10 +830,10 @@ unemp1 <- rollcalls %>%
          bioname,party_code,date_month,unemp_rate) %>% 
   mutate(cast_code=recode_factor(cast_code,Abstention=NA_character_),
          cast_code=as.numeric(cast_code)-1) %>% 
-  filter(bioname %in% c("BARTON, Joe Linus",
-                        "DeFAZIO, Peter Anthony",
-                        "LEVIN, Sander Martin",
-                        "ROGERS, Harold Dallas (Hal)")) %>% 
+  # filter(bioname %in% c("BARTON, Joe Linus",
+  #                       "DeFAZIO, Peter Anthony",
+  #                       "LEVIN, Sander Martin",
+  #                       "ROGERS, Harold Dallas (Hal)")) %>% 
   distinct %>% 
                  id_make(outcome_disc="cast_code",
                          item_id="rollnumber",
