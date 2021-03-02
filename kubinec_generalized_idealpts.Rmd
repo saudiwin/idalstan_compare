@@ -24,7 +24,7 @@ options(tinytex.verbose = TRUE)
 
 .libPaths("/home/rmk7/other_R_libs")
 
-cmdstanr::set_cmdstan_path("/home/rmk7/cmdstan")
+#cmdstanr::set_cmdstan_path("/home/rmk7/cmdstan")
 
 require(dplyr)
 require(ggplot2)
@@ -828,7 +828,8 @@ rollcalls <- readRDS('data/rollcalls.rds')
 unemp1 <- rollcalls %>% 
   select(cast_code,rollnumber,
          bioname,party_code,date_month,unemp_rate) %>% 
-  mutate(cast_code=recode_factor(cast_code,Abstention=NA_character_)) %>% 
+  mutate(cast_code=recode_factor(cast_code,Abstention=NA_character_),
+         cast_code=as.numeric(cast_code)-1) %>% 
   filter(bioname %in% c("BARTON, Joe Linus",
                         "DeFAZIO, Peter Anthony",
                         "LEVIN, Sander Martin",
@@ -879,11 +880,12 @@ rollcalls <- readRDS('data/rollcalls.rds')
 unemp2 <- rollcalls %>% 
   select(cast_code,rollnumber,
          bioname,party_code,date,unemp_rate) %>% 
+  mutate(cast_code=recode_factor(cast_code,Abstention=NA_character_),
+         cast_code=as.numeric(cast_code)-1) %>% 
   distinct %>% 
   filter(date>lubridate::ymd("2008-06-01")) %>% 
-                 id_make(outcome="cast_code",
+                 id_make(outcome_disc="cast_code",
                          item_id="rollnumber",
-                         miss_val="Abstention",
                   person_id="bioname",
                   group_id="party_code",
                   time_id = "date",
@@ -896,17 +898,17 @@ unemp2_fit <- id_estimate(unemp2,model_type=2,vary_ideal_pts = 'GP',
                           ncores=2,nchain=1,save_files="/scratch/rmk7",
                           fixtype="prefix",
                           restrict_ind_high = "R",
-                          restict_ind_low="D",
+                          restrict_ind_low="D",
                          restrict_sd_low = 3,
                           fix_low=0,
                           use_groups = T,
                          cmdstan_path_user="/home/rmk7/cmdstan",
-                          within_chain="threads",
-                          output_samples=100,
-                          pars=c("steps_votes_grm",
-                                 "steps_votes",
-                                 "B_int_free",
-                                 "A_int_free"),
+                         within_chain="threads",
+                         #  output_samples=100,
+                         #  pars=c("steps_votes_grm",
+                         #         "steps_votes",
+                         #         "B_int_free",
+                         #         "A_int_free"),
                           id_refresh=100)
 
 saveRDS(unemp2_fit,'data/unemp2_fit.rds')
@@ -925,6 +927,8 @@ rollcalls <- readRDS('data/rollcalls.rds') %>%
   select(cast_code,rollnumber,year,
          bioname,party_code,date,unemp_rate,
          district_code,state_abbrev) %>% 
+  mutate(cast_code=recode_factor(cast_code,Abstention=NA_character_),
+         cast_code=as.numeric(cast_code)-1) %>% 
   distinct %>% 
   mutate(decade=case_when(year<2000~1L,
                           year<2010~2L,
@@ -941,9 +945,8 @@ rollcalls <- left_join(rollcalls,select(x,dist,decade,x,z,state),
 
 rollcalls <- filter(rollcalls,!is.na(x))
 
-china_data <- id_make(rollcalls,outcome="cast_code",
+china_data <- id_make(rollcalls,outcome_disc="cast_code",
                          item_id="rollnumber",
-                         miss_val="Abstention",
                   person_id="bioname",
                   group_id="party_code",
                   time_id = "date",
@@ -953,20 +956,21 @@ rm(rollcalls)
 china_fit <- id_estimate(china_data,vary_ideal_pts = 'AR1',
                           niters=300,
                           warmup=300,gpu=F,
-                          ncores=2,nchains=1,
+                          ncores=parallel::detectCores(),nchains=1,
                           fixtype="prefix",save_files="/scratch/rmk7",
                           restrict_ind_high = "R",
-                         restict_ind_low="D",
+                         restrict_ind_low="D",
                          restrict_sd_low = 3,
                          cmdstan_path_user="/home/rmk7/cmdstan",
                           fix_low=0,
                           use_groups = T,
+                         map_over_id="items",
                           within_chain="threads",
-                          output_samples=100,
-                          pars=c("steps_votes_grm",
-                                 "steps_votes",
-                                 "B_int_free",
-                                 "A_int_free"),
+                          # output_samples=100,
+                          # pars=c("steps_votes_grm",
+                          #        "steps_votes",
+                          #        "B_int_free",
+                          #        "A_int_free"),
                           id_refresh=100)
 
 saveRDS(china_fit,'data/china_fit.rds')
