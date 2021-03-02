@@ -849,6 +849,7 @@ rm(rollcalls)
 unemp1_fit <- id_estimate(unemp1,model_type=2,vary_ideal_pts = 'AR1',niters=300,
                           warmup=300,
                           within_chain="threads",nchains=1,ncores=parallel::detectCores(),
+                          grainsize=floor(length(unique(unemp1@score_matrix$item_id))/parallel::detectCores()),
                           restrict_ind_high = "BARTON, Joe Linus",
                           restrict_ind_low="DeFAZIO, Peter Anthony",
                           restrict_sd_low = 3,
