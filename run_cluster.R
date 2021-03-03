@@ -1,5 +1,7 @@
 # Run models on cluster
 
+.libPaths("/home/rmk7/other_R_libs")
+
 require(idealstan)
 require(dplyr)
 require(tidyr)
@@ -10,7 +12,7 @@ this_mod <- Sys.getenv("MODTYPE")
 this_run <- Sys.getenv("THISRUN")
 
 rollcalls <- readRDS('data/rollcalls.rds') %>% 
-  select(cast_code,rollnumber,congress,
+  select(cast_code,rollnumber,congress,year,district_code,state_abbrev,date,
          bioname,party_code,date_month,unemp_rate) %>% 
   mutate(item=paste0(congress,"_",rollnumber),
          cast_code=recode_factor(cast_code,Abstention=NA_character_),
