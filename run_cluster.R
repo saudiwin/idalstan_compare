@@ -2,6 +2,8 @@
 
 .libPaths("/home/rmk7/other_R_libs")
 
+cmdstanr::set_cmdstan_path("/home/rmk7/cmdstan")
+
 require(idealstan)
 require(dplyr)
 require(tidyr)
