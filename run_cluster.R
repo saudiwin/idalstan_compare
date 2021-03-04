@@ -54,10 +54,6 @@ if(this_mod=="first_ar") {
             time_id = "date_month")
   #person_cov = ~unemp_rate*party_code)
   
-  # remove original data
-  
-  rm(rollcalls)
-  
   unemp1_fit <- id_estimate(unemp1,model_type=2,
                             vary_ideal_pts = 'AR1',
                             niters=300,
