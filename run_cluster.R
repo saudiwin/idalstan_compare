@@ -67,7 +67,7 @@ if(this_mod=="first_ar") {
                             within_chain="threads",
                             nchains=1,
                             ncores=parallel::detectCores(),
-                            grainsize=floor(length(unique(unemp1@score_matrix$person_id))/parallel::detectCores()),
+                            grainsize=1,
                             restrict_ind_high = "BARTON, Joe Linus",
                             restrict_ind_low="DeFAZIO, Peter Anthony",
                             restrict_sd_low = 3,
