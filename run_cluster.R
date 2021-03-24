@@ -1,6 +1,6 @@
 # Run models on cluster
 
-.libPaths("/home/rmk7/other_R_libs")
+.libPaths("/home/rmk7/other_R_libs3")
 
 cmdstanr::set_cmdstan_path("/home/rmk7/cmdstan")
 
@@ -9,9 +9,13 @@ require(dplyr)
 require(tidyr)
 
 
-this_mod <- Sys.getenv("MODTYPE")
+#this_mod <- Sys.getenv("MODTYPE")
 
-this_run <- Sys.getenv("THISRUN")
+#this_run <- Sys.getenv("THISRUN")
+
+this_mod <- "first_ar"
+
+this_run <- "1"
 
 rollcalls <- readRDS('data/rollcalls.rds') %>% 
   select(cast_code,rollnumber,congress,year,district_code,state_abbrev,date,
@@ -21,10 +25,10 @@ rollcalls <- readRDS('data/rollcalls.rds') %>%
          cast_code=as.numeric(cast_code)-1,
          bioname=factor(bioname),
          bioname=relevel(bioname,"DeFAZIO, Peter Anthony")) %>% 
-  # filter(bioname %in% c("BARTON, Joe Linus",
-  #                       "DeFAZIO, Peter Anthony",
-  #                       "LEVIN, Sander Martin",
-  #                       "ROGERS, Harold Dallas (Hal)")) %>%
+  filter(bioname %in% c("BARTON, Joe Linus",
+                        "DeFAZIO, Peter Anthony",
+                        "LEVIN, Sander Martin",
+                        "ROGERS, Harold Dallas (Hal)")) %>%
   distinct
 
 # drop legislators who vote on fewer than 25 unanimous bills
