@@ -1,21 +1,16 @@
 # Run models on cluster
 
-.libPaths("/home/rmk7/other_R_libs3")
-
-cmdstanr::set_cmdstan_path("/home/rmk7/cmdstan")
-
-require(idealstan)
 require(dplyr)
 require(tidyr)
 
 
-#this_mod <- Sys.getenv("MODTYPE")
+this_mod <- Sys.getenv("MODTYPE")
 
-#this_run <- Sys.getenv("THISRUN")
+this_run <- Sys.getenv("THISRUN")
 
-this_mod <- "first_ar"
+#this_mod <- "first_ar"
 
-this_run <- "1"
+#this_run <- "1"
 
 rollcalls <- readRDS('data/rollcalls.rds') %>% 
   select(cast_code,rollnumber,congress,year,district_code,state_abbrev,date,
@@ -49,6 +44,12 @@ rollcalls <- anti_join(rollcalls, filter(legis_count, n_votes_nonunam<25),by="bi
   anti_join(filter(num_days,n<10),by="bioname")
 
 if(this_mod=="first_ar") {
+  
+  .libPaths("/home/rmk7/other_R_libs3")
+  
+  cmdstanr::set_cmdstan_path("/home/rmk7/cmdstan")
+  
+  require(idealstan)
   
   # you had to have voted on at least 10 separate days
   
@@ -86,6 +87,12 @@ if(this_mod=="first_ar") {
   
 } else if(this_mod=='gp_groups') {
   
+  .libPaths("/home/rmk7/other_R_libs4")
+  
+  cmdstanr::set_cmdstan_path("/home/rmk7/cmdstan")
+  
+  require(idealstan)
+  
 
   unemp2 <- rollcalls %>% 
     filter(date>lubridate::ymd("2008-06-01")) %>% 
@@ -120,6 +127,12 @@ if(this_mod=="first_ar") {
   
   
 } else if(this_mod=="chinafit") {
+  
+  .libPaths("/home/rmk7/other_R_libs5")
+  
+  cmdstanr::set_cmdstan_path("/home/rmk7/cmdstan")
+  
+  require(idealstan)
   
   rollcalls <- rollcalls %>% 
     distinct %>% 
