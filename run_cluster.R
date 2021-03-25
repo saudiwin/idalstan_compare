@@ -20,10 +20,10 @@ rollcalls <- readRDS('data/rollcalls.rds') %>%
          cast_code=as.numeric(cast_code)-1,
          bioname=factor(bioname),
          bioname=relevel(bioname,"DeFAZIO, Peter Anthony")) %>% 
-  filter(bioname %in% c("BARTON, Joe Linus",
-                        "DeFAZIO, Peter Anthony",
-                        "LEVIN, Sander Martin",
-                        "ROGERS, Harold Dallas (Hal)")) %>%
+  # filter(bioname %in% c("BARTON, Joe Linus",
+  #                       "DeFAZIO, Peter Anthony",
+  #                       "LEVIN, Sander Martin",
+  #                       "ROGERS, Harold Dallas (Hal)")) %>%
   distinct
 
 # drop legislators who vote on fewer than 25 unanimous bills
@@ -58,8 +58,8 @@ if(this_mod=="first_ar") {
             item_id="item",
             person_id="bioname",
             group_id="party_code",
-            time_id = "date_month")
-  #person_cov = ~unemp_rate*party_code)
+            time_id = "date_month",
+            person_cov = ~unemp_rate*party_code)
   
   unemp1_fit <- id_estimate(unemp1,model_type=2,
                             vary_ideal_pts = 'AR1',
