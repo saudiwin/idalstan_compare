@@ -106,7 +106,7 @@ if(this_mod=="first_ar") {
 
   unemp2_fit <- id_estimate(unemp2,model_type=2,vary_ideal_pts = 'GP',
                             niters=300,
-                            warmup=300,gpu=T,
+                            warmup=300,gpu=F,
                             ncores=parallel::detectCores(),
                             nchains=1,save_files="/scratch/rmk7/idalstan_compare/",
                             fixtype="prefix",
