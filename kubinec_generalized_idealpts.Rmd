@@ -40,7 +40,7 @@ require(idealstan)
 require(forcats)
 
 # set to true to run all models (will take a long time)
-run_all <- T
+run_all <- F
 
 # set to true to create congressional datasets (will take a long time)
 create_data <- F
@@ -894,7 +894,7 @@ saveRDS(unemp1_fit,'data/unemp1_fit.rds')
 rm(unemp1_fit)
   
 } else {
-  unemp1_fit <- readRDS('data/unemp1_fit.rds')
+  unemp1_fit <- readRDS('data/unemp1_run1fit.rds')
 }
 
 ```
@@ -1033,7 +1033,7 @@ As a result we have two sets of marginal effects that represent the effect of th
 
 ```{r ardistconst, fig.cap="Over-time Ideal Points for Constrained Legislators by Month, 1990-2018"}
 
-unemp1_fit <- readRDS("data/unemp1_fit.rds")
+#unemp1_fit <- readRDS("data/unemp1_run1fit.rds")
 
 id_plot_legis_dyn(unemp1_fit,use_ci=F,plot_text = T,include=c("BARTON, Joe Linus",
                                                               "NEAL, Richard Edmund")) +

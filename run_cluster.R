@@ -158,7 +158,7 @@ if(this_mod=="first_ar") {
                         person_id="bioname",
                         group_id="party_code",
                         time_id = "date",
-                        remove_cov_int = F,
+                        remove_cov_int = T,
                         person_cov = ~unemp_rate*party_code*x)
 
   china_fit <- id_estimate(china_data,vary_ideal_pts = 'AR1',
@@ -168,7 +168,8 @@ if(this_mod=="first_ar") {
                            fixtype="prefix",save_files="/scratch/rmk7/idalstan_compare/",
                            restrict_ind_high = "BARTON, Joe Linus",
                            restrict_ind_low="DeFAZIO, Peter Anthony",
-                           restrict_sd_low = 3,
+                           restrict_sd_low = 3,keep_param=list(person_vary=T,
+                                                               extra=T),
                            fix_low=0,
                            cmdstan_path_user="/home/rmk7/cmdstan",
                            use_groups = F,
