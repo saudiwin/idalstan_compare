@@ -101,12 +101,12 @@ if(this_mod=="first_ar") {
             person_id="bioname",
             group_id="party_code",
             time_id = "date",
-            remove_cov_int = F,
+            remove_cov_int = T,
             person_cov = ~unemp_rate*party_code)
 
   unemp2_fit <- id_estimate(unemp2,model_type=2,vary_ideal_pts = 'GP',
                             niters=300,
-                            warmup=300,gpu=F,
+                            warmup=300,gpu=T,
                             ncores=parallel::detectCores(),
                             nchains=1,save_files="/scratch/rmk7/idalstan_compare/",
                             fixtype="prefix",
