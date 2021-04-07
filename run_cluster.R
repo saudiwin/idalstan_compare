@@ -58,8 +58,8 @@ if(this_mod=="first_ar") {
             item_id="item",
             person_id="bioname",
             group_id="party_code",
-            time_id = "date_month",
-            person_cov = ~unemp_rate*party_code)
+            time_id = "date_month")
+            #person_cov = ~unemp_rate*party_code)
   
   unemp1_fit <- id_estimate(unemp1,model_type=2,
                             vary_ideal_pts = 'AR1',
@@ -110,7 +110,8 @@ if(this_mod=="first_ar") {
                             ncores=parallel::detectCores(),
                             nchains=1,save_files="/scratch/rmk7/idalstan_compare/",
                             fixtype="prefix",
-                            use_groups = F,
+                            use_groups = F,keep_param=list(person_vary=T,
+                                                           extra=T),
                             cmdstan_path_user="/home/rmk7/cmdstan",
                             within_chain="threads",
                             restrict_ind_high = "BARTON, Joe Linus",
