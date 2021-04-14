@@ -62,7 +62,7 @@ if(this_mod=="first_ar") {
             #person_cov = ~unemp_rate*party_code)
   
   unemp1_fit <- id_estimate(unemp1,model_type=2,
-                            vary_ideal_pts = 'AR1',
+                            vary_ideal_pts = 'random_walk',
                             niters=300,
                             warmup=300,
                             within_chain="threads",
@@ -71,8 +71,8 @@ if(this_mod=="first_ar") {
                             grainsize=1,
                             restrict_ind_high = "BARTON, Joe Linus",
                             restrict_ind_low="DeFAZIO, Peter Anthony",
-                            restrict_sd_low = 3,
-                            fix_low=0,
+                            restrict_sd_low = .001,
+                            fix_low=-1,
                             fixtype="prefix",save_files="/scratch/rmk7/idalstan_compare/",
                             cmdstan_path_user="/home/rmk7/cmdstan",
                             # pars=c("steps_votes_grm",
