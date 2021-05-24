@@ -163,7 +163,7 @@ if(this_mod=="first_ar") {
   china_fit <- id_estimate(china_data,vary_ideal_pts = 'AR1',
                            niters=300,
                            warmup=300,gpu=F,
-                           ncores=8,nchains=4,
+                           ncores=parallel::detectCores(),nchains=1,
                            fixtype="prefix",save_files="/scratch/rmk7/idalstan_compare/",
                            restrict_ind_high = "BARTON, Joe Linus",
                            restrict_ind_low="DeFAZIO, Peter Anthony",
