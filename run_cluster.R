@@ -67,9 +67,9 @@ miss_year <- group_by(rollcalls, bioname, date_month) %>%
 
 if(this_mod=="first_ar") {
   
-  #.libPaths("/home/rmk7/other_R_libs3")
+  .libPaths("/home/rmk7/other_R_libs3")
   
-  #cmdstanr::set_cmdstan_path("/home/rmk7/cmdstan")
+  cmdstanr::set_cmdstan_path("/home/rmk7/cmdstan")
   
   require(idealstan)
   
