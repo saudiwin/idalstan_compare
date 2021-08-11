@@ -2,15 +2,16 @@
 
 require(dplyr)
 require(tidyr)
+require(idealstan)
 
 
-this_mod <- Sys.getenv("MODTYPE")
+#this_mod <- Sys.getenv("MODTYPE")
 
-this_run <- Sys.getenv("THISRUN")
+#this_run <- Sys.getenv("THISRUN")
 
-#this_mod <- "first_ar"
+this_mod <- "first_ar"
 
-#this_run <- "1"
+this_run <- "1"
 
 rollcalls <- readRDS('data/rollcalls.rds') %>% 
   select(cast_code,rollnumber,congress,year,district_code,state_abbrev,date,
@@ -22,8 +23,8 @@ rollcalls <- readRDS('data/rollcalls.rds') %>%
          bioname=relevel(bioname,"DeFAZIO, Peter Anthony")) %>% 
   # filter(bioname %in% c("BARTON, Joe Linus",
   #                       "DeFAZIO, Peter Anthony",
-  #                       "LEVIN, Sander Martin",
-  #                       "ROGERS, Harold Dallas (Hal)")) %>%
+  #                       "COBURN, Thomas Allen","COHEN, Stephen")) %>%
+  mutate(bioname=factor(bioname)) %>% 
   distinct
 
 # drop legislators who vote on fewer than 25 unanimous bills
@@ -43,11 +44,32 @@ num_days <- distinct(rollcalls,bioname,date_month) %>%
 rollcalls <- anti_join(rollcalls, filter(legis_count, n_votes_nonunam<25),by="bioname") %>% 
   anti_join(filter(num_days,n<10),by="bioname")
 
+# we probably want to drop unanimous votes
+
+unam_votes <- group_by(rollcalls, item,cast_code) %>% 
+  #summarize(unan=all(cast_code[!is.na(cast_code)]==1) || all(cast_code[!is.na(cast_code)]==0))
+  count %>% 
+  spread(key="cast_code",value = 'n') %>% 
+  mutate(perc_miss=`<NA>`/(`<NA>` + `0` + `1`))
+
+# check % miss by year
+
+miss_year <- group_by(rollcalls, bioname, date_month) %>% 
+  summarize(perc_miss=sum(is.na(cast_code))/n()) %>% 
+  ungroup %>% 
+  complete(bioname,date_month) %>% 
+  group_by(bioname) %>% 
+  arrange(bioname,date_month) %>% 
+  mutate(perc_miss=case_when(is.na(perc_miss)~0,
+                             perc_miss==1~0,
+                             TRUE~1))
+
+
 if(this_mod=="first_ar") {
   
-  .libPaths("/home/rmk7/other_R_libs3")
+  #.libPaths("/home/rmk7/other_R_libs3")
   
-  cmdstanr::set_cmdstan_path("/home/rmk7/cmdstan")
+  #cmdstanr::set_cmdstan_path("/home/rmk7/cmdstan")
   
   require(idealstan)
   
@@ -64,16 +86,20 @@ if(this_mod=="first_ar") {
   unemp1_fit <- id_estimate(unemp1,model_type=2,
                             vary_ideal_pts = 'random_walk',
                             niters=300,
-                            warmup=300,
+                            warmup=300,ignore_db = select(miss_year,
+                                                          person_id="bioname",
+                                                          time_id="date_month",
+                                                          ignore="perc_miss"),
                             nchains=1,
-                            ncores=parallel::detectCores(),
+                            ncores=1,
                             grainsize=1,
                             restrict_ind_high = "BARTON, Joe Linus",
                             restrict_ind_low="DeFAZIO, Peter Anthony",
                             restrict_sd_low = .001,
                             fix_low=-1,
-                            fixtype="prefix",save_files="/scratch/rmk7/idalstan_compare/",
-                            cmdstan_path_user="/home/rmk7/cmdstan",
+                            fixtype="prefix",
+                            #save_files="/scratch/rmk7/idalstan_compare/",
+                            #cmdstan_path_user="/home/rmk7/cmdstan",
                             # pars=c("steps_votes_grm",
                             #        "steps_votes",
                             #        "B_int_free",
@@ -164,6 +190,10 @@ if(this_mod=="first_ar") {
                            niters=300,
                            warmup=300,gpu=F,
                            ncores=parallel::detectCores(),nchains=1,
+                           ignore_db = select(miss_year,
+                                              person_id="bioname",
+                                              time_id="date_month",
+                                              ignore="perc_miss"),
                            fixtype="prefix",save_files="/scratch/rmk7/idalstan_compare/",
                            restrict_ind_high = "BARTON, Joe Linus",
                            restrict_ind_low="DeFAZIO, Peter Anthony",
