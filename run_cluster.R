@@ -89,9 +89,9 @@ miss_year <- group_by(rollcalls, bioname, date_month) %>%
 
 if(this_mod=="first_ar") {
   
-  #.libPaths("/home/rmk7/other_R_libs3")
+  .libPaths("/home/rmk7/other_R_libs3")
   
-  #cmdstanr::set_cmdstan_path("/home/rmk7/cmdstan")
+  cmdstanr::set_cmdstan_path("/home/rmk7/cmdstan")
   
   # you had to have voted on at least 10 separate days
   
@@ -138,6 +138,10 @@ if(this_mod=="first_ar") {
   
 } else if(this_mod=='gp_groups') {
   
+  .libPaths("/home/rmk7/other_R_libs3")
+  
+  cmdstanr::set_cmdstan_path("/home/rmk7/cmdstan")
+  
   require(idealstan)
   
 
@@ -175,6 +179,10 @@ if(this_mod=="first_ar") {
   
   
 } else if(this_mod=="chinafit") {
+  
+  .libPaths("/home/rmk7/other_R_libs3")
+  
+  cmdstanr::set_cmdstan_path("/home/rmk7/cmdstan")
   
   rollcalls <- rollcalls %>% 
     distinct %>% 
