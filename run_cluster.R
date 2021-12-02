@@ -5,13 +5,15 @@ require(tidyr)
 require(idealstan)
 
 
-#this_mod <- Sys.getenv("MODTYPE")
+this_mod <- Sys.getenv("MODTYPE")
 
-#this_run <- Sys.getenv("THISRUN")
+this_run <- Sys.getenv("THISRUN")
 
-this_mod <- "first_ar"
+set_cmdstan_path("~/cmdstan")
 
-this_run <- "1"
+#this_mod <- "first_ar"
+
+#this_run <- "1"
 
 rollcalls <- readRDS('data/rollcalls.rds') %>% 
   select(cast_code,rollnumber,congress,year,district_code,state_abbrev,date,
@@ -52,6 +54,14 @@ unam_votes <- group_by(rollcalls, item,cast_code) %>%
   spread(key="cast_code",value = 'n') %>% 
   mutate(perc_miss=`<NA>`/(`<NA>` + `0` + `1`))
 
+# polarizing bills
+
+polar_bills <- count(rollcalls, item, cast_code) %>% 
+  filter(!is.na(cast_code)) %>% 
+  group_by(item) %>% 
+  summarize(vote_split=abs((n[1] - n[2])/sum(n))) %>% 
+  filter(vote_split==0)
+
 # check % miss by year
 
 miss_year <- group_by(rollcalls, bioname, date_month) %>% 
@@ -71,8 +81,6 @@ if(this_mod=="first_ar") {
   
   cmdstanr::set_cmdstan_path("/home/rmk7/cmdstan")
   
-  require(idealstan)
-  
   # you had to have voted on at least 10 separate days
   
   unemp1 <- rollcalls %>% 
@@ -80,8 +88,8 @@ if(this_mod=="first_ar") {
             item_id="item",
             person_id="bioname",
             group_id="party_code",
-            time_id = "date_month")
-            #person_cov = ~unemp_rate*party_code)
+            time_id = "date_month",
+            person_cov = ~unemp_rate*party_code)
   
   unemp1_fit <- id_estimate(unemp1,model_type=2,
                             vary_ideal_pts = 'random_walk',
@@ -90,16 +98,20 @@ if(this_mod=="first_ar") {
                                                           person_id="bioname",
                                                           time_id="date_month",
                                                           ignore="perc_miss"),
-                            nchains=1,
-                            ncores=1,
+                            nchains=4,
+                            ncores=parallel::detectCores(),
                             grainsize=1,
-                            restrict_ind_high = "BARTON, Joe Linus",
-                            restrict_ind_low="DeFAZIO, Peter Anthony",
-                            restrict_sd_low = .001,
+                            restrict_ind_high = "103_725",
+                            restrict_ind_low="113_290",
+                            #restrict_ind_high = "BARTON, Joe Linus",
+                            #restrict_ind_low="DeFAZIO, Peter Anthony",
+                            restrict_sd_low = .01,
+                            restrict_sd_high = .01,
+                            restrict_var=T,
                             fix_low=-1,
-                            fixtype="prefix",
-                            save_files="/scratch/rmk7/idalstan_compare/",
-                            #cmdstan_path_user="/home/rmk7/cmdstan",
+                            fixtype="prefix",const_type="items",
+                            save_files="/scratch/rmk",
+                            cmdstan_path_user="/home/rmk7/cmdstan",
                             # pars=c("steps_votes_grm",
                             #        "steps_votes",
                             #        "B_int_free",
@@ -107,14 +119,12 @@ if(this_mod=="first_ar") {
                             #include=F,
                             id_refresh=100)
   
+  #saveRDS(unemp1_fit,paste0('/home/rmk7/idalstan_compare/data/unemp1_',"run",this_run,'fit.rds'))
+  
   saveRDS(unemp1_fit,paste0('/scratch/rmk7/idalstan_compare/unemp1_',"run",this_run,'fit.rds'))
   
   
 } else if(this_mod=='gp_groups') {
-  
-  .libPaths("/home/rmk7/other_R_libs4")
-  
-  cmdstanr::set_cmdstan_path("/home/rmk7/cmdstan")
   
   require(idealstan)
   
@@ -149,16 +159,10 @@ if(this_mod=="first_ar") {
                             #         "A_int_free"),
                             id_refresh=100)
   
-  saveRDS(unemp2_fit,'/scratch/rmk7/idalstan_compare/unemp2_fit.rds')
+  saveRDS(unemp2_fit,'/home/rmk7/idalstan_compare/data/unemp2_fit.rds')
   
   
 } else if(this_mod=="chinafit") {
-  
-  .libPaths("/home/rmk7/other_R_libs5")
-  
-  cmdstanr::set_cmdstan_path("/home/rmk7/cmdstan")
-  
-  require(idealstan)
   
   rollcalls <- rollcalls %>% 
     distinct %>% 
@@ -209,7 +213,7 @@ if(this_mod=="first_ar") {
                            #        "A_int_free"),
                            id_refresh=100)
   
-  saveRDS(china_fit,'/scratch/rmk7/idalstan_compare/china_fit.rds')
+  saveRDS(china_fit,'/home/rmk7/idalstan_compare/data/china_fit.rds')
   
 }
 
