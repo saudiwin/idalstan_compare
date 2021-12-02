@@ -1,5 +1,9 @@
 # Run models on cluster
 
+.libPaths("/home/rmk7/other_R_libs3")
+
+cmdstanr::set_cmdstan_path("/home/rmk7/cmdstan")
+
 require(dplyr)
 require(tidyr)
 require(idealstan)
