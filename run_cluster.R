@@ -3,6 +3,7 @@
 require(dplyr)
 require(tidyr)
 require(idealstan)
+require(lubridate)
 
 
 this_mod <- Sys.getenv("MODTYPE")
@@ -23,15 +24,26 @@ rollcalls <- readRDS('data/rollcalls.rds') %>%
          cast_code=as.numeric(cast_code)-1,
          bioname=factor(bioname),
          bioname=relevel(bioname,"DeFAZIO, Peter Anthony")) %>% 
-  # filter(bioname %in% c("BARTON, Joe Linus",
-  #                       "DeFAZIO, Peter Anthony",
-  #                       "COBURN, Thomas Allen","COHEN, Stephen")) %>%
+  filter(bioname %in% c("MCCARTHY, Kevin",
+                        "SCALISE, Steve",
+                        "McHENRY, Patrick T.","PELOSI, Nancy",
+                        "CLYBURN, James Enos",
+                        "NUNES, Devin","ELLISON, Keith"),
+         date_month>ymd("2015-01-01"),
+         date_month<ymd("2018-01-01")) %>%
   mutate(bioname=factor(bioname)) %>% 
   distinct
 
 # drop legislators who vote on fewer than 25 unanimous bills
+# drop bills where >95% of the votes are the  same
 
-check_bills <- group_by(rollcalls,item,cast_code) %>% count
+check_bills <- group_by(rollcalls,item,cast_code) %>% count %>% 
+  group_by(item) %>% 
+  mutate(n_prop=n/(sum(n))) %>% 
+  summarize(high_perc=max(n_prop,na.rm=T)) %>% 
+  filter(high_perc>0.95)
+
+rollcalls <- anti_join(rollcalls, check_bills)
 
 legis_count <- group_by(rollcalls, item) %>% 
   mutate(unan=all(cast_code[!is.na(cast_code)]==1) || all(cast_code[!is.na(cast_code)]==0)) %>% 
@@ -77,9 +89,9 @@ miss_year <- group_by(rollcalls, bioname, date_month) %>%
 
 if(this_mod=="first_ar") {
   
-  .libPaths("/home/rmk7/other_R_libs3")
+  #.libPaths("/home/rmk7/other_R_libs3")
   
-  cmdstanr::set_cmdstan_path("/home/rmk7/cmdstan")
+  #cmdstanr::set_cmdstan_path("/home/rmk7/cmdstan")
   
   # you had to have voted on at least 10 separate days
   
@@ -98,7 +110,7 @@ if(this_mod=="first_ar") {
                                                           person_id="bioname",
                                                           time_id="date_month",
                                                           ignore="perc_miss"),
-                            nchains=4,
+                            nchains=1,
                             ncores=parallel::detectCores(),
                             grainsize=1,
                             restrict_ind_high = "103_725",
@@ -119,9 +131,13 @@ if(this_mod=="first_ar") {
                             #include=F,
                             id_refresh=100)
   
+<<<<<<< HEAD
   #saveRDS(unemp1_fit,paste0('/home/rmk7/idalstan_compare/data/unemp1_',"run",this_run,'fit.rds'))
   
   saveRDS(unemp1_fit,paste0('/scratch/rmk7/idalstan_compare/unemp1_',"run",this_run,'fit.rds'))
+=======
+  #saveRDS(unemp1_fit,paste0('/scratch/rmk7/idalstan_compare/unemp1_',"run",this_run,'fit.rds'))
+>>>>>>> 95626b18a0adb7f31767973ab7f5fe88201f30d8
   
   
 } else if(this_mod=='gp_groups') {
