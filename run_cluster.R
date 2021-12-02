@@ -10,7 +10,7 @@ this_mod <- Sys.getenv("MODTYPE")
 
 this_run <- Sys.getenv("THISRUN")
 
-set_cmdstan_path("~/cmdstan")
+#set_cmdstan_path("~/cmdstan")
 
 #this_mod <- "first_ar"
 
