@@ -131,13 +131,9 @@ if(this_mod=="first_ar") {
                             #include=F,
                             id_refresh=100)
   
-<<<<<<< HEAD
-  #saveRDS(unemp1_fit,paste0('/home/rmk7/idalstan_compare/data/unemp1_',"run",this_run,'fit.rds'))
-  
+
   saveRDS(unemp1_fit,paste0('/scratch/rmk7/idalstan_compare/unemp1_',"run",this_run,'fit.rds'))
-=======
-  #saveRDS(unemp1_fit,paste0('/scratch/rmk7/idalstan_compare/unemp1_',"run",this_run,'fit.rds'))
->>>>>>> 95626b18a0adb7f31767973ab7f5fe88201f30d8
+
   
   
 } else if(this_mod=='gp_groups') {
