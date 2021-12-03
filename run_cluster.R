@@ -28,13 +28,6 @@ rollcalls <- readRDS('data/rollcalls.rds') %>%
          cast_code=as.numeric(cast_code)-1,
          bioname=factor(bioname),
          bioname=relevel(bioname,"DeFAZIO, Peter Anthony")) %>% 
-  filter(bioname %in% c("MCCARTHY, Kevin",
-                        "SCALISE, Steve",
-                        "McHENRY, Patrick T.","PELOSI, Nancy",
-                        "CLYBURN, James Enos",
-                        "NUNES, Devin","ELLISON, Keith"),
-         date_month>ymd("2015-01-01"),
-         date_month<ymd("2018-01-01")) %>%
   mutate(bioname=factor(bioname)) %>% 
   distinct
 
@@ -107,8 +100,12 @@ if(this_mod=="first_ar") {
             time_id = "date_month",
             person_cov = ~unemp_rate*party_code)
   
+  unemp1@person_cov <- c(unemp1@person_cov[1],unemp1@person_cov[4:5])
+  unemp1@score_matrix <- select(unemp1@score_matrix,item_id:unemp_rate,
+                                        `unemp_rate:party_codeR`:discrete)
+  
   unemp1_fit <- id_estimate(unemp1,model_type=2,
-                            vary_ideal_pts = 'random_walk',
+                            vary_ideal_pts = 'AR1',
                             niters=300,
                             warmup=300,ignore_db = select(miss_year,
                                                           person_id="bioname",
@@ -171,7 +168,7 @@ if(this_mod=="first_ar") {
                             restrict_ind_high = "BARTON, Joe Linus",
                             restrict_ind_low="DeFAZIO, Peter Anthony",
                             restrict_sd_low = 3,
-                            fix_low=0,
+                            fix_low=0,const_type="items",
                             #  output_samples=100,
                             #  pars=c("steps_votes_grm",
                             #         "steps_votes",
