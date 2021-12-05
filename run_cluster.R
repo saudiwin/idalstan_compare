@@ -123,7 +123,7 @@ if(this_mod=="first_ar") {
                             restrict_var=T,
                             fix_low=-1,
                             fixtype="prefix",const_type="items",
-                            save_files="/scratch/rmk",
+                            save_files="/scratch/rmk7",
                             cmdstan_path_user="/home/rmk7/cmdstan",
                             # pars=c("steps_votes_grm",
                             #        "steps_votes",
