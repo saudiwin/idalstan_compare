@@ -120,7 +120,7 @@ if(this_mod=="first_ar") {
                             #restrict_ind_low="DeFAZIO, Peter Anthony",
                             restrict_sd_low = .01,
                             restrict_sd_high = .01,
-                            time_var=1000,
+                            time_var=5000,
                             #max_treedepth=12,
                             #adapt_delta=0.95,
                             #fix_low=0,
