@@ -1035,6 +1035,14 @@ As a result we have two sets of marginal effects that represent the effect of th
 
 #unemp1_fit <- readRDS("data/unemp1_run1fit.rds")
 
+# need to calculate ideal points manually b/c of hierarchical covariates
+library(posterior)
+
+time_points <- unemp1_fit@time_varying
+legis_cov <- unemp1_fit@stan_samples$draws("legis_x") %>% as_draws_matrix()
+
+
+
 id_plot_legis_dyn(unemp1_fit,use_ci=F,plot_text = T,include=c("BARTON, Joe Linus",
                                                               "NEAL, Richard Edmund")) +
   scale_color_manual(values=c(R="red",

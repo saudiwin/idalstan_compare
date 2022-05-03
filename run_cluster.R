@@ -121,7 +121,7 @@ if(this_mod=="first_ar") {
                             restrict_sd_low = .01,
                             restrict_sd_high = .01,
                             time_var=5000,
-                            #max_treedepth=12,
+                            max_treedepth=12,
                             #adapt_delta=0.95,
                             #fix_low=0,
                             fixtype="prefix",restrict_var = F,
