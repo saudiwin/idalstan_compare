@@ -48,6 +48,8 @@ test <- F
 
 # set to true to create congressional datasets (will take a long time)
 create_data <- F
+
+cluster <- FALSE
 ```
 
 
@@ -825,7 +827,7 @@ rm(county_series,over_states)
 
 ```
 
-```{r runcong1,eval=T}
+```{r runcong1}
 if(run_all) {
 rollcalls <- readRDS('data/rollcalls.rds')
 
@@ -886,8 +888,6 @@ unemp1 <- anti_join(unemp1, filter(legis_count, n_votes_nonunam<25),by="bioname"
 
 rm(rollcalls)
 
-gc()
-
 unemp1_fit <- id_estimate(unemp1,model_type=2,
                           vary_ideal_pts = 'splines',
                           niters=300,
@@ -908,12 +908,79 @@ unemp1_fit <- id_estimate(unemp1,model_type=2,
                           #include=F,
                           id_refresh=100)
 
-saveRDS(unemp1_fit,'data/unemp1_fit.rds')
+unemp2_fit <- id_estimate(unemp1,model_type=2,
+                          vary_ideal_pts = 'splines',
+                          niters=300,
+                          warmup=300,
+                          spline_knots=5,
+                          spline_degree = 3,
+                          nchains=2,
+                          ncores=parallel::detectCores(),
+                          const_type = "items",
+                          restrict_ind_high = "105_919",
+                          restrict_ind_low="115_1050",
+                          fixtype="prefix",
+                          adapt_delta=0.95,
+                          # pars=c("steps_votes_grm",
+                          #        "steps_votes",
+                          #        "B_int_free",
+                          #        "A_int_free"),
+                          #include=F,
+                          id_refresh=100)
 
-rm(unemp1_fit)
+unemp3_fit <- id_estimate(unemp1,model_type=2,
+                          vary_ideal_pts = 'splines',
+                          niters=300,
+                          warmup=300,
+                          spline_knots=5,
+                          spline_degree = 4,
+                          nchains=2,
+                          ncores=parallel::detectCores(),
+                          const_type = "items",
+                          restrict_ind_high = "105_919",
+                          restrict_ind_low="115_1050",
+                          fixtype="prefix",
+                          adapt_delta=0.95,
+                          # pars=c("steps_votes_grm",
+                          #        "steps_votes",
+                          #        "B_int_free",
+                          #        "A_int_free"),
+                          #include=F,
+                          id_refresh=100)
+
+# save in non-local folder if in cluster
+
+if(cluster) {
+  
+  saveRDS(unemp1_fit,'/scratch/rmk7/unemp1_fit.rds')
+  saveRDS(unemp2_fit,'/scratch/rmk7/unemp2_fit.rds')
+  saveRDS(unemp3_fit,'/scratch/rmk7/unemp3_fit.rds')
   
 } else {
-  unemp1_fit <- readRDS('data/unemp1_run1fit.rds')
+  
+  saveRDS(unemp1_fit,'data/unemp1_fit.rds')
+  saveRDS(unemp2_fit,'data/rmk7/unemp2_fit.rds')
+  saveRDS(unemp3_fit,'data/rmk7/unemp3_fit.rds')
+  
+}
+  
+} else {
+  
+  if(cluster) {
+    
+    unemp1_fit <- readRDS('data/unemp1_run1fit.rds')
+    unemp2_fit <- readRDS('data/unemp2_run1fit.rds')
+    unemp3_fit <- readRDS('data/unemp3_run1fit.rds')
+    
+  } else {
+    
+    unemp1_fit <- readRDS('/scratch/rmk7/unemp1_run1fit.rds')
+    unemp2_fit <- readRDS('/scratch/rmk7/unemp2_run1fit.rds')
+    unemp3_fit <- readRDS('/scratch/rmk7/unemp3_run1fit.rds')
+    
+  }
+  
+
 }
 
 ```
@@ -999,30 +1066,76 @@ china_data <- id_make(rollcalls,outcome_disc="cast_code",
                   remove_cov_int = T,
                   person_cov = ~unemp_rate*party_code*x)
 rm(rollcalls)
-china_fit <- id_estimate(china_data,vary_ideal_pts = 'AR1',
+china_fit1 <- id_estimate(china_data,model_type=2,
+                          vary_ideal_pts = 'splines',
                           niters=300,
-                          warmup=300,gpu=F,
-                          ncores=parallel::detectCores(),nchains=1,
-                          fixtype="prefix",save_files="/scratch/rmk7",
-                          restrict_ind_high = "R",
-                         restrict_ind_low="D",
-                         restrict_sd_low = 3,
-                         cmdstan_path_user="/home/rmk7/cmdstan",
-                          fix_low=0,
-                          use_groups = T,
-                         map_over_id="items",
-                          within_chain="threads",
-                          # output_samples=100,
+                          warmup=300,
+                          spline_knots=5,
+                          spline_degree = 2,
+                          nchains=2,
+                          ncores=parallel::detectCores(),
+                          const_type = "items",
+                          restrict_ind_high = "105_919",
+                          restrict_ind_low="115_1050",
+                          fixtype="prefix",
+                          adapt_delta=0.95,
                           # pars=c("steps_votes_grm",
                           #        "steps_votes",
                           #        "B_int_free",
                           #        "A_int_free"),
+                          #include=F,
                           id_refresh=100)
 
-saveRDS(china_fit,'data/china_fit.rds')
+saveRDS(china_fit1,'data/china_fit1.rds')
+
+china_fit2 <- id_estimate(china_data,model_type=2,
+                          vary_ideal_pts = 'splines',
+                          niters=300,
+                          warmup=300,
+                          spline_knots=5,
+                          spline_degree = 3,
+                          nchains=2,
+                          ncores=parallel::detectCores(),
+                          const_type = "items",
+                          restrict_ind_high = "105_919",
+                          restrict_ind_low="115_1050",
+                          fixtype="prefix",
+                          adapt_delta=0.95,
+                          # pars=c("steps_votes_grm",
+                          #        "steps_votes",
+                          #        "B_int_free",
+                          #        "A_int_free"),
+                          #include=F,
+                          id_refresh=100)
+
+saveRDS(china_fit2,'data/china_fit2.rds')
+
+china_fit3 <- id_estimate(china_data,model_type=2,
+                          vary_ideal_pts = 'splines',
+                          niters=300,
+                          warmup=300,
+                          spline_knots=5,
+                          spline_degree = 4,
+                          nchains=2,
+                          ncores=parallel::detectCores(),
+                          const_type = "items",
+                          restrict_ind_high = "105_919",
+                          restrict_ind_low="115_1050",
+                          fixtype="prefix",
+                          adapt_delta=0.95,
+                          # pars=c("steps_votes_grm",
+                          #        "steps_votes",
+                          #        "B_int_free",
+                          #        "A_int_free"),
+                          #include=F,
+                          id_refresh=100)
+
+saveRDS(china_fit3,'data/china_fit3.rds')
   
 } else {
-  china_fit <- readRDS('data/china_fit.rds')
+  china_fit1 <- readRDS('data/china_fit1.rds')
+  china_fit2 <- readRDS('data/china_fit2.rds')
+  china_fit3 <- readRDS('data/china_fit3.rds')
 }
 
 ```
@@ -1050,7 +1163,7 @@ In this equation, $\Theta(\cdot)$ represents an inverse link function that maps 
 
 As a result we have two sets of marginal effects that represent the effect of the covariate weighted by the model's estimate as to whether a given item, in this case a rollcall vote, belongs to either side of the dimension. For example, if we assume that the lower end of the spectrum is liberal, then the marginal effect of $\phi$ for negative discrimination parameters will be weighted by the total amount of "liberalness" in the data. If there are many highly discriminating liberal bills, then the covariate's marginal effects on liberal votes will be much higher than if there are only a few discriminating liberal bills. Another way of conceptualizing this effect is how much a covariate prompts a given person to take a position that is consistent with a given direction of the latent scale. 
 
-```{r ardistconst, fig.cap="Over-time Ideal Points for Constrained Legislators by Month, 1990-2018"}
+```{r ardistconst, fig.cap="Over-time Ideal Points for Constrained Legislators by Month, 1990-2018",eval=FALSE}
 
 #unemp1_fit <- readRDS("data/unemp1_run1fit.rds")
 
@@ -1086,7 +1199,7 @@ ggsave("overall_dist.png")
 
 ```
 
-```{r ardistallconst, fig.cap="Overlay of Constrained Legislators on Unconstrained Legislators, 1990-2018"}
+```{r ardistallconst, fig.cap="Overlay of Constrained Legislators on Unconstrained Legislators, 1990-2018",eval=FALSE}
 
 dem_ids <- select(unemp1_fit@score_data@score_matrix,person_id,group_id) %>% 
   distinct %>% filter(group_id %in% c("D","R"))
@@ -1141,7 +1254,7 @@ ggsave("overall_eff_gp1.png")
 
 ```
 
-```{r irf_calc,include=F}
+```{r irf_calc,include=F,eval=FALSE}
 # need to calculate these in a separate chunk as they produce too much output otherwise
 dem_ids <- select(unemp1_fit@score_data@score_matrix,person_id,group_id) %>% 
   distinct %>% filter(group_id=="D")
@@ -1178,7 +1291,7 @@ outplot_rep <- id_plot_irf(unemp1_fit,label_high = "Conservative",
 
 # load AR(1) fit and plot resulting data
 
-id_plot_cov(china_fit,label_high = "Conservative",
+id_plot_cov(china_fit1,label_high = "Conservative",
             label_low="Liberal",pred_outcome = "Yes",
             new_cov_names = c(`unemp_rate:party_codeR`="Republican X\nUnemployment",
                               `unemp_rate:party_codeI`="Independent X\nUnemployment",
@@ -1230,7 +1343,7 @@ We can then iterate over future time periods $t$ by forward-substituting $\alpha
 This recursive algorithm can be run for an infinite number of time periods as the effect will never decay truly to zero, although in general ten time periods is usually more than sufficient to capture the impulse-response function dynamics. I calculate these impulse-response dynamics for the unemployment-party ID interaction on latent score marginal effects for each legislator. Figures \@ref(fig:irfdem) and \@ref(fig:irfrep) show these impulse-response functions for Democrat and Republican legislators respectively. What is interesting to note is that oscillation rather than slow decay is the dominant time-series behavior for legislators in both parties. We also see that there are substantial levels of autocorrelation with effects persisting through the whole 10-month period over which the impulse response functions were calculated.
 
 
-```{r irfdem,fig.cap="Impulse Response Functions for Unemployment on Democrats' Ideal Points"}
+```{r irfdem,fig.cap="Impulse Response Functions for Unemployment on Democrats' Ideal Points",eval=FALSE}
 
 
 print(outplot_dem)
@@ -1238,7 +1351,7 @@ print(outplot_dem)
 ggsave("irf_dem.png")
 ```
 
-```{r irfrep,fig.cap="Impulse Response Functions for Unemployment on Republicans' Ideal Points"}
+```{r irfrep,fig.cap="Impulse Response Functions for Unemployment on Republicans' Ideal Points",eval=FALSE}
 
 print(outplot_rep)
 
@@ -1257,7 +1370,7 @@ Finally I turn to the results of the Chinese import exposure model. The ideal po
 
 # need to extract the values of the covariates
 
-legis_x <- rstan::extract(china_fit@stan_samples,"legis_x")[[1]]
+legis_x <- rstan::extract(china_fit1@stan_samples,"legis_x")[[1]]
 
 # let's separate out the different values of the covariates
 
