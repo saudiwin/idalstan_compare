@@ -1,7 +1,7 @@
 ---
 title: 'Generalized Ideal Point Models for Time-Varying and Missing-Data Inference'
 author: "Robert Kubinec \\ New York University Abu Dhabi"
-date: "July 11, 2019"
+date: "January 5th, 2024"
 output: 
   bookdown::pdf_document2:
     includes:
@@ -40,7 +40,11 @@ require(idealstan)
 require(forcats)
 
 # set to true to run all models (will take a long time)
-run_all <- F
+run_all <- T
+
+# whether to use a subset of items for identification
+
+test <- F
 
 # set to true to create congressional datasets (will take a long time)
 create_data <- F
@@ -833,15 +837,20 @@ unemp1 <- rollcalls %>%
          cast_code=as.numeric(cast_code)-1,
          bioname=factor(bioname),
          bioname=relevel(bioname,"DeFAZIO, Peter Anthony")) %>% 
-  filter(bioname %in% c("BARTON, Joe Linus",
-                        "DeFAZIO, Peter Anthony",
-                        "LEVIN, Sander Martin",
-                        "ROGERS, Harold Dallas (Hal)")) %>%
   distinct
 
 # drop legislators who vote on fewer than 25 unanimous bills
 
-check_bills <- group_by(unemp1,item,cast_code) %>% count
+check_bills <- group_by(unemp1,item,cast_code) %>% count %>% 
+  group_by(item) %>% 
+  summarize(prop=n[cast_code==1] / sum(n),
+            n_vote=sum(n)) %>% 
+  ungroup %>% 
+  mutate(prop=ifelse(prop==.5,
+                          sample(c(.49,.51),1),
+                     prop),
+    util_func=(1 / sqrt((.5 - prop)^2))*n_vote) %>% 
+  arrange(desc(util_func))
 
 legis_count <- group_by(unemp1, item) %>% 
   mutate(unan=all(cast_code[!is.na(cast_code)]==1) || all(cast_code[!is.na(cast_code)]==0)) %>% 
@@ -852,6 +861,15 @@ legis_count <- group_by(unemp1, item) %>%
 
 num_days <- distinct(unemp1,bioname,date_month) %>% 
   count(bioname)
+
+if(test) {
+  
+  # only use a subset of bills
+  
+  unemp1 <- filter(unemp1, (item %in% sample(unique(item),
+                                  3000)) | item %in% c("105_919","115_1050"))
+  
+}
 
 # you had to have voted on at least 10 separate days
 
@@ -868,20 +886,21 @@ unemp1 <- anti_join(unemp1, filter(legis_count, n_votes_nonunam<25),by="bioname"
 
 rm(rollcalls)
 
+gc()
+
 unemp1_fit <- id_estimate(unemp1,model_type=2,
-                          vary_ideal_pts = 'AR1',
+                          vary_ideal_pts = 'splines',
                           niters=300,
                           warmup=300,
-                          within_chain="threads",
-                          nchains=1,
+                          spline_knots=5,
+                          spline_degree = 2,
+                          nchains=2,
                           ncores=parallel::detectCores(),
-                          grainsize=floor(length(unique(unemp1@score_matrix$person_id))/parallel::detectCores()),
-                          restrict_ind_high = "BARTON, Joe Linus",
-                          restrict_ind_low="DeFAZIO, Peter Anthony",
-                          restrict_sd_low = 3,
-                          fix_low=0,
-                          fixtype="prefix",save_files="/scratch/rmk7",
-                          cmdstan_path_user="/home/rmk7/cmdstan",
+                          const_type = "items",
+                          restrict_ind_high = "105_919",
+                          restrict_ind_low="115_1050",
+                          fixtype="prefix",
+                          adapt_delta=0.95,
                           # pars=c("steps_votes_grm",
                           #        "steps_votes",
                           #        "B_int_free",
