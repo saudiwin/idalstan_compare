@@ -36,7 +36,7 @@ require(idealstan)
 require(forcats)
 
 # set to true to run all models (will take a long time)
-run_all <- F
+run_all <- T
 
 # whether to use a subset of items for identification
 
