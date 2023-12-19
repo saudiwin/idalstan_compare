@@ -20,8 +20,6 @@ require(missRanger)
 require(idealstan)
 require(forcats)
 
-# set to true to run all models (will take a long time)
-run_all <- T
 
 # whether to use a subset of items for identification
 
@@ -36,9 +34,7 @@ create_data <- F
 
 cluster <- TRUE
 
-spline_num <- 2
-
-fit_type <- "spline1"
+fit_type <- Sys.getenv("FITTYPE")
 
 
 ## ----load_cong,include=F------------------------------------------------------------------------
@@ -347,44 +343,6 @@ over_states <- readRDS('data/over_states.rds')
 
 
 
-## ----histun, fig.cap="Histogram of District-Level Unemployment"---------------------------------
-
-out_plot <- over_states %>% 
-  ggplot(aes(x=unemp_rate)) +
-  geom_histogram() +
-  theme(panel.grid=element_blank(),
-        panel.background = element_blank()) +
-  ylab("") +
-  xlab("Unemployment Rates") +
-  scale_x_continuous(labels=scales::percent)
-
-print(out_plot)
-
-
-
-## ----plotcount,fig.cap="Monthly Unemployment Rates by U.S. County, 1990-2018",fig.subcap="Source: Bureau of Labor Statistics",fig.width=6,fig.height=5----
-
-county_series <- readRDS('data/county_series.rds')
-
-county_series %>% 
-  mutate(unemp_rate=unemp/labor_force) %>% 
-  filter(state %in% c("AL","CA","NY","MI")) %>% 
-    distinct %>% 
-  ggplot(aes(y=unemp_rate,x=date_recode)) + 
-    geom_line(alpha=0.2,aes(group=fips_county)) +
-    theme(panel.grid=element_blank(),
-          panel.background = element_blank(),
-          strip.background = element_blank(),
-          axis.text=element_text(face="bold"),
-          strip.text = element_text(face="bold")) +
-    facet_wrap(~state,scales='free_y',ncol=2) +
-    xlab("") +
-    ylab("Unemployment Rates") +
-    scale_y_continuous(labels=scales::percent)
-  
-ggsave("month_unemp.png",width=5,height=4)
-
-
 ## ----preparecong--------------------------------------------------------------------------------
 
 # UNCOMMENT TO RUN FROM SCRATCH
@@ -485,15 +443,6 @@ ggsave("month_unemp.png",width=5,height=4)
 
 # rm(over_states,rollinfo,meminfo)
 
-# use a sample of rollcall data for now
-
-# rollcalls <- filter(rollcalls,bioname %in% c("BARTON, Joe Linus",
-#                                              "DUNCAN, John J., Jr.",
-#                                              "LEVIN, Sander Martin",
-#                                              "NEAL, Richard Edmund")) %>%
-#   mutate(party_code=factor(party_code,levels=c("D","R")))
-
-rm(county_series,over_states)
 
 
 # Load rollcall data ------------------------------------------------------
