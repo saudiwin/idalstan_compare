@@ -11,19 +11,19 @@ require(dplyr)
 require(ggplot2)
 require(tidyr)
 require(readr)
-require(blscrapeR)
+#require(blscrapeR)
 require(lubridate)
-require(tigris)
-require(sf)
-require(areal)
+#require(tigris)
+#require(sf)
+#require(areal)
 require(missRanger)
 require(idealstan)
 require(forcats)
 
 
-# whether to use a subset of items for identification
+# whether to use a subset of items for sampling to reduce time (for testing purposes only)
 
-test <- T
+test <- F
 
 # whether to use the prior predictive distribution for all models
 
@@ -34,7 +34,15 @@ create_data <- F
 
 cluster <- TRUE
 
-fit_type <- Sys.getenv("FITTYPE")
+fit_type <- as.numeric(Sys.getenv("FITTYPE"))
+
+fit_type <- switch(fit_type,"spline1","spline2","spline3","china",
+                   "GP","ar1","rw")
+
+
+
+niters <- 3
+nwarmup <- 3
 
 
 ## ----load_cong,include=F------------------------------------------------------------------------
@@ -479,6 +487,8 @@ spline_knots_year <- c(min(collapse_rollcall$year),
                            2016,
                           max(collapse_rollcall$year))
 
+print(paste0("Processing model: ",fit_type))
+
 
 ## ----runcong1-----------------------------------------------------------------------------------
 
@@ -549,8 +559,8 @@ if(test) {
   
   unemp1_fit <- id_estimate(unemp1,model_type=2,
                           vary_ideal_pts = 'splines',
-                          niters=300,
-                          warmup=300,
+                          niters=niters,
+                          warmup=nwarmup,
                           spline_knots=1,
                           spline_degree = 2,
                           nchains=2,
@@ -571,8 +581,8 @@ if(test) {
 
 unemp2_fit <- id_estimate(unemp1,model_type=2,
                           vary_ideal_pts = 'splines',
-                          niters=300,
-                          warmup=300,
+                          niters=niters,
+                          warmup=nwarmup,
                           spline_knots=5,
                           spline_degree = 3,
                           nchains=2,
@@ -591,8 +601,8 @@ unemp2_fit <- id_estimate(unemp1,model_type=2,
 
 unemp3_fit <- id_estimate(unemp1,model_type=2,
                           vary_ideal_pts = 'splines',
-                          niters=300,
-                          warmup=300,
+                          niters=niters,
+                          warmup=nwarmup,
                           spline_knots=5,
                           spline_degree = 4,
                           nchains=2,
@@ -611,12 +621,12 @@ unemp3_fit <- id_estimate(unemp1,model_type=2,
   
 } else {
   
-  if(type=="spline1") {
+  if(fit_type=="spline1") {
     
     unemp1_fit <- id_estimate(unemp1,model_type=2,
                               vary_ideal_pts = 'splines',
-                              niters=300,
-                              warmup=300,
+                              niters=niters,
+                              warmup=nwarmup,
                               spline_knots=5,
                               spline_degree = 2,
                               nchains=2,
@@ -633,16 +643,16 @@ unemp3_fit <- id_estimate(unemp1,model_type=2,
                               #include=F,
                               id_refresh=100)
     
-    unemp1_fit$save_object("/scratch/rmk7/unemp1_fit.rds")
+    unemp1_fit@stan_samples$save_object("/scratch/rmk7/unemp1_fit.rds")
     
   }
   
-  if(type=="spline2") {
+  if(fit_type=="spline2") {
     
     unemp2_fit <- id_estimate(unemp1,model_type=2,
                               vary_ideal_pts = 'splines',
-                              niters=300,
-                              warmup=300,
+                              niters=niters,
+                              warmup=nwarmup,
                               spline_knots=5,
                               spline_degree = 3,
                               nchains=2,
@@ -659,18 +669,18 @@ unemp3_fit <- id_estimate(unemp1,model_type=2,
                               #include=F,
                               id_refresh=100)
     
-    unemp2_fit$save_object("/scratch/rmk7/unemp2_fit.rds")
+    unemp2_fit@stan_samples$save_object("/scratch/rmk7/unemp2_fit.rds")
     
     
   }
   
-  if(type=="spline3") {
+  if(fit_type=="spline3") {
     
     
     unemp3_fit <- id_estimate(unemp1,model_type=2,
                               vary_ideal_pts = 'splines',
-                              niters=300,
-                              warmup=300,
+                              niters=niters,
+                              warmup=nwarmup,
                               spline_knots=5,
                               spline_degree = 4,
                               nchains=2,
@@ -689,7 +699,7 @@ unemp3_fit <- id_estimate(unemp1,model_type=2,
                               #include=F,
                               id_refresh=100)
     
-    unemp3_fit$save_object("/scratch/rmk7/unemp3_fit.rds")
+    unemp3_fit@stan_samples$save_object("/scratch/rmk7/unemp3_fit.rds")
     
   }
   
@@ -702,7 +712,7 @@ unemp3_fit <- id_estimate(unemp1,model_type=2,
 ## 
 
   
-  if(type=="GP") {
+  if(fit_type=="GP") {
     
     rollcalls <- readRDS('data/rollcalls.rds')
     unemp2 <- rollcalls %>%
@@ -721,8 +731,8 @@ unemp3_fit <- id_estimate(unemp1,model_type=2,
               person_cov = ~unemp_rate*party_code)
 
     unemp_gp_fit <- id_estimate(unemp2,model_type=2,vary_ideal_pts = 'GP',
-                              niters=300,
-                              warmup=300,
+                              niters=niters,
+                              warmup=nwarmup,
                               ncores=parallel::detectCores(),nchain=2,
                               fixtype="prefix",
                               const_type = "items",
@@ -739,7 +749,7 @@ unemp3_fit <- id_estimate(unemp1,model_type=2,
                               #         "A_int_free"),
                               id_refresh=100)
     
-   unemp_gp_fit$save_object('/scratch/rmk7/unemp_gp_fit.rds')
+   unemp_gp_fit@stan_samples$save_object('/scratch/rmk7/unemp_gp_fit.rds')
     
   }
 
@@ -747,7 +757,7 @@ unemp3_fit <- id_estimate(unemp1,model_type=2,
 
 # fitar1 ------------------------------------------------------------------
 
-if(type=="ar1") {
+if(fit_type=="ar1") {
   
   rollcalls <- readRDS('data/rollcalls.rds')
   unemp2 <- rollcalls %>%
@@ -767,8 +777,8 @@ if(type=="ar1") {
   
   unemp1_ar_fit <- id_estimate(unemp2,model_type=2,
                             vary_ideal_pts = 'AR1',
-                            niters=300,
-                            warmup=300,
+                            niters=niters,
+                            warmup=nwarmup,
                             spline_knots=5,
                             spline_degree = 2,
                             nchains=2,
@@ -788,14 +798,14 @@ if(type=="ar1") {
                             #include=F,
                             id_refresh=100)
   
-  unemp1_ar_fit$save_object("/scratch/rmk7/unemp1_ar_fit.rds")
+  unemp1_ar_fit@stan_samples$save_object("/scratch/rmk7/unemp1_ar_fit.rds")
   
   
 }
 
 # fitrw ------------------------------------------------------------------
 
-if(type=="rw") {
+if(fit_type=="rw") {
   
   rollcalls <- readRDS('data/rollcalls.rds')
   unemp2 <- rollcalls %>%
@@ -815,8 +825,8 @@ if(type=="rw") {
   
   unemp1_rw_fit <- id_estimate(unemp2,model_type=2,
                                vary_ideal_pts = 'random_walk',
-                               niters=300,
-                               warmup=300,
+                               niters=niters,
+                               warmup=nwarmup,
                                spline_knots=5,
                                spline_degree = 2,
                                nchains=2,
@@ -836,7 +846,7 @@ if(type=="rw") {
                                #include=F,
                                id_refresh=100)
   
-  unemp1_rw_fit$save_object("/scratch/rmk7/unemp1_rw_fit.rds")
+  unemp1_rw_fit@stan_samples$save_object("/scratch/rmk7/unemp1_rw_fit.rds")
   
   
 }
@@ -845,7 +855,7 @@ if(type=="rw") {
 
 ## ----fitchina, include=F------------------------------------------------------------------------
 
-if(type=="china") {
+if(fit_type=="china") {
   
   rollcalls <- readRDS('data/rollcalls.rds') %>% 
     select(cast_code,rollnumber,year,
@@ -879,8 +889,8 @@ if(type=="china") {
   rm(rollcalls)
   china_fit1 <- id_estimate(china_data,model_type=2,
                             vary_ideal_pts = 'splines',
-                            niters=300,
-                            warmup=300,
+                            niters=niters,
+                            warmup=nwarmup,
                             spline_knots=spline_knots_china,
                             spline_degree = 2,
                             nchains=2,
@@ -923,7 +933,7 @@ if(type=="china") {
 ## ggsave("constrained_dist.png")
 ## 
 
-if(type=="postprocess") {
+if(fit_type=="postprocess") {
   
 
 ## ----ardistall, fig.cap="Over-time Ideal Points for All U.S. House Legislators by Month, 1990-2018"----
