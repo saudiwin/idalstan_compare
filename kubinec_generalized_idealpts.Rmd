@@ -40,7 +40,11 @@ run_all <- T
 
 # whether to use a subset of items for identification
 
-test <- F
+test <- T
+
+# whether to use the prior predictive distribution for all models
+
+prior_only <- FALSE
 
 # set to true to create congressional datasets (will take a long time)
 create_data <- F
@@ -834,8 +838,11 @@ unemp1 <- rollcalls %>%
          cast_code=recode_factor(cast_code,Abstention=NA_character_),
          cast_code=as.numeric(cast_code)-1,
          bioname=factor(bioname),
+         unemp_rate=100*unemp_rate,
          bioname=relevel(bioname,"DeFAZIO, Peter Anthony")) %>% 
-  distinct
+  distinct %>% 
+  filter(party_code %in% c("R","D")) %>% 
+  mutate(party_code=factor(party_code))
 
 # drop legislators who vote on fewer than 25 unanimous bills
 
@@ -862,10 +869,16 @@ num_days <- distinct(unemp1,bioname,date_month) %>%
 
 if(test) {
   
-  # only use a subset of bills
+  # only use a subset of bills from full time period
   
-  unemp1 <- filter(unemp1, (item %in% sample(unique(item),
-                                  3000)) | item %in% c("105_919","115_1050"))
+  # unemp1 <- filter(unemp1, (item %in% sample(unique(item),
+  #                                 3000)) | item %in% c("105_919","115_1050"))
+  
+  # use only last congress
+  
+  unemp1 <- filter(unemp1, congress==115) %>% 
+    filter((item %in% sample(unique(item),
+                                   200)) | item %in% c("115_588","115_1050"))
   
 }
 
@@ -884,7 +897,73 @@ unemp1 <- anti_join(unemp1, filter(legis_count, n_votes_nonunam<25),by="bioname"
 
 rm(rollcalls)
 
-unemp1_fit <- id_estimate(unemp1,model_type=2,
+if(test) {
+  
+  unemp1_fit <- id_estimate(unemp1,model_type=2,
+                          vary_ideal_pts = 'splines',
+                          niters=300,
+                          warmup=300,
+                          spline_knots=1,
+                          spline_degree = 2,
+                          nchains=2,
+                          ncores=parallel::detectCores(),
+                          const_type = "items",prior_only = prior_only,
+                          restrict_ind_high = "115_588",
+                          restrict_sd_high = .01,
+                          restrict_sd_low = .01,
+                          restrict_ind_low="115_1050",
+                          fixtype="prefix",
+                          adapt_delta=0.95,
+                          # pars=c("steps_votes_grm",
+                          #        "steps_votes",
+                          #        "B_int_free",
+                          #        "A_int_free"),
+                          #include=F,
+                          id_refresh=100)
+
+unemp2_fit <- id_estimate(unemp1,model_type=2,
+                          vary_ideal_pts = 'splines',
+                          niters=300,
+                          warmup=300,
+                          spline_knots=5,
+                          spline_degree = 3,
+                          nchains=2,
+                          ncores=parallel::detectCores(),
+                          const_type = "items",
+                          restrict_ind_high = "115_588",
+                          restrict_ind_low="115_1050",
+                          fixtype="prefix",
+                          adapt_delta=0.95,
+                          # pars=c("steps_votes_grm",
+                          #        "steps_votes",
+                          #        "B_int_free",
+                          #        "A_int_free"),
+                          #include=F,
+                          id_refresh=100)
+
+unemp3_fit <- id_estimate(unemp1,model_type=2,
+                          vary_ideal_pts = 'splines',
+                          niters=300,
+                          warmup=300,
+                          spline_knots=5,
+                          spline_degree = 4,
+                          nchains=2,
+                          ncores=parallel::detectCores(),
+                          const_type = "items",
+                          restrict_ind_high = "115_588",
+                          restrict_ind_low="115_1050",
+                          fixtype="prefix",
+                          adapt_delta=0.95,
+                          # pars=c("steps_votes_grm",
+                          #        "steps_votes",
+                          #        "B_int_free",
+                          #        "A_int_free"),
+                          #include=F,
+                          id_refresh=100)
+  
+} else {
+  
+  unemp1_fit <- id_estimate(unemp1,model_type=2,
                           vary_ideal_pts = 'splines',
                           niters=300,
                           warmup=300,
@@ -943,6 +1022,11 @@ unemp3_fit <- id_estimate(unemp1,model_type=2,
                           #        "A_int_free"),
                           #include=F,
                           id_refresh=100)
+  
+  
+}
+
+
 
 # save in non-local folder if in cluster
 
@@ -955,8 +1039,8 @@ if(cluster) {
 } else {
   
   saveRDS(unemp1_fit,'data/unemp1_fit.rds')
-  saveRDS(unemp2_fit,'data/rmk7/unemp2_fit.rds')
-  saveRDS(unemp3_fit,'data/rmk7/unemp3_fit.rds')
+  saveRDS(unemp2_fit,'data/unemp2_fit.rds')
+  saveRDS(unemp3_fit,'data/unemp3_fit.rds')
   
 }
   
@@ -1033,7 +1117,7 @@ saveRDS(unemp2_fit,'data/unemp2_fit.rds')
 if(run_all) {
   rm(unemp1)
 rollcalls <- readRDS('data/rollcalls.rds') %>% 
-  select(cast_code,rollnumber,year,
+  select(cast_code,rollnumber,year,congress,
          bioname,party_code,date,unemp_rate,
          district_code,state_abbrev) %>% 
   mutate(cast_code=recode_factor(cast_code,Abstention=NA_character_),
@@ -1052,10 +1136,11 @@ rollcalls <- left_join(rollcalls,select(x,dist,decade,x,z,state),
                        by=c(district_code="dist",
                             "decade",state_abbrev="state"))
 
-rollcalls <- filter(rollcalls,!is.na(x))
+rollcalls <- filter(rollcalls,!is.na(x)) %>% 
+  mutate(item_id=paste0(congress,"_",rollnumber))
 
 china_data <- id_make(rollcalls,outcome_disc="cast_code",
-                         item_id="rollnumber",
+                         item_id="item_id",
                   person_id="bioname",
                   group_id="party_code",
                   time_id = "date",
@@ -1066,13 +1151,13 @@ china_fit1 <- id_estimate(china_data,model_type=2,
                           vary_ideal_pts = 'splines',
                           niters=300,
                           warmup=300,
-                          spline_knots=5,
-                          spline_degree = 2,
+                          spline_knots=2,
+                          spline_degree = 4,
                           nchains=2,
                           ncores=parallel::detectCores(),
                           const_type = "items",
-                          restrict_ind_high = "105_919",
-                          restrict_ind_low="115_1050",
+                          restrict_ind_high = "105_238",
+                          restrict_ind_low="105_962",
                           fixtype="prefix",
                           adapt_delta=0.95,
                           # pars=c("steps_votes_grm",
@@ -1174,7 +1259,7 @@ legis_cov <- unemp1_fit@stan_samples$draws("legis_x") %>% as_draws_matrix()
 id_plot_legis_dyn(unemp1_fit,use_ci=F,plot_text = T,include=c("BARTON, Joe Linus",
                                                               "NEAL, Richard Edmund")) +
   scale_color_manual(values=c(R="red",
-                              D="blue"),guide=F)
+                              D="blue"),guide="none")
 
 ggsave("constrained_dist.png")
 
