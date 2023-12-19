@@ -39,7 +39,7 @@ fit_type <- as.numeric(Sys.getenv("FITTYPE"))
 fit_type <- switch(fit_type,"spline1","spline2","spline3","china",
                    "GP","ar1","rw")
 
-
+spline_degree <- 4
 
 niters <- 3
 nwarmup <- 3
@@ -561,8 +561,8 @@ if(test) {
                           vary_ideal_pts = 'splines',
                           niters=niters,
                           warmup=nwarmup,
-                          spline_knots=1,
-                          spline_degree = 2,
+                          spline_knots=spline_knots_all,
+                          spline_degree = spline_degree-2,
                           nchains=2,
                           ncores=parallel::detectCores(),
                           const_type = "items",prior_only = prior_only,
@@ -583,8 +583,8 @@ unemp2_fit <- id_estimate(unemp1,model_type=2,
                           vary_ideal_pts = 'splines',
                           niters=niters,
                           warmup=nwarmup,
-                          spline_knots=5,
-                          spline_degree = 3,
+                          spline_knots=spline_knots_all,
+                          spline_degree = spline_degree - 1,
                           nchains=2,
                           ncores=parallel::detectCores(),
                           const_type = "items",
@@ -603,8 +603,8 @@ unemp3_fit <- id_estimate(unemp1,model_type=2,
                           vary_ideal_pts = 'splines',
                           niters=niters,
                           warmup=nwarmup,
-                          spline_knots=5,
-                          spline_degree = 4,
+                          spline_knots=spline_knots_all,
+                          spline_degree = spline_degree,
                           nchains=2,
                           ncores=parallel::detectCores(),
                           const_type = "items",
@@ -627,8 +627,8 @@ unemp3_fit <- id_estimate(unemp1,model_type=2,
                               vary_ideal_pts = 'splines',
                               niters=niters,
                               warmup=nwarmup,
-                              spline_knots=5,
-                              spline_degree = 2,
+                              spline_knots=spline_knots_all,
+                              spline_degree = spline_degree - 2,
                               nchains=2,
                               ncores=parallel::detectCores(),
                               const_type = "items",prior_only = TRUE,
@@ -653,8 +653,8 @@ unemp3_fit <- id_estimate(unemp1,model_type=2,
                               vary_ideal_pts = 'splines',
                               niters=niters,
                               warmup=nwarmup,
-                              spline_knots=5,
-                              spline_degree = 3,
+                              spline_knots=spline_knots_all,
+                              spline_degree = spline_degree - 1,
                               nchains=2,
                               ncores=parallel::detectCores(),
                               const_type = "items",
@@ -681,8 +681,8 @@ unemp3_fit <- id_estimate(unemp1,model_type=2,
                               vary_ideal_pts = 'splines',
                               niters=niters,
                               warmup=nwarmup,
-                              spline_knots=5,
-                              spline_degree = 4,
+                              spline_knots=spline_knots_all,
+                              spline_degree = spline_degree,
                               nchains=2,
                               ncores=parallel::detectCores(),
                               const_type = "items",
@@ -717,13 +717,14 @@ unemp3_fit <- id_estimate(unemp1,model_type=2,
     rollcalls <- readRDS('data/rollcalls.rds')
     unemp2 <- rollcalls %>%
       select(cast_code,rollnumber,
-             bioname,party_code,date,unemp_rate) %>%
+             bioname,party_code,date,unemp_rate,congress) %>%
       mutate(cast_code=recode_factor(cast_code,Abstention=NA_character_),
-             cast_code=as.numeric(cast_code)-1) %>%
+             cast_code=as.numeric(cast_code)-1,
+             item_id=paste0(congress,"_",rollnumber)) %>%
       distinct %>%
       #filter(date>lubridate::ymd("2008-06-01")) %>%
       id_make(outcome_disc="cast_code",
-              item_id="rollnumber",
+              item_id="item_id",
               person_id="bioname",
               group_id="party_code",
               time_id = "year",
@@ -762,13 +763,14 @@ if(fit_type=="ar1") {
   rollcalls <- readRDS('data/rollcalls.rds')
   unemp2 <- rollcalls %>%
     select(cast_code,rollnumber,
-           bioname,party_code,date,unemp_rate) %>%
+           bioname,party_code,date,unemp_rate,congress) %>%
     mutate(cast_code=recode_factor(cast_code,Abstention=NA_character_),
-           cast_code=as.numeric(cast_code)-1) %>%
+           cast_code=as.numeric(cast_code)-1,
+           item_id=paste0(congress,"_",rollnumber)) %>%
     distinct %>%
     #filter(date>lubridate::ymd("2008-06-01")) %>%
     id_make(outcome_disc="cast_code",
-            item_id="rollnumber",
+            item_id="item_id",
             person_id="bioname",
             group_id="party_code",
             time_id = "year",
@@ -779,8 +781,8 @@ if(fit_type=="ar1") {
                             vary_ideal_pts = 'AR1',
                             niters=niters,
                             warmup=nwarmup,
-                            spline_knots=5,
-                            spline_degree = 2,
+                            spline_knots=spline_knots_year,
+                            spline_degree = spline_degree,
                             nchains=2,
                             ncores=parallel::detectCores(),
                             const_type = "items",prior_only = TRUE,
@@ -788,7 +790,6 @@ if(fit_type=="ar1") {
                             restrict_ind_low="115_1050",
                             restrict_sd_low = .01,
                             restrict_sd_high = .01,
-                            spline_knots = spline_knots_year,
                             fixtype="prefix",
                             adapt_delta=0.95,
                             # pars=c("steps_votes_grm",
@@ -810,13 +811,14 @@ if(fit_type=="rw") {
   rollcalls <- readRDS('data/rollcalls.rds')
   unemp2 <- rollcalls %>%
     select(cast_code,rollnumber,
-           bioname,party_code,date,unemp_rate) %>%
+           bioname,party_code,date,unemp_rate,congrewss) %>%
     mutate(cast_code=recode_factor(cast_code,Abstention=NA_character_),
-           cast_code=as.numeric(cast_code)-1) %>%
+           cast_code=as.numeric(cast_code)-1,
+           item_id=paste0(congress,"_",rollnumber)) %>%
     distinct %>%
     #filter(date>lubridate::ymd("2008-06-01")) %>%
     id_make(outcome_disc="cast_code",
-            item_id="rollnumber",
+            item_id="item_id",
             person_id="bioname",
             group_id="party_code",
             time_id = "year",
@@ -827,8 +829,8 @@ if(fit_type=="rw") {
                                vary_ideal_pts = 'random_walk',
                                niters=niters,
                                warmup=nwarmup,
-                               spline_knots=5,
-                               spline_degree = 2,
+                               spline_knots=spline_knots_year,
+                               spline_degree = spline_degree,
                                nchains=2,
                                ncores=parallel::detectCores(),
                                const_type = "items",prior_only = TRUE,
@@ -836,7 +838,6 @@ if(fit_type=="rw") {
                                restrict_ind_low="115_1050",
                                restrict_sd_low = .01,
                                restrict_sd_high = .01,
-                               spline_knots = spline_knots_year,
                                fixtype="prefix",
                                adapt_delta=0.95,
                                # pars=c("steps_votes_grm",
@@ -860,9 +861,10 @@ if(fit_type=="china") {
   rollcalls <- readRDS('data/rollcalls.rds') %>% 
     select(cast_code,rollnumber,year,
            bioname,party_code,date,unemp_rate,
-           district_code,state_abbrev) %>% 
+           district_code,state_abbrev,congress) %>% 
     mutate(cast_code=recode_factor(cast_code,Abstention=NA_character_),
-           cast_code=as.numeric(cast_code)-1) %>% 
+           cast_code=as.numeric(cast_code)-1,
+           item_id=paste0(congress,"_",rollnumber)) %>% 
     distinct %>% 
     mutate(decade=case_when(year<2000~1L,
                             year<2010~2L,
@@ -880,7 +882,7 @@ if(fit_type=="china") {
   rollcalls <- filter(rollcalls,!is.na(x))
   
   china_data <- id_make(rollcalls,outcome_disc="cast_code",
-                        item_id="rollnumber",
+                        item_id="item_id",
                         person_id="bioname",
                         group_id="party_code",
                         time_id = "date",
@@ -892,7 +894,7 @@ if(fit_type=="china") {
                             niters=niters,
                             warmup=nwarmup,
                             spline_knots=spline_knots_china,
-                            spline_degree = 2,
+                            spline_degree = spline_degree,
                             nchains=2,
                             ncores=parallel::detectCores(),
                             const_type = "items",
