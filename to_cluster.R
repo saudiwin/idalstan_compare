@@ -643,7 +643,7 @@ unemp3_fit <- id_estimate(unemp1,model_type=2,
                               #include=F,
                               id_refresh=100)
     
-    unemp1_fit@stan_samples$save_object("/scratch/rmk7/unemp1_fit.rds")
+    saveRDS(unemp1_fit,"/scratch/rmk7/unemp1_fit.rds")
     
   }
   
@@ -669,7 +669,7 @@ unemp3_fit <- id_estimate(unemp1,model_type=2,
                               #include=F,
                               id_refresh=100)
     
-    unemp2_fit@stan_samples$save_object("/scratch/rmk7/unemp2_fit.rds")
+    saveRDS(unemp2_fit,"/scratch/rmk7/unemp2_fit.rds")
     
     
   }
@@ -699,7 +699,7 @@ unemp3_fit <- id_estimate(unemp1,model_type=2,
                               #include=F,
                               id_refresh=100)
     
-    unemp3_fit@stan_samples$save_object("/scratch/rmk7/unemp3_fit.rds")
+   saveRDS( unemp3_fit,"/scratch/rmk7/unemp3_fit.rds")
     
   }
   
@@ -750,7 +750,7 @@ unemp3_fit <- id_estimate(unemp1,model_type=2,
                               #         "A_int_free"),
                               id_refresh=100)
     
-   unemp_gp_fit@stan_samples$save_object('/scratch/rmk7/unemp_gp_fit.rds')
+   saveRDS(unemp_gp_fit, '/scratch/rmk7/unemp_gp_fit.rds')
     
   }
 
@@ -799,7 +799,7 @@ if(fit_type=="ar1") {
                             #include=F,
                             id_refresh=100)
   
-  unemp1_ar_fit@stan_samples$save_object("/scratch/rmk7/unemp1_ar_fit.rds")
+  saveRDS(unemp1_ar_fit, "/scratch/rmk7/unemp1_ar_fit.rds")
   
   
 }
@@ -847,7 +847,7 @@ if(fit_type=="rw") {
                                #include=F,
                                id_refresh=100)
   
-  unemp1_rw_fit@stan_samples$save_object("/scratch/rmk7/unemp1_rw_fit.rds")
+  saveRDS(unemp1_rw_fit, "/scratch/rmk7/unemp1_rw_fit.rds")
   
   
 }
