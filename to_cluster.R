@@ -811,7 +811,7 @@ if(fit_type=="rw") {
   rollcalls <- readRDS('data/rollcalls.rds')
   unemp2 <- rollcalls %>%
     select(cast_code,rollnumber,
-           bioname,party_code,date,unemp_rate,congrewss) %>%
+           bioname,party_code,date,unemp_rate,congress) %>%
     mutate(cast_code=recode_factor(cast_code,Abstention=NA_character_),
            cast_code=as.numeric(cast_code)-1,
            item_id=paste0(congress,"_",rollnumber)) %>%
@@ -860,7 +860,7 @@ if(fit_type=="china") {
   
   rollcalls <- readRDS('data/rollcalls.rds') %>% 
     select(cast_code,rollnumber,year,
-           bioname,party_code,date,unemp_rate,
+           bioname,party_code,date_month,unemp_rate,
            district_code,state_abbrev,congress) %>% 
     mutate(cast_code=recode_factor(cast_code,Abstention=NA_character_),
            cast_code=as.numeric(cast_code)-1,
@@ -885,7 +885,7 @@ if(fit_type=="china") {
                         item_id="item_id",
                         person_id="bioname",
                         group_id="party_code",
-                        time_id = "date",
+                        time_id = "date_month",
                         remove_cov_int = T,
                         person_cov = ~unemp_rate*party_code*x)
   rm(rollcalls)
