@@ -41,8 +41,8 @@ fit_type <- switch(fit_type,"spline1","spline2","spline3","china",
 
 spline_degree <- 4
 
-niters <- 3
-nwarmup <- 3
+niters <- 300
+nwarmup <- 300
 
 
 ## ----load_cong,include=F------------------------------------------------------------------------
