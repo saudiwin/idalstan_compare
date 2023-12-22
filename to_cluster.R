@@ -717,7 +717,7 @@ unemp3_fit <- id_estimate(unemp1,model_type=2,
     rollcalls <- readRDS('data/rollcalls.rds')
     unemp2 <- rollcalls %>%
       select(cast_code,rollnumber,
-             bioname,party_code,date,unemp_rate,congress) %>%
+             bioname,party_code,date,unemp_rate,congress,year) %>%
       mutate(cast_code=recode_factor(cast_code,Abstention=NA_character_),
              cast_code=as.numeric(cast_code)-1,
              item_id=paste0(congress,"_",rollnumber)) %>%
@@ -733,16 +733,15 @@ unemp3_fit <- id_estimate(unemp1,model_type=2,
 
     unemp_gp_fit <- id_estimate(unemp2,model_type=2,vary_ideal_pts = 'GP',
                               niters=niters,
-                              warmup=nwarmup,
-                              ncores=parallel::detectCores(),nchain=2,
+                              warmup=nwarmup,prior_only=prior_only,
+                              ncores=6,nchain=2,
                               fixtype="prefix",
                               const_type = "items",
                               restrict_ind_high = "105_919",
                               restrict_ind_low="115_1050",
                               restrict_sd_low = .01,
                               restrict_sd_high = .01,
-                              spline_knots = spline_knots_year,
-                              use_groups = T,
+                              use_groups = F,
                               #  output_samples=100,
                               #  pars=c("steps_votes_grm",
                               #         "steps_votes",
