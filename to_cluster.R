@@ -39,10 +39,21 @@ fit_type <- as.numeric(Sys.getenv("FITTYPE"))
 fit_type <- switch(fit_type,"spline1","spline2","spline3","china",
                    "GP","ar1","rw")
 
+modtype <- "double_restrict"
+
 spline_degree <- 4
 
 niters <- 300
 nwarmup <- 300
+
+
+# set max treedepth (for spline models)
+
+max_treedepth <- 11
+
+# set restrict SD for pinned items
+
+restrict_sd <- .001
 
 
 ## ----load_cong,include=F------------------------------------------------------------------------
@@ -534,13 +545,13 @@ if(test) {
   # only use a subset of bills from full time period
   
   unemp1 <- filter(unemp1, (item %in% sample(unique(item),
-                                  3000)) | item %in% c("105_919","115_1050"))
+                                  3000)) | item %in% c(c("102_409","109_33"),c("115_1050","108_329")))
 
   # use only last congress
   
   # unemp1 <- filter(unemp1, congress==115) %>% 
   #   filter((item %in% sample(unique(item),
-  #                                  200)) | item %in% c("115_588","115_1050"))
+  #                                  200)) | item %in% c("115_588",c("115_1050","108_329")))
   # 
 }
 
@@ -567,8 +578,8 @@ if(test) {
                           ncores=parallel::detectCores(),
                           const_type = "items",prior_only = prior_only,
                           restrict_ind_high = "115_588",
-                          restrict_sd_high = .01,
-                          restrict_sd_low = .01,
+                          restrict_sd_high = restrict_sd,
+                          restrict_sd_low = restrict_sd,
                           restrict_ind_low="115_1050",
                           fixtype="prefix",
                           adapt_delta=0.95,
@@ -632,8 +643,11 @@ unemp3_fit <- id_estimate(unemp1,model_type=2,
                               nchains=2,
                               ncores=parallel::detectCores(),
                               const_type = "items",prior_only = prior_only,
-                              restrict_ind_high = "105_919",
-                              restrict_ind_low="115_1050",
+                              restrict_ind_high = c("102_409","109_33"),
+                              restrict_ind_low=c("115_1050","108_329"),
+                              restrict_sd_high = restrict_sd,
+                              restrict_sd_low = restrict_sd,
+                              max_treedepth=max_treedepth,
                               fixtype="prefix",
                               adapt_delta=0.95,
                               # pars=c("steps_votes_grm",
@@ -643,7 +657,7 @@ unemp3_fit <- id_estimate(unemp1,model_type=2,
                               #include=F,
                               id_refresh=100)
     
-    saveRDS(unemp1_fit,"/scratch/rmk7/unemp1_fit.rds")
+    saveRDS(unemp1_fit,paste0("/scratch/rmk7/unemp",modtype,"1_fit.rds"))
     
   }
   
@@ -658,8 +672,11 @@ unemp3_fit <- id_estimate(unemp1,model_type=2,
                               nchains=2,
                               ncores=parallel::detectCores(),
                               const_type = "items",
-                              restrict_ind_high = "105_919",
-                              restrict_ind_low="115_1050",
+                              restrict_ind_high = c("102_409","109_33"),
+                              restrict_ind_low=c("115_1050","108_329"),
+                              restrict_sd_high = restrict_sd,
+                              restrict_sd_low = restrict_sd,
+                              max_treedepth=max_treedepth,
                               fixtype="prefix",
                               adapt_delta=0.95,
                               # pars=c("steps_votes_grm",
@@ -669,7 +686,7 @@ unemp3_fit <- id_estimate(unemp1,model_type=2,
                               #include=F,
                               id_refresh=100)
     
-    saveRDS(unemp2_fit,"/scratch/rmk7/unemp2_fit.rds")
+    saveRDS(unemp2_fit,paste0("/scratch/rmk7/unemp",modtype,"2_fit.rds"))
     
     
   }
@@ -686,10 +703,11 @@ unemp3_fit <- id_estimate(unemp1,model_type=2,
                               nchains=2,
                               ncores=parallel::detectCores(),
                               const_type = "items",
-                              restrict_ind_high = "105_919",
-                              restrict_ind_low="115_1050",
-                              restrict_sd_low = .01,
-                              restrict_sd_high = .01,
+                              restrict_ind_high = c("102_409","109_33"),
+                              restrict_ind_low=c("115_1050","108_329"),
+                              restrict_sd_low = restrict_sd,
+                              restrict_sd_high = restrict_sd,
+                              max_treedepth=max_treedepth,
                               fixtype="prefix",
                               adapt_delta=0.95,
                               # pars=c("steps_votes_grm",
@@ -699,7 +717,7 @@ unemp3_fit <- id_estimate(unemp1,model_type=2,
                               #include=F,
                               id_refresh=100)
     
-   saveRDS( unemp3_fit,"/scratch/rmk7/unemp3_fit.rds")
+   saveRDS( unemp3_fit,paste0("/scratch/rmk7/unemp",modtype,"3_fit.rds"))
     
   }
   
@@ -737,10 +755,10 @@ unemp3_fit <- id_estimate(unemp1,model_type=2,
                               ncores=parallel::detectCores(),nchain=2,
                               fixtype="prefix",
                               const_type = "items",
-                              restrict_ind_high = "105_919",
-                              restrict_ind_low="115_1050",
-                              restrict_sd_low = .01,
-                              restrict_sd_high = .01,
+                              restrict_ind_high = c("102_409","109_33"),
+                              restrict_ind_low=c("115_1050","108_329"),
+                              restrict_sd_low = restrict_sd,
+                              restrict_sd_high = restrict_sd,
                               use_groups = F,
                               #  output_samples=100,
                               #  pars=c("steps_votes_grm",
@@ -749,7 +767,7 @@ unemp3_fit <- id_estimate(unemp1,model_type=2,
                               #         "A_int_free"),
                               id_refresh=100)
     
-   saveRDS(unemp_gp_fit, '/scratch/rmk7/unemp_gp_fit.rds')
+   saveRDS(unemp_gp_fit, paste0("/scratch/rmk7/unemp",modtype,"_gp_fit.rds"))
     
   }
 
@@ -785,12 +803,12 @@ if(fit_type=="ar1") {
                             nchains=2,
                             ncores=parallel::detectCores(),
                             const_type = "items",prior_only = prior_only,
-                            restrict_ind_high = "105_919",
-                            restrict_ind_low="115_1050",
-                            restrict_sd_low = .01,
-                            restrict_sd_high = .01,
+                            restrict_ind_high = c("102_409","109_33"),
+                            restrict_ind_low=c("115_1050","108_329"),
+                            restrict_sd_low = restrict_sd,
+                            restrict_sd_high = restrict_sd,
                             fixtype="prefix",
-                            adapt_delta=0.95,
+                            adapt_delta=0.95,max_treedepth=max_treedepth,
                             # pars=c("steps_votes_grm",
                             #        "steps_votes",
                             #        "B_int_free",
@@ -798,7 +816,7 @@ if(fit_type=="ar1") {
                             #include=F,
                             id_refresh=100)
   
-  saveRDS(unemp1_ar_fit, "/scratch/rmk7/unemp1_ar_fit.rds")
+  saveRDS(unemp1_ar_fit, paste0("/scratch/rmk7/unemp",modtype,"1_ar_fit.rds"))
   
   
 }
@@ -834,12 +852,12 @@ if(fit_type=="rw") {
                                nchains=2,
                                ncores=parallel::detectCores(),
                                const_type = "items",prior_only = prior_only,
-                               restrict_ind_high = "105_919",
-                               restrict_ind_low="115_1050",
-                               restrict_sd_low = .01,
-                               restrict_sd_high = .01,
+                               restrict_ind_high = c("102_409","109_33"),
+                               restrict_ind_low=c("115_1050","108_329"),
+                               restrict_sd_low = restrict_sd,
+                               restrict_sd_high = restrict_sd,
                                fixtype="prefix",
-                               adapt_delta=0.95,
+                               adapt_delta=0.95,max_treedepth=max_treedepth,
                                # pars=c("steps_votes_grm",
                                #        "steps_votes",
                                #        "B_int_free",
@@ -847,7 +865,7 @@ if(fit_type=="rw") {
                                #include=F,
                                id_refresh=100)
   
-  saveRDS(unemp1_rw_fit, "/scratch/rmk7/unemp1_rw_fit.rds")
+  saveRDS(unemp1_rw_fit, paste0("/scratch/rmk7/unemp",modtype,"1_rw_fit.rds"))
   
   
 }
@@ -889,19 +907,22 @@ if(fit_type=="china") {
                         remove_cov_int = T,
                         person_cov = ~unemp_rate*party_code*x)
   rm(rollcalls)
+  
+  # note one ID bill is set differently as there is no 115th Congress
+  
   china_fit1 <- id_estimate(china_data,model_type=2,
                             vary_ideal_pts = 'splines',
                             niters=niters,
-                            warmup=nwarmup,
+                            warmup=nwarmup,prior_only = prior_only,
                             spline_knots=spline_knots_china,
                             spline_degree = spline_degree,
                             nchains=2,
                             ncores=parallel::detectCores(),
                             const_type = "items",
-                            restrict_ind_high = "105_238",
-                            restrict_ind_low="105_962",
+                            restrict_ind_high = c("102_409","109_33"),
+                            restrict_ind_low=c("111_1","108_329"),
                             fixtype="prefix",
-                            adapt_delta=0.95,
+                            adapt_delta=0.95,max_treedepth=max_treedepth,
                             # pars=c("steps_votes_grm",
                             #        "steps_votes",
                             #        "B_int_free",
@@ -909,7 +930,7 @@ if(fit_type=="china") {
                             #include=F,
                             id_refresh=100)
   
-  saveRDS(china_fit1,'/scratch/rmk7/china_fit1.rds')
+  saveRDS(china_fit1,paste0('/scratch/rmk7/china_',modtype,'_fit1.rds'))
   
   
 }
