@@ -7,7 +7,7 @@ output:
     includes:
       in_header: preamble.tex
 abstract: 'This  paper presents an item-response theory parameterization of ideal points that unifies existing approaches to ideal point models while also extending them. For time-varying inference, the model permits ideal points to vary in a random walk, in a stationary autoregressive process, or in a semi-parametric Gaussian process. For missing data, the model implements a two-stage selection adjustment to account for non-ignorable missingness. In addition, the ideal point model is extended to handle new distributions, including continuous, positive-continuous and ordinal data. To enable modeling of datasets with mixed data (discrete and continuous), I incorporate joint modeling of different distributions. Finally, I also address ways of implementing Bayesian inference with big data sets, including variational inference and within-chain MCMC parallelization.'
-bibliography: "/Users/rmk/firmbook/BibTexDatabase.bib"
+bibliography: "/Users/rmk7/firmbook/BibTexDatabase.bib"
 citation_package: biblatex
 classoption: 12pt
 toc: false
@@ -36,7 +36,7 @@ require(idealstan)
 require(forcats)
 
 # set to true to run all models (will take a long time)
-run_all <- T
+run_all <- F
 
 # whether to use a subset of items for identification
 
@@ -50,22 +50,58 @@ prior_only <- FALSE
 create_data <- F
 
 cluster <- FALSE
-```
 
+# load the datas
+
+rollcalls <- readRDS('data/rollcalls.rds')
+
+unemp1 <- rollcalls %>% 
+  select(cast_code,rollnumber,congress,
+         bioname,party_code,date_month,unemp_rate) %>% 
+  mutate(item=paste0(congress,"_",rollnumber),
+         cast_code=recode_factor(cast_code,Abstention=NA_character_),
+         cast_code=as.numeric(cast_code)-1,
+         bioname=factor(bioname),
+         unemp_rate=100*unemp_rate,
+         bioname=relevel(bioname,"DeFAZIO, Peter Anthony")) %>% 
+  distinct %>% 
+  filter(party_code %in% c("R","D")) %>% 
+  mutate(party_code=factor(party_code))
+
+# drop legislators who vote on fewer than 25 unanimous bills
+
+check_bills <- group_by(unemp1,item,party_code,cast_code) %>% count %>% 
+  group_by(item,party_code) %>% 
+  summarize(prop=n[cast_code==1] / sum(n),
+            n_vote=sum(n)) %>% 
+  ungroup %>% 
+  mutate(prop=ifelse(prop==.5,
+                          sample(c(.49,.51),1),
+                     prop),
+    util_func=(1 / sqrt((.5 - prop)^2))*n_vote) %>% 
+  arrange(desc(util_func))
+
+legis_count <- group_by(unemp1, item) %>% 
+  mutate(unan=all(cast_code[!is.na(cast_code)]==1) || all(cast_code[!is.na(cast_code)]==0)) %>% 
+  group_by(bioname) %>% 
+  summarize(n_votes_nonunam=length(unique(item[!unan])))
+
+# check number of days in legislature
+
+num_days <- distinct(unemp1,bioname,date_month) %>% 
+  count(bioname)
+
+```
 
 \newpage
 
-While ideal point models were conceived as a way to measure ideology in the U.S. Congress, this powerful measurement tool has wide applicability as a general tool for analyzing social situations. Political scientists have continued to apply the ideal point model to new datasets and empirical challenges, such as Twitter data, the United Nations security council, campaign finance data and legislative speech. Through these applications, it has become apparent that the ideal point model has utility for many more measurement problems in the social sciences where data rarely exactly capture the concept of interest. To encourage further usage of this model, and to help address difficult measurement problems in political science, this paper extends the existing ideal point model while also unifying recent advances within a single framework. 
+While ideal point models were conceived as a way to measure ideology in the U.S. Congress, this powerful measurement tool has wide applicability as a general tool for analyzing social situations. Political scientists have continued to apply the ideal point model to new datasets and empirical challenges, such as Twitter data [@barbera2015; @kubinec2018], the United Nations Security Council [@bailey2017], state capacity [@hanson2021], democracy [@coppedge2019; @pemstein2017], campaign finance data [@bonica2014] and legislative speech [@lauderdale2016]. Through these applications, it has become apparent that the ideal point model has utility for many more measurement problems in the social sciences where data rarely exactly capture the concept of interest. To encourage further usage of this model, and to help address difficult measurement problems in political science, this paper extends the existing ideal point model in terms of mixed continuous and discrete outcome distributions, time processes and missing data, while building from a Bayesian framework for inference and incorporating computational advances for the purposes of analyzing big data sets [@martin2002; @martin2011a; @barbera2015; @kropko2013; @carroll2009; @bafumi2005; @jackman2004; @imai2016a; @lewis2018; @goplerud2019; @caughey2018].
 
-The aim of generalizing the ideal point model is to construct a tool that can be applied to most distributions that political scientists encounter while incorporating non-ignorable missingness and permitting over-time inference. Although recent developments in the field have increasingly employed diverse outcomes, the standard ideal point framework assumes binary data in a largely static framework. As I show in this paper, there is nothing about the underlying ideal point model that requires a binary outcome, and there is much to be learned from the dynamics of ideal points. As the datasets available to political scientists have grown in size and complexity, capturing measures of interest, especially time-varying measures, provides an avenue for powerful inference of compelling research questions.
+I further show in this paper that combining advances in Bayesian computation with flexible time processes in the form of splines can solve a particularly difficult problem of scaling sparse data with measurement error, such as that available from finely grained time series in social media and other digital sources. While existing applications of dynamic ideal points are generally at a relatively high level of aggregation, such as the Congressional session [@carroll2009] or the judicial session [@martin2002], social media data like Twitter/X/Bluesky can be available in minute by minute increments [@kubinec2018; @eady2024], not to mention the wealth of preference information available in TikTok, Youtube, and other sources. However, existing time-series methods for ideal points are difficult to employ with sparse data, and for that reason I employ splines as a way of estimating restricted polynomials that can separate time trends from measurement noise. To illustrate the method, I estimate monthly time-varying ideal points for Congresspeople in the House in the 115th Congress.
 
-Broadly speaking, I propose that the ideal point framework can be best understood as a social choice aggregation method, of which the most common application of estimating political ideology is a special case. The underlying idea of the ideal point model, that individuals make choices over competing alternatives by comparing their distance to the individual's ideal point, applies to many social situations in which people make decisions with regard to a polarizing latent dimension. Given the wide applicability of this simple rational actor model, it can help political scientists incorporate measurement error by directly estimating traits that are impossible to capture directly.
+In addition, I show in this paper how Bayesian post-estimation [@gill2020] enables the calculation of a new quantity of interest from ideal point models: ideal point marginal effects. I define an ideal point marginal effect as the unit change in the set of items for a unit change in a covariate that is mediated by a given person's ideal point. This quantity, which is estimated separately for each item (or bill) in the data, enables us to understand how an external covariate can influence a person's decision-making while taking into account the relative latent position of the items on which they are taking positions. I illustrate this method with an analysis of the association between monthly district-level unemployment rates and voting behavior in the 115th Congress.
 
-This feature of ideal point models--incorporating measurement uncertainty--could be a considerable boon for empirical research if applied more widely. As I show in this paper, the ideal point model can be understood as a generalization of the item-response theory framework long employed by psychometricians to study latent psychological traits. The ideal point model makes fewer assumptions than the standard item-response theory model about how observed indicators are related to an underlying latent construct, permitting more flexible estimation of latent constructs while also providing useful inferences about exactly how some indicators are related to the construct. The ideal point model not only permits the estimation of unobserved traits, but also to help researchers learn about the structure of these traits.
-
-The contribution of this paper is to combine existing approaches to ideal points and extensions within a single framework. All the models in this paper can be fit with the R package `idealstan`. Combining missing-data inference, time-varying inference and inference over joint distributions provides scholars with a multi-purpose tool for tackling measurement challenges that can extend the reach and applicability of the ideal point model. 
-
-In this paper I first situate the ideal point model in the broader context of latent variable models and dimension-reduction methods. I then turn to each generalization of the ideal point model presented in this paper, first missing-data inference via selection models, then time-varying inference with parametric and semi-parametric methods, and finally the ability to combine distributions to estimate indices from survey and panel data. To demonstrate the wide possibilities for new inferences from this framework, I look at the association between twenty years' of local monthly unemployment data and rollcall voting in the U.S. House. 
+All the models in this paper can be fit with the R package `idealstan`, which employs the probabilistic programming language Stan to allow for a wide variety of models to be fit within one joint framework. Furthermore, the application of Hamiltonian Monte Carlo and its associated diagnostics permits very robust inference of difficult posterior geometry, ensuring that measurement inferences are stable. Combining missing-data inference, time-varying inference and inference over joint distributions provides scholars with a multi-purpose tool for tackling measurement challenges that can extend the reach and applicability of the ideal point model.
 
 # Latent Variables as Statistical Deduction
 
@@ -79,7 +115,7 @@ Measurement models flip this perspective on its head. Rather than assuming that 
 
 The simplest measurement model is the econometric errors-in-variables model where the data were generated by a Normal distribution with a pre-specified standard deviation [@durbin1954]. This model assumes that any noise in the data is evenly distributed across all the data points, and its only effect on the final statistical estimation is to increase the uncertainty of estimates. There are many more measurement models available, however, all of which can be combined with traditional statistical estimation techniques or employed as the primary model of interest.
 
-It is possible to define measurement models in terms of the structure they impose on the distribution underlying the data. As mentioned previously, the errors-in-variables model may be the simplest such distribution in which relatively little is known or assumed about noise in the data. Most other measurement models assume that the data are generated by a reduced-form expression. On one end of the spectrum, in cases where there is little prior information about what underlies the data, reduction methods like factor analysis [@harman1960], principal components analysis [@hotelling1933] and correspondence analysis [@greenacre2017;@barbera2015] can compress the columns of a data matrix into an eigenvalue-based summary of the variation within the matrix. This kind of information can be thought of a generalization of a correlation matrix of the data, describing how different variables are related to each other purely through covariation. 
+It is possible to define measurement models in terms of the structure they impose on the distribution underlying the data. As mentioned previously, the errors-in-variables model may be the simplest such distribution in which relatively little is known or assumed about noise in the data. Most other measurement models assume that the data are generated by a reduced-form expression. On one end of the spectrum, in cases where there is little prior information about what underlies the data, reduction methods like factor analysis [@harman1960], principal components analysis [@hotelling1933] and correspondence analysis [@greenacre2017; @barbera2015] can compress the columns of a data matrix into an eigenvalue-based summary of the variation within the matrix. This kind of information can be thought of a generalization of a correlation matrix of the data.
 
 On the other end of the spectrum are methods that impose a very specific structure on the data distribution. Structural equation modeling is arguably the most demanding as researchers can stipulate a very precise process through which latent variables are related to each other, permitting complex unobserved feedback networks [@ullman2012]. There are other models involving latent variable analysis in time-series that impose a very specific functional form, such as the hidden Markov model [@rabiner1989] and the state-space model [@roesser1975], in which the data were generated by an unobserved time-varying construct. The number of latent variable models with a precise structure can be almost endless as it can even include two-stage models like the Heckman selection model [@heckman1985].
 
@@ -93,17 +129,17 @@ That is, if $\alpha_i$ is closer in Euclidean space to the Yes position than the
 
 @jackman2004 showed that a certain IRT model, the 2-Pl family, was equivalent to the ideal point model if the actual Yes and No positions of the bill were left unidentified. Instead, this parameterization can estimate the ideal points $\alpha_i$ and a midpoint where the person $i$ is indifferent to voting on the bill $j$. The IRT 2-Pl model in terms of ideal points $\alpha_i$, or what are called ability parameters in the IRT literature, discrimination parameters $\gamma_j$ and difficulty parameters $\beta_j$, is as follows for a binary observed vote $Y_{ij}$:
 
+```{=tex}
 \begin{equation}
 Pr(Y_{ij}=1) = \prod^{I}_{i=1} \prod^{J}_{j=1} logit^{-1}(\gamma_j \alpha_i - \beta_j)
 (\#eq:basic)
 \end{equation}
-
-where the midpoint or line of indifference for each vote can be found by re-arranging the linear model so that 
+```
+where the midpoint or line of indifference for each vote can be found by re-arranging the linear model so that
 
 $$
 \alpha_i = \frac{\gamma_j}{\beta_j}
-$$
-In addition to estimating the line of indifference, the bill or item parameters (in IRT speak) have their own meaning. The sign of the discrimination parameter $\gamma_j$ indicates the "polarity" of the bill/item, or whether voting yes indicates one is more liberal or conservative in the Congressional case. The absolute magnitude of the discrimination parameter indicates how well the bill/item discriminates between persons such that the latent dimension strongly predicts voting. The $\beta_j$ difficulty parameters, by contrast, have the relatively uninteresting interpretation in representing the propensity of a person to vote yes marginal or independent of the latent dimension, though their incorporation is important to allow for the residual propensity to vote Yes to vary by bill.
+$$ In addition to estimating the line of indifference, the bill or item parameters (in IRT speak) have their own meaning. The sign of the discrimination parameter $\gamma_j$ indicates the "polarity" of the bill/item, or whether voting yes indicates one is more liberal or conservative in the Congressional case. The absolute magnitude of the discrimination parameter indicates how well the bill/item discriminates between persons such that the latent dimension strongly predicts voting. The $\beta_j$ difficulty parameters, by contrast, have the relatively uninteresting interpretation in representing the propensity of a person to vote yes marginal or independent of the latent dimension, though their incorporation is important to allow for the residual propensity to vote Yes to vary by bill.
 
 The crucial difference between this parameterization and the standard IRT model is that the discrimination parameters $\gamma_j$ are unconstrained. In an IRT 2-Pl model the discrimination parameters are normally constrained to be positive so that the ideal points/ability parameters $\alpha_i$ can have the interpretation of reflecting the ability of a students to answer correctly more difficult test questions. In other words, the observed indicators are always positively related to the latent trait. The ideal point model can be considered a generalization of the IRT 2-Pl model because it does not assume that this is the case and in fact can estimate the direction of items from the data. This difference, though it would seem minute, is important when analysts are uncertain of the directional relationship between the data and the latent trait, as often occurs in practice.
 
@@ -113,19 +149,21 @@ It is important to note that there is nothing about this model that necessarily 
 
 In this paper I employ a Bayesian interpretation of this model [@jackman2004] that I estimate using Hamiltonian Markov Chain Monte Carlo with Stan [@carpenter2017]. I am interested in posterior inference on the set of unobserved parameters $\{\alpha_i,\gamma_j,\beta_j\} \in \theta$ that is conditional on the observed data $Y_{ij}$, or $Pr(\theta|Y_{ij})$. To do so, I define independent priors on $\theta$, $Pr(\theta)$, which is multiplied by the likelihood $L(\cdot)$ that is defined by \@ref(eq:basic):
 
+```{=tex}
 \begin{equation}
 Pr(\theta|Y_{ij}) \propto Pr(\theta)L(Y_{ij}|\theta)
 (\#eq:Bayes)
 \end{equation}
-
+```
 I use the proportional symbol $\propto$ to reflect the fact that the term in the denominator representing the probability of the data $Pr(Y_{ij})$ is normally omitted in computational Bayesian analysis as it is fixed with respect to the parameters [@gelman2013]. We can further specify the priors in terms of the distributions assigned to each parameter in $\theta$:
 
+```{=tex}
 \begin{align*}
 \alpha_i &\sim N(0,1)\\
 \gamma_j &\sim N(0,5)\\
 \beta_j &\sim N(0,2)\\
 \end{align*}
-
+```
 The ideal points are given a tight $N(0,1)$ prior to constrain the scale for identification purposes, while the discrimination and difficulty parameters have weakly informative priors on the logit scale. The effect $\phi$ of a matrix of covariates $X$ measured on the persons $i$ can also be added to this model for ideal points as shown in @gelman2005 and @jackman2004 by including them as hierarchical predictors:
 
 $$
@@ -138,28 +176,27 @@ $$
 \gamma_j \sim N(X\phi',1)
 $$
 
-
 Given this definition of the model, I next show how this framework can incorporate missing data when not all of $Y_{ij}$ is observed, time-varying inference when $\alpha_i$ is measured at different points in time and the estimation of diverse distributions for $Y_{ij}$ whether singly or jointly.
 
 # Missing Data
 
-Missing data is a tricky problem to address in latent variable models because latent variables are themselves defined as missing data. For this reason, standard imputation techniques cannot be easily applied. Because ideal point models are representations of social aggregation processes, a straightforward approach of imputing data conditional on the model assumes that missingness is orthogonal to observed ideal points [@rubin2002]. In many situations, this assumption may not be realistic when there is reason to believe that social actors, such as legislators, are absent for reasons that are related to their own ideal points. 
+Missing data is a tricky problem to address in latent variable models because latent variables are themselves defined as missing data. For this reason, standard imputation techniques cannot be easily applied. Because ideal point models are representations of social aggregation processes, a straightforward approach of imputing data conditional on the model assumes that missingness is orthogonal to observed ideal points [@rubin2002]. In many situations, this assumption may not be realistic when there is reason to believe that social actors, such as legislators, are absent for reasons that are related to their own ideal points.
 
-The most rigorous treatment of the problem of missing data and ideal points can be found in @rosas2015, who put forward a model in which non-ignorable missingness occurs when legislators disagree with the position of their party. Their analysis shows that missingness in ideal point models often reflects strategic behavior and it is unwise to treat it as either missing-at-random (MAR) or missing-conditionally-at-random (MCAR). In this section I define a model for non-ignorable missingness that aims for widespread applicability while taking into account the strategic nature of ideal point actors. 
+The most rigorous treatment of the problem of missing data and ideal points can be found in @rosas2015, who put forward a model in which non-ignorable missingness occurs when legislators disagree with the position of their party. Their analysis shows that missingness in ideal point models often reflects strategic behavior and it is unwise to treat it as either missing-at-random (MAR) or missing-conditionally-at-random (MCAR). In this section I define a model for non-ignorable missingness that aims for widespread applicability while taking into account the strategic nature of ideal point actors.
 
 I extend my notation of the outcome $Y_{ij}$ by adding a subscript $r \in \{0,1\}$ for whether person $i$ chose to vote or answer item $j$ ($r=1$) or chose not to vote/answer ($r=0$). We can then add a separate selection model that first estimates $Pr(r=0)$ and deflates the likelihood $L(Y_{ijr}|\theta)$ accordingly:
 
-
+```{=tex}
 \begin{equation}
-	L(Y_{ijr}|\alpha_i,\gamma_j,\beta_j,\nu_j,\omega_j) = 
-	\prod^{I}_{i=1} \prod^{J}_{j=1}
-	\begin{cases}
-	\zeta(\alpha_{i}'\nu_j - \omega_j ) & \text{if } r=0, \text{ and} \\
-	(1-\zeta({\alpha_{i}'\nu_j - \omega_j}))L(Y_{ijr}|\alpha_i,\gamma_j,\beta_j) & \text{if } r=1
-	\end{cases}
+    L(Y_{ijr}|\alpha_i,\gamma_j,\beta_j,\nu_j,\omega_j) = 
+    \prod^{I}_{i=1} \prod^{J}_{j=1}
+    \begin{cases}
+    \zeta(\alpha_{i}'\nu_j - \omega_j ) & \text{if } r=0, \text{ and} \\
+    (1-\zeta({\alpha_{i}'\nu_j - \omega_j}))L(Y_{ijr}|\alpha_i,\gamma_j,\beta_j) & \text{if } r=1
+    \end{cases}
 (\#eq:inflate2)
 \end{equation}
-
+```
 I let $\zeta(\cdot)$ stand for the inverse logit function in the equation above. As can be seen, the selection model for absences $\zeta(\alpha_i'\nu_j - \omega_j)$ is very similar to \@ref(eq:basic) except that I have substituted a new set of discrimination $\nu_j$ and difficulty $\omega_j$ parameters. The ideal points $\alpha_i$ enter into both the selection model and the main ideal point model $L(Y_{ijr}|\alpha_i,\gamma_j,\beta_j)$. As such, the selection model is able to inflate or deflate the ideal points by taking into account a first stage process. The inclusion of $\nu_j$ and $\omega_j$ in the first-stage selection model creates a new "missingness" space where person $i$ first chooses whether she will cast a vote, send a tweet or answer a question, as the case may be. Only if the item is close to person $i$ in this missingness space will person $i$ then also decide to participate and provide information $Y_{ij}$ that is informative of their ideal point. This model can be interpreted as a censoring model where persons may choose to self-censor their ideal points.
 
 The general form of the selection model--which is essentially a first-stage ideal point model--allows it to pick up a range of non-ignorable missingness patterns if missingness correlates with ideal points. The model does not make a priori assumptions about exactly why ideal points may determine missingness, and as such the model cannot provide such an interpretation a posteriori without taking time to interpret what the parameters of the selection model reveal about actors' intentions. The discrimination parameter $\nu_j$ is very helpful for this purpose because it will indicate which set of items show correlation between missingness and one of the poles of the latent variable. For example, if the latent variable is constrained positive for liberal Senators, then high positive discrimination would indicate that more liberal Senators tend to be absent on a particular bill. A naive model that assumed that absences were ignorable would miss this pattern and treat these Senators as more moderate based solely on their observed voting record.
@@ -170,7 +207,7 @@ While this missingness model is readily applicable to a legislative context wher
 
 # Time-varying Inference
 
-While ideal points are usually conceived of as relatively time-invariant constructs, time-varying ideal point models have been available to researchers for quite some time. The most well-known time-varying version is the DW-NOMINATE model [@rosenthal2007;@armstrong2014;@Caughey2016], which employs a flexible polynomial function of ideal points to permit them to vary semi-parametrically. The other existing approach is the random walk model of @quinn2002 in which ideal points in time $t$ are equal to ideal points in $t-1$ plus a Normally-distributed random jump. This simple model is nonetheless quite helpful at determining the probable trend in ideal points over time because it imposes virtually no structure on the time-series trends. 
+While ideal points are usually conceived of as relatively time-invariant constructs, time-varying ideal point models have been available to researchers for quite some time. The most well-known time-varying version is the DW-NOMINATE model [@rosenthal2007; @armstrong2014; @Caughey2016], which employs a flexible polynomial function of ideal points to permit them to vary semi-parametrically. The other existing approach is the random walk model of @quinn2002 in which ideal points in time $t$ are equal to ideal points in $t-1$ plus a Normally-distributed random jump. This simple model is nonetheless quite helpful at determining the probable trend in ideal points over time because it imposes virtually no structure on the time-series trends.
 
 Both of these approaches share in common an emphasis measuring over-time trends. By contrast, in this paper I also want to consider effects of hierarchical predictors on ideal points that vary over time. Including such predictors would enable scholars to test much more precise questions about how time-varying covariates influence ideal points, especially as political scientists obtain ever-larger and more fine-grained datasets. However, existing methods cannot easily handle such covariates. The DW-NOMINATE approach is designed to produce accurate and relatively non-parametric estimates of legislator's ideal points versus inference on those trends, while the random-walk approach cannot include additional covariates without radically changing the model. Any covariate with a constant effect in a random-walk will push the time series in a constant direction over time (i.e., static drift). It is too simple of a model to separate the effect of a covariate from the time series trend.
 
@@ -179,9 +216,9 @@ To produce a wider range of possibilities to time-varying inference, I introduce
 \begin{equation}
 \alpha_{it} \sim N(\delta_i+ \alpha_{it-1},\sigma_i)
 (\#eq:rwc)
-\end{equation}
-We give every person $i$ a separate over-time variance parameter $\sigma_i$ and intercept/offset $\delta_i$. It is possible to identify this model by placing a tight upper bound on the variance parameters and adding a polarity constraint in the intercepts $\delta_i$, though as I discuss later, this approach can still fail. For computational reasons, the implementation of this model in `idealstan` employs a non-centered parameterization [@betancourt2013] that reduces dependence between the variance $\sigma_i$ and the prior value of $\alpha_{it-1}$:
+\end{equation} We give every person $i$ a separate over-time variance parameter $\sigma_i$ and intercept/offset $\delta_i$. It is possible to identify this model by placing a tight upper bound on the variance parameters and adding a polarity constraint in the intercepts $\delta_i$, though as I discuss later, this approach can still fail. For computational reasons, the implementation of this model in `idealstan` employs a non-centered parameterization [@betancourt2013] that reduces dependence between the variance $\sigma_i$ and the prior value of $\alpha_{it-1}$:
 
+```{=tex}
 \begin{equation}
 \begin{split}
 \epsilon_{it} &\sim N(0,1)\\
@@ -190,9 +227,10 @@ We give every person $i$ a separate over-time variance parameter $\sigma_i$ and 
 \end{split}
 (\#eq:rwnc)
 \end{equation}
-
+```
 The first new time-series model that I consider is an AR(1) or autoregressive parameterization, which can be understood as a generalization of the random-walk model. To do so, we must add a parameter to the model, $\psi_i$ that is constrained to lie in the $(-1,1)$ interval:
 
+```{=tex}
 \begin{equation}
 \begin{split}
 \epsilon_{it} &\sim N(0,1)\\
@@ -201,8 +239,8 @@ The first new time-series model that I consider is an AR(1) or autoregressive pa
 \end{split}
 (\#eq:ar1)
 \end{equation}
-
-If $\psi_i$ lies in the $(-1,1)$ interval, then the series is stationary and will always return or decay to the long-term mean of the series $\delta_i$. By comparison, the random walk model can be thought of as an AR(1) model where $\psi_i$ is fixed at 1. Importantly, the effect of a hierarchical time-varying covariate $X_t'\phi$ is now well-defined due to the addition of the decay factor $\psi_i$ in the model. A covariate $\phi$ now represents the shock of a time-varying covariate $X_t$ on the ideal point series $\alpha_t$ that will decay over time at a rate determined by $\psi_i$. We can even calculate an impulse-response function showing the over-time decay in the effect of $\phi$ as shown in the empirical example section. 
+```
+If $\psi_i$ lies in the $(-1,1)$ interval, then the series is stationary and will always return or decay to the long-term mean of the series $\delta_i$. By comparison, the random walk model can be thought of as an AR(1) model where $\psi_i$ is fixed at 1. Importantly, the effect of a hierarchical time-varying covariate $X_t'\phi$ is now well-defined due to the addition of the decay factor $\psi_i$ in the model. A covariate $\phi$ now represents the shock of a time-varying covariate $X_t$ on the ideal point series $\alpha_t$ that will decay over time at a rate determined by $\psi_i$. We can even calculate an impulse-response function showing the over-time decay in the effect of $\phi$ as shown in the empirical example section.
 
 In addition to incorporating covariates, the AR(1) time-series model will provide more useful estimates than the random-walk model when there is a prior reason to believe that ideal point trends are stationary over time. This assumption could hold in a setting where shifting ideal points reflect temporary "shocks" as opposed to long-term shifts, such as comparing roll call votes from a single legislative session versus an entire legislator's career. A priori it can be difficult to know which model is a more accurate description of time trends in ideal points; however, fitting both models and comparing predictions can elucidate how each model performs in a given context.
 
@@ -210,101 +248,104 @@ Based on this comparison of the AR(1) and the random walk model, it would seem a
 
 A GP is usually defined as a "distribution over functions" [@rasmussen2006, 13]. We assume that underlying an observed time series $x_t$ is an unobserved function $f(x_t)$. To estimate the most likely values of $f(x_t)$, I can assume $f(x_t)$ is multivariate Normally-distributed where the mean and covariance of this distribution are themselves functions of the mean and covariance of $f(x_t)$:
 
+```{=tex}
 \begin{equation}
 f(x_t) \sim N(\mu(f(x_t)),\Sigma(f(x_t)))
 (\#eq:gp1)
 \end{equation}
-
+```
 Usually the $\mu(f(x_t))$ function is assumed to be 0 as it does not vary with $t$. Instead, much of the flexibility of the distribution involves specifying a function for $\Sigma(f(x_t))$, the covariance. The function most often used, and incorporated here, is the squared-exponential kernel $k_t(\cdot)$:
 
+```{=tex}
 \begin{equation}
 k_t(x_t,x_{t'}) = \large \sigma^2_f  e^{\displaystyle -\frac{(x_t - x_{t'})^2}{ 2l^2}} + \sigma^2_{x_t}  
 (\#eq:gpcov)
 \end{equation}
-
+```
 What this function does is convert all the distances in terms of time between $x_t$ and $x_{t'}$ into a positive semi-definite covariance matrix $\Sigma$. We can then sample from this multivariate Normal with covariance $\Sigma$ to estimate a distribution over the possible time-series functions $f(x_t)$. The GP framework is so flexible that it can fit an *infinite* number of basis functions of $x_t$ [@rasmussen2006, 14]. Other semi-parametric functions, such as splines and polynomials, are special cases of the GP for certain values of the hyper parameters used in the covariance function [@rasmussen2006, 137-140]. What is even more appealing is that the GP can handle time-varying covariates $X_t\phi'$ simply by including them in place of $\mu(x_t)$. The multivariate Normal will then sample from the specified covariate matrix while averaging over the possible values of the covariates.
 
 The GP model has another considerable advantage over the random walk and AR(1) models. Because the covariance function accepts the actual values of the time series, it does not have to use consecutive time points. In an AR(1) or random walk model, it is assumed that the time points are discrete and consecutive. For example, in a legislature it would be possible to record the actual day that a bill was voted on rather than simply assign that aggregate the bill to the month-level. In cases in which gaps in the time series are significant, the GP may produce inferences that are more realistic [@tahk2015].
 
-What gives the GP the ability to fit so many different functions are the three hyper-parameters in \@ref(eq:gpcov). $\sigma^2_{if}$ can be referred to as the marginal standard deviation and represents the total amount of variance in $x_t$ explained by the covariance function $k(x_t,x_{t'})$. A higher value for this hyperparameter will result in more bounce in the time series. $\sigma^2_{ix_t}$, on the other hand, represents residual variance in the time series $x_t$ that the covariance function does not fully explain (which could be interpreted as additional measurement error). Finally, the length-scale parameter $l^2_i$ represents a smoothing factor controlling how much different in time are correlated together. A very low length-scale will allow the time-series to cross the origin at a much higher rate. Conversely, higher length-scales result in smoother functions. The three hyper-parameters both overlap and interact, which makes isolating the effect of any one hyper-parameter difficult. 
+What gives the GP the ability to fit so many different functions are the three hyper-parameters in \@ref(eq:gpcov). $\sigma^2_{if}$ can be referred to as the marginal standard deviation and represents the total amount of variance in $x_t$ explained by the covariance function $k(x_t,x_{t'})$. A higher value for this hyperparameter will result in more bounce in the time series. $\sigma^2_{ix_t}$, on the other hand, represents residual variance in the time series $x_t$ that the covariance function does not fully explain (which could be interpreted as additional measurement error). Finally, the length-scale parameter $l^2_i$ represents a smoothing factor controlling how much different in time are correlated together. A very low length-scale will allow the time-series to cross the origin at a much higher rate. Conversely, higher length-scales result in smoother functions. The three hyper-parameters both overlap and interact, which makes isolating the effect of any one hyper-parameter difficult.
 
 To employ the GP as a time process for ideal points, we simply replace the observed $x_t$ with the latent ideal points $\alpha_{it}$:
 
+```{=tex}
 \begin{equation}
 \alpha_i \sim N(0,k_t(\alpha_{it},\alpha_{it'}))
 (\#eq:gpideal)
 \end{equation}
-
+```
 This straightforward parameterization shows some of the power of Bayesian modeling. We can include virtually any time process by simply defining the time series over a set of parameters rather than a set of observed data.
 
-These different time series models can be understood in terms of order of complexity. The random walk is the simplest as it only requires one parameter, $\sigma_i$, per person $i$. The AR(1) model is more complex as it introduces an additional parameter to control the decay rate in the series, $\psi_i$. The GP is the most complex as it has three separate parameters per person, $\sigma^2_{if}$, $l_i^2$ and $\sigma^2_{iY}$. 
+These different time series models can be understood in terms of order of complexity. The random walk is the simplest as it only requires one parameter, $\sigma_i$, per person $i$. The AR(1) model is more complex as it introduces an additional parameter to control the decay rate in the series, $\psi_i$. The GP is the most complex as it has three separate parameters per person, $\sigma^2_{if}$, $l_i^2$ and $\sigma^2_{iY}$.
 
 We can also combine these time-series processes with the model of missing data in \@ref(eq:inflate1) to permit inference on ideal points that vary over time and may have non-ignorable missingness:
 
-
+```{=tex}
 \begin{equation}
-	L(Y_{ijtr}|\alpha_{it},\gamma_j,\beta_j,\nu_j,\omega_j) = 
-	\prod^{T}_{t=1} \prod^{I}_{i=1} \prod^{J}_{j=1}
-	\begin{cases}
-	\zeta(\alpha_{it}'\nu_j - \omega_j ) & \text{if } r=0, \text{ and} \\
-	(1-\zeta({\alpha_{it}'\nu_j - \omega_j}))L(Y_{ijtr}|\alpha_{it},\gamma_j,\beta_j) & \text{if } r=1
-	\end{cases}
+    L(Y_{ijtr}|\alpha_{it},\gamma_j,\beta_j,\nu_j,\omega_j) = 
+    \prod^{T}_{t=1} \prod^{I}_{i=1} \prod^{J}_{j=1}
+    \begin{cases}
+    \zeta(\alpha_{it}'\nu_j - \omega_j ) & \text{if } r=0, \text{ and} \\
+    (1-\zeta({\alpha_{it}'\nu_j - \omega_j}))L(Y_{ijtr}|\alpha_{it},\gamma_j,\beta_j) & \text{if } r=1
+    \end{cases}
 (\#eq:inflate1)
 \end{equation}
-
+```
 To change from a random-walk to a different time-series model for $\alpha_{it}$, we can simply change the prior for $\alpha_{it}$ that we include in $Pr(\theta)$ with one of the previously-defined time processes. I do not index the item parameters by $t$ because in many applications of the model, the item parameters only occur at one point in time, such as bills in a legislature. It is possible in some situations, such as students taking a test multiple times, for item parameters to vary over time as well. Inference on these parameters' time-series trends would then involve defining time-series priors over these parameters, whether jointly with $\alpha_{it}$ or separately, which is a possible area for future research.
 
 Identification for models with time-varying $\alpha_{it}$ is more challenging. @quinn2002 addressed this issue for random-walk models by restricting the variance $\sigma_i$ to very low values, generally less than 0.1. I employ this restriction as well for the random walk and AR(1) models, constraining $\sigma_i$ to the interval $(0,0.1)$ for the random walk model and $(0,0.5)$ for the AR(1) model, although I find that even with these very restrictive variances, unidentifiability can still manifest itself for the random-walk model. Time-varying models can have multiple possible rotations of the ideal points at multiple time points, creating many modes and oscillation from one time point to the next. As such, for the random-walk and GP models, I first fit a model with a restricted variance with variational inference, described later in this paper, and then include the differences between the maximum and minimum of two persons' time series as additional prior information. This prevents further oscillation in the ideal points while allowing for slightly more variance in the series. Indeed, fitting an approximate fit of the model first is helpful for the AR(1) model as well as it provides useful starting values for hierarchical parameters.
 
 As a result, the AR(1) model is in fact easier to identify than the random walk. Because of the constraints on the series to return to its over-time mean, all that is usually needed for identification is a polarity constraint on two of the persons' long-term intercepts $\delta_i$. The AR(1) model can generally also permit more variance in $\sigma_i$ than the random walk model without resulting in multi-modality.
 
-In addition to the polarity constraints, The GP model requires further constraints to have global identification. Its greatest strength, flexibility, is also its greatest weakness in an ideal point framework. To prevent multi-modality and oscillation in the series, I had to limit the residual standard deviation parameter $\sigma_{iY}$ to a very small interval of $(0,0.025)$ as the inclusion of *additional* measurement error caused oscillation in the time series. I then assigned a very high log-normal prior to the length-scale $l^2$ equal to three times the mean time point $3\bar{T}$. The marginal standard deviation $\sigma_{if}$ is constrained to the $(0,0.3)$ interval,  permitting some inference on the variability of different persons' trends. These priors and constraints are conservative and are designed to permit identification in a wide array of settings. The priors and constraints can be loosened with larger datasets that also have very high levels of over-time variation. As the hyper-parameters are constant with respect to $T$, identification will generally improve with longer time series.
+In addition to the polarity constraints, The GP model requires further constraints to have global identification. Its greatest strength, flexibility, is also its greatest weakness in an ideal point framework. To prevent multi-modality and oscillation in the series, I had to limit the residual standard deviation parameter $\sigma_{iY}$ to a very small interval of $(0,0.025)$ as the inclusion of *additional* measurement error caused oscillation in the time series. I then assigned a very high log-normal prior to the length-scale $l^2$ equal to three times the mean time point $3\bar{T}$. The marginal standard deviation $\sigma_{if}$ is constrained to the $(0,0.3)$ interval, permitting some inference on the variability of different persons' trends. These priors and constraints are conservative and are designed to permit identification in a wide array of settings. The priors and constraints can be loosened with larger datasets that also have very high levels of over-time variation. As the hyper-parameters are constant with respect to $T$, identification will generally improve with longer time series.
 
 # Diverse Distributions
 
-Up to this point, I have followed convention in assuming that the observed data $Y_{ij}$ is a binary outcome (Bernoulli distribution). Virtually any distribution for $Y_{ij}$ is possible, especially with the flexibility of Bayesian modeling. In this section I incorporate existing distributions used for ideal points while also introducing the reader to distributions, especially ordinal models, that have been rarely employed for this purpose but could have considerable utility. Furthermore, I implement the @kropko2013 method to combine distributions into one joint posterior distribution, permitting models to use mixed datasets, such as both discrete and continuous variables. This method is especially useful for building time-varying indices incorporating measurement indicators that could be binary, ordinal, continuous or count variables. 
+Up to this point, I have followed convention in assuming that the observed data $Y_{ij}$ is a binary outcome (Bernoulli distribution). Virtually any distribution for $Y_{ij}$ is possible, especially with the flexibility of Bayesian modeling. In this section I incorporate existing distributions used for ideal points while also introducing the reader to distributions, especially ordinal models, that have been rarely employed for this purpose but could have considerable utility. Furthermore, I implement the @kropko2013 method to combine distributions into one joint posterior distribution, permitting models to use mixed datasets, such as both discrete and continuous variables. This method is especially useful for building time-varying indices incorporating measurement indicators that could be binary, ordinal, continuous or count variables.
 
-There are two possible ordinal models that can be implemented in the ideal point framework. The first is known as a rating-scale model in the IRT framework and is structurally similar to the ordered logit model. @imai2016 are the first to implement this model for ideal points, though within an EM algorithm that is unfortunately vulnerable to issues of perfect separation, which occur frequently in legislative data if certain vote categories, such as abstentions, do not occur very often. By contrast, a fully Bayesian approach to ordinal models permits very sparse distributions of responses across persons. 
+There are two possible ordinal models that can be implemented in the ideal point framework. The first is known as a rating-scale model in the IRT framework and is structurally similar to the ordered logit model. @imai2016 are the first to implement this model for ideal points, though within an EM algorithm that is unfortunately vulnerable to issues of perfect separation, which occur frequently in legislative data if certain vote categories, such as abstentions, do not occur very often. By contrast, a fully Bayesian approach to ordinal models permits very sparse distributions of responses across persons.
 
 Following the notation I introduced, a rating-scale model for $k \in K$ outcomes can be modeled as follows for observed data:
 
-\[
-	L(Y_{ijtk}|\alpha_{it},\gamma_j,\beta_j) =  \prod_{i-1}^{I} \prod_{j=1}^{J} \prod_{t=1}^{T}
-	\begin{cases} 
-	1 -  \zeta(\gamma_j \alpha_i - \beta_j - c_1) & \text{if } K = 0 \\
-	\zeta(\gamma_j \alpha_i - \beta_j - c_{k-1}) - \zeta(\gamma_j \alpha_i - \beta_j - c_{k})       & \text{if } 0 < k < K, \text{ and} \\
-	\zeta(\gamma_j \alpha_i - \beta_j - c_{k-1}) - 0 & \text{if } k=K
-	\end{cases}
-\]
+$$
+    L(Y_{ijtk}|\alpha_{it},\gamma_j,\beta_j) =  \prod_{i-1}^{I} \prod_{j=1}^{J} \prod_{t=1}^{T}
+    \begin{cases} 
+    1 -  \zeta(\gamma_j \alpha_i - \beta_j - c_1) & \text{if } K = 0 \\
+    \zeta(\gamma_j \alpha_i - \beta_j - c_{k-1}) - \zeta(\gamma_j \alpha_i - \beta_j - c_{k})       & \text{if } 0 < k < K, \text{ and} \\
+    \zeta(\gamma_j \alpha_i - \beta_j - c_{k-1}) - 0 & \text{if } k=K
+    \end{cases}
+$$
 
 where again $\zeta(\cdot)$ represents the logit function. In this version, each ordinal category $k$ less one is assigned a cutpoint $c_k$. In ideal point terms, these cutpoints divide the ideal point space across categories. A direct appliction is to use this model to include abstentions as a middle category between yea and nay votes. In this three outcome setting, two cutting planes exist in the ideal point space such that one end of the spectrum would vote No, the opposite end of the spectrum would vote Yes, and those in between the cutpoints would vote Abstain. As the polarity of items switches, Abstain will always remain in the center of the ideal point distribution, but the Yes and No positions can flip sides. This simple but efficient model helps to model situations where abstentions are in fact quite important, such as parliamentary systems [@brauninger2016].
 
 A different parameterization is known as the graded response model in IRT. This model allows the cutpoints $c_k$ to vary by bill. As a result, instead of including separate cutpoints, we can change the model by indexing each item-specific intercept for each category $k$:
 
-\[
-	L(Y_{ijtk}|\alpha_{it},\gamma_j,\beta_j) =  \prod_{i-1}^{I} \prod_{j=1}^{J} \prod_{t=1}^{T}
-	\begin{cases} 
-	1 -  \zeta(\gamma_j \alpha_i - \beta_{jk-1}) & \text{if } K = 0 \\
-	\zeta(\gamma_j \alpha_i - \beta_{jk-1}) - \zeta(\gamma_j \alpha_i - \beta_{jk-1})       & \text{if } 0 < k < K, \text{ and} \\
-	\zeta(\gamma_j \alpha_i - \beta_{jk-1}) - 0 & \text{if } k=K
-	\end{cases}
-\]
+$$
+    L(Y_{ijtk}|\alpha_{it},\gamma_j,\beta_j) =  \prod_{i-1}^{I} \prod_{j=1}^{J} \prod_{t=1}^{T}
+    \begin{cases} 
+    1 -  \zeta(\gamma_j \alpha_i - \beta_{jk-1}) & \text{if } K = 0 \\
+    \zeta(\gamma_j \alpha_i - \beta_{jk-1}) - \zeta(\gamma_j \alpha_i - \beta_{jk-1})       & \text{if } 0 < k < K, \text{ and} \\
+    \zeta(\gamma_j \alpha_i - \beta_{jk-1}) - 0 & \text{if } k=K
+    \end{cases}
+$$
 
 Though not employed in political science to any great extent, this alternative formulation to ordered logit permits more flexible inference on the cutpoints. Allowing cutpoints to vary by item will enable much more accurate prediction of categories with fewer numbers of observations. It also increases information about the items/bills, though of course at a cost of including $K$ additional parameters per item. My intention in including it here is not to suggest that it is a superior model to the standard rating-scale approach, but rather as an alternative that may be useful in some situations. Either model can be profitably used to model rollcall data with middle outcomes like abstentions.
 
-I do not review the distributions for the Poisson count model as that has been widely applied in political science [@slapin2008]. However, I do specify two other distributions that have not been widely used in the ideal point literature: the Normal distribution for continuous and the log-normal distribution for positive-continuous outcomes. While @kropko2013 employed the Normal distribution in a traditional IRT framework, no one has yet used the log-Normal distribution. 
+I do not review the distributions for the Poisson count model as that has been widely applied in political science [@slapin2008]. However, I do specify two other distributions that have not been widely used in the ideal point literature: the Normal distribution for continuous and the log-normal distribution for positive-continuous outcomes. While @kropko2013 employed the Normal distribution in a traditional IRT framework, no one has yet used the log-Normal distribution.
 
 For a normal distribution, the ideal point model is used to predict the mean of $Y_{ijt}$ given residual standard deviation $\sigma_N$:
 
-\[
+$$
   L(Y_{ijt}|\alpha_{it},\gamma_j,\beta_j) =  \prod_{i-1}^{I} \prod_{j=1}^{J} \prod_{t=1}^{T} \frac{1}{ \sqrt{2\pi \sigma_N^2 }} e^{-\frac{(Y_{ijt}-(\gamma_j\alpha_{it}-\beta_j)^2}{2\sigma_N^2}}
-\]
+$$
 
 The log-normal distribution is the same distribution except that the domain of the distribution is on $log(Y_{ijt})$:
 
-\[
+$$
   L(Y_{ijt}|\alpha_{it},\gamma_j,\beta_j) =  \prod_{i-1}^{I} \prod_{j=1}^{J} \prod_{t=1}^{T} \frac{1}{ \sqrt{2\pi \sigma_N^2 }} e^{-\frac{(log(Y_{ijt})-(\gamma_j\alpha_{it}-\beta_j)^2}{2\sigma_N^2}}
-\]
+$$
 
 The log-normal parameterization is useful for continuous variables that are only defined on positive real numbers. For variables with substantial skew, such as income, this parameterization has a more useful interpretation than the more general Normal distribution. With both of these distributions, most continuous distributions can be modeled with reasonable accuracy.
 
@@ -312,17 +353,17 @@ The utility of including all of these kinds of distributions, besides granting s
 
 It is straightforward to do so using the Bayesian framework defined in this paper. I simply index $Y_{ij}$ by $m$ for the $M$ models that each relate to a distinct outcome. These outcomes could be binary, ordinal, counts, continuous or positive-continuous per the notation presented:
 
-\[
+$$
   L(Y_{ijtm}|\alpha_{it},\gamma_j,\beta_j) =  \prod_{i-1}^{I} \prod_{j=1}^{J} \prod_{t=1}^{T} \prod_{m=1}^{M} L_m(\gamma_j\alpha_{it}-\beta_j)
-\]
+$$
 
 where $L_m$ represents the likelihood function for the $m$th distribution. While I suppressed notation for missing data for the sake of brevity, all of these models can also be estimated marginal of missing data $r$ using the notation presented earlier in addition to incorporating time-series dynamics.
 
 # Big Data Inference
 
-The Achilles heel of Bayesian inference is generalizing to large data sets. Markov chains, which form the core of the estimation engine, cannot be parallelized as each iteration depends on the value of the previous iteration. As such, I present two methods of scaling this model to the ever-increasing datasets that political scientists employ for analysis. 
+The Achilles heel of Bayesian inference is generalizing to large data sets. Markov chains, which form the core of the estimation engine, cannot be parallelized as each iteration depends on the value of the previous iteration. As such, I present two methods of scaling this model to the ever-increasing datasets that political scientists employ for analysis.
 
-The first method is variational posterior approximation. A variational approximation converts the posterior distribution into a series of factorized distributions for each variable in the posterior [@Grimmer2011;@blei2017]. Though this method is not new, the implementation in Stan that I incorporate as well in `idealstan` is. Variational algorithmic approximations normally need to be derived separately for each model, which dramatically increases the costs of switching to this form of inference. However, Stan has implemented a form of "black box" variational inference where the gradients necessary to perform variational are calculated using an automatic differentiation library [@NIPS2015_5758]. As a result, variational inference is available for *any* of the models presented in this paper (and all future models as well). 
+The first method is variational posterior approximation. A variational approximation converts the posterior distribution into a series of factorized distributions for each variable in the posterior [@Grimmer2011; @blei2017]. Though this method is not new, the implementation in Stan that I incorporate as well in `idealstan` is. Variational algorithmic approximations normally need to be derived separately for each model, which dramatically increases the costs of switching to this form of inference. However, Stan has implemented a form of "black box" variational inference where the gradients necessary to perform variational are calculated using an automatic differentiation library [@NIPS2015_5758]. As a result, variational inference is available for *any* of the models presented in this paper (and all future models as well).
 
 Variational inference (VI), though, is not a perfect solution. Because the distribution of each parameter is independent, it ignores inter-parameter correlations, which lowers the uncertainty of estimates. Furthermore, the variational approximation can fail to capture a close summary of the posterior if the algorithm is terminated prematurely [@gelman2018]. This issue can be largely avoided by using a more conservative standard for convergence, and additional statistics can be measured to test for degeneracies in the variational approximation [@gelman2018]. It may even be possible to adjust posterior inference post-hoc by conducting simulation studies on particular models to see how much uncertainty is lost with the VI algorithm.
 
@@ -330,17 +371,17 @@ In addition to these questions about VI's ability to capture the true posterior,
 
 Traditionally, parallel computation has had a limited impact on MCMC because Markov chains depend on prior iterations of the algorithm. This dependence between iterations means that the computations cannot be parallelized across iterations. However, recently the Stan team has implemented a way to parallelize the *likelihood* computation within a Markov chain, and in particular the computationally expensive gradients necessary to perform Hamiltonian MCMC. The likelihood can be parallelized so long as parameters are conditionally independent. For a static ideal point model, this means that the likelihood can be parallelized across persons or items. For a dynamic model, parallelization can be performed across persons as ideal points depend on prior values. As this parallelization has yet to be fully released, it will be implemented in the near future as part of the R package `idealstan`, permitting truly massive computational inference of ideal point models where the upper limit is the number of computer cores available.
 
-There is one another means of speeding up computations, and that is to transfer computation to a graphical processing unit (GPU). This method has recently been implemented successfully to speed up MCMC estimation of a static ideal point model [@lewis2018]. Stan has also recently implemented GPU optimization for matrix calculations. This feature will be implemented to speed up GP inference, as GPs require sampling from a multivariate Normal distribution. However, GPU optimization will otherwise be limited as it requires square matrix computation, and the data in `idealstan` is in a "long" form that allows for varying numbers of observations per item and person. 
+There is one another means of speeding up computations, and that is to transfer computation to a graphical processing unit (GPU). This method has recently been implemented successfully to speed up MCMC estimation of a static ideal point model [@lewis2018]. Stan has also recently implemented GPU optimization for matrix calculations. This feature will be implemented to speed up GP inference, as GPs require sampling from a multivariate Normal distribution. However, GPU optimization will otherwise be limited as it requires square matrix computation, and the data in `idealstan` is in a "long" form that allows for varying numbers of observations per item and person.
 
 # Empirical Examples
 
-To show how time-varying estimation can increase our ability to learn about ideal points, I fit a time-varying ideal point model with the most commonly used dataset in ideal point analysis: U.S. Congressional roll-call votes. The research question that I consider is that of the effect of economic disruption on political polarization in Congress. Recent research has proposed that changes in economic conditions, whether in terms of economic inequality and trade, may be affecting increasing polarization in the U.S. Congress. It has long been understood that there is an important interaction in terms of how voters perceive economic recession and their willingness to vote for parties in a polarized environment [@alesina1995]. 
+To show how time-varying estimation can increase our ability to learn about ideal points, I fit a time-varying ideal point model with the most commonly used dataset in ideal point analysis: U.S. Congressional roll-call votes. The research question that I consider is that of the effect of economic disruption on political polarization in Congress. Recent research has proposed that changes in economic conditions, whether in terms of economic inequality and trade, may be affecting increasing polarization in the U.S. Congress. It has long been understood that there is an important interaction in terms of how voters perceive economic recession and their willingness to vote for parties in a polarized environment [@alesina1995].
 
-However, we also know that the salience of policy-making varies with economic conditions that correlate with external shocks [@baker2016]. Most of the studies of trade and other shocks on Congress employ outcomes at the year level, whether the unit of analysis are states or Congressional districts. To show the power of the time-series models I employ, I analyze month-level variation in unemployment by Congressional district and its effect on party-level ideal points in the House to see to what extent localized economic shocks either polarize or de-polarize parties. 
+However, we also know that the salience of policy-making varies with economic conditions that correlate with external shocks [@baker2016]. Most of the studies of trade and other shocks on Congress employ outcomes at the year level, whether the unit of analysis are states or Congressional districts. To show the power of the time-series models I employ, I analyze month-level variation in unemployment by Congressional district and its effect on party-level ideal points in the House to see to what extent localized economic shocks either polarize or de-polarize parties.
 
 Furthermore, I interact unemployment with the level that these districts experienced adverse shocks due to exposure to Chinese trade to see whether heightened salience due to recession increases polarization among legislators in those districts even further. It has been shown that exposure to Chinese trade has important consequences for manufacturing across the United States [@autor2013], and also has implications for how legislators vote on trade-related legislation [@hall2015] and foreign policy hositility towards China [@kuk2017]. As such, exposure to trade with China is an important potential mediator of the effect of unemployment on legislative behavior.
 
-The data I collect come from the Bureau of Labor Statistic's Local Area Unemployment Statistics program, which produces unadjusted estimates of monthly unemployment by local-level units. To aggregate these numbers to the Congressional district level, I performed a spatial join by areal interpolation (i.e., weighted by amount of overlap) between the county-level monthly series and Congressional district boundaries from @lewis2013. The resulting dataset represents the average monthly unemployment data that would be most relevant to a particular Congressperson's district. Even with this high level of disaggregation, the dataset has very low missingness (50 district-year-month observations), which I impute non-parametrically using the technique of @StekhovenBuehlmann2012. 
+The data I collect come from the Bureau of Labor Statistic's Local Area Unemployment Statistics program, which produces unadjusted estimates of monthly unemployment by local-level units. To aggregate these numbers to the Congressional district level, I performed a spatial join by areal interpolation (i.e., weighted by amount of overlap) between the county-level monthly series and Congressional district boundaries from @lewis2013. The resulting dataset represents the average monthly unemployment data that would be most relevant to a particular Congressperson's district. Even with this high level of disaggregation, the dataset has very low missingness (50 district-year-month observations), which I impute non-parametrically using the technique of @StekhovenBuehlmann2012.
 
 I then merge this dataset with a decade-level measure of exposure to Chinese imports from @hall2015 who aggregated information from @autor2013 to produce district-level measures of import exposure per worker. I use this measure as a direct way of determining how strongly Chinese trade has affected a particular district. The measure only has two over-time values, unfortunately, but there is substantial variation across districts. Their measure does not have specific units as it is a weighted multiplication of workers in a district in a given industry and that industry's trade with China, although the measure is scaled to isolate Chinese dependence as opposed to other kinds of trade behavior.
 
@@ -650,7 +691,6 @@ over_states <- readRDS('data/over_states.rds')
 
 ```
 
-
 ```{r histun, fig.cap="Histogram of District-Level Unemployment"}
 
 out_plot <- over_states %>% 
@@ -665,8 +705,6 @@ out_plot <- over_states %>%
 print(out_plot)
 
 ```
-
-
 
 ```{r plotcount,fig.cap="Monthly Unemployment Rates by U.S. County, 1990-2018",fig.subcap="Source: Bureau of Labor Statistics",fig.width=6,fig.height=5}
 
@@ -691,8 +729,6 @@ county_series %>%
 ggsave("month_unemp.png",width=5,height=4)
 ```
 
-
-
 Figure \@ref(fig:histun) shows the overall distribution of district-level unemployment rates from 1990 to 2018 inclusive, with a distinct mode at 5.0%, the so-called natural rate of unemployment. Figure \@ref(fig:plotcount) breaks out the distribution of county-level unemployment rates over time by four states: Alabama, California, Michigan and New York. As can be seen, there is substantial variation both over time and across counties within a state. As such, this series is an excellent data source for showing the utility of time-varying ideal point models. We can also learn empirically from seeing how the effect of these unemployment rates affects legislators in both parties in the House. For the unemployment data itself, we can consider the following hypothesis about the effect of recession on legislators' ideal points:
 
 > H1: When monthly unemployment rates rise, legislators in each party become less polarized.
@@ -707,11 +743,9 @@ With the Chinese import shock data, we might surmise that polarization will incr
 
 > H2: When monthly unemployment rates rise in districts with a higher exposure to Chinese import competition, legislators in each party become more polarized.
 
-
 This hypothesis expresses a conditional relationship that runs in the opposite direction of the first hypothesis. It would seem that, as existing literature has shown, exposure to Chinese import shocks shifts legislators' ideal points on trade policy and increases polarization, that there should be a strongly interactive relationshp between district-level unemployment and Chinese import exposure. When both are high, we would have a strong prior that legislators will polarize away from each other. This hypothesis can be tested with a three-way interaction of party ID, unemployment rates and Chinese shock exposure at the district level.
 
-To test these hypotheses, I fit an AR(1) time-varying ideal point model to the data.  Because the AR(1) model is a discrete-time model, I aggregate the date of votes to months. Each legislator's ideal point is estimated separately, along with legislator-specific autoregressive parameters ($\psi_i$), while the covariates $\phi$ average across this time-series variation.
-
+To test these hypotheses, I fit an AR(1) time-varying ideal point model to the data. Because the AR(1) model is a discrete-time model, I aggregate the date of votes to months. Each legislator's ideal point is estimated separately, along with legislator-specific autoregressive parameters ($\psi_i$), while the covariates $\phi$ average across this time-series variation.
 
 ```{r preparecong}
 
@@ -828,44 +862,7 @@ rm(county_series,over_states)
 ```
 
 ```{r runcong1}
-if(run_all) {
-rollcalls <- readRDS('data/rollcalls.rds')
 
-unemp1 <- rollcalls %>% 
-  select(cast_code,rollnumber,congress,
-         bioname,party_code,date_month,unemp_rate) %>% 
-  mutate(item=paste0(congress,"_",rollnumber),
-         cast_code=recode_factor(cast_code,Abstention=NA_character_),
-         cast_code=as.numeric(cast_code)-1,
-         bioname=factor(bioname),
-         unemp_rate=100*unemp_rate,
-         bioname=relevel(bioname,"DeFAZIO, Peter Anthony")) %>% 
-  distinct %>% 
-  filter(party_code %in% c("R","D")) %>% 
-  mutate(party_code=factor(party_code))
-
-# drop legislators who vote on fewer than 25 unanimous bills
-
-check_bills <- group_by(unemp1,item,cast_code) %>% count %>% 
-  group_by(item) %>% 
-  summarize(prop=n[cast_code==1] / sum(n),
-            n_vote=sum(n)) %>% 
-  ungroup %>% 
-  mutate(prop=ifelse(prop==.5,
-                          sample(c(.49,.51),1),
-                     prop),
-    util_func=(1 / sqrt((.5 - prop)^2))*n_vote) %>% 
-  arrange(desc(util_func))
-
-legis_count <- group_by(unemp1, item) %>% 
-  mutate(unan=all(cast_code[!is.na(cast_code)]==1) || all(cast_code[!is.na(cast_code)]==0)) %>% 
-  group_by(bioname) %>% 
-  summarize(n_votes_nonunam=length(unique(item[!unan])))
-
-# check number of days in legislature
-
-num_days <- distinct(unemp1,bioname,date_month) %>% 
-  count(bioname)
 
 if(test) {
   
@@ -895,334 +892,63 @@ unemp1 <- anti_join(unemp1, filter(legis_count, n_votes_nonunam<25),by="bioname"
 
 # remove original data
 
-rm(rollcalls)
+# to fit the models, see file to_cluster.R
 
-if(test) {
-  
-  unemp1_fit <- id_estimate(unemp1,model_type=2,
-                          vary_ideal_pts = 'splines',
-                          niters=300,
-                          warmup=300,
-                          spline_knots=1,
-                          spline_degree = 2,
-                          nchains=2,
-                          ncores=parallel::detectCores(),
-                          const_type = "items",prior_only = prior_only,
-                          restrict_ind_high = "115_588",
-                          restrict_sd_high = .01,
-                          restrict_sd_low = .01,
-                          restrict_ind_low="115_1050",
-                          fixtype="prefix",
-                          adapt_delta=0.95,
-                          # pars=c("steps_votes_grm",
-                          #        "steps_votes",
-                          #        "B_int_free",
-                          #        "A_int_free"),
-                          #include=F,
-                          id_refresh=100)
+# spline of degree 
 
-unemp2_fit <- id_estimate(unemp1,model_type=2,
-                          vary_ideal_pts = 'splines',
-                          niters=300,
-                          warmup=300,
-                          spline_knots=5,
-                          spline_degree = 3,
-                          nchains=2,
-                          ncores=parallel::detectCores(),
-                          const_type = "items",
-                          restrict_ind_high = "115_588",
-                          restrict_ind_low="115_1050",
-                          fixtype="prefix",
-                          adapt_delta=0.95,
-                          # pars=c("steps_votes_grm",
-                          #        "steps_votes",
-                          #        "B_int_free",
-                          #        "A_int_free"),
-                          #include=F,
-                          id_refresh=100)
-
-unemp3_fit <- id_estimate(unemp1,model_type=2,
-                          vary_ideal_pts = 'splines',
-                          niters=300,
-                          warmup=300,
-                          spline_knots=5,
-                          spline_degree = 4,
-                          nchains=2,
-                          ncores=parallel::detectCores(),
-                          const_type = "items",
-                          restrict_ind_high = "115_588",
-                          restrict_ind_low="115_1050",
-                          fixtype="prefix",
-                          adapt_delta=0.95,
-                          # pars=c("steps_votes_grm",
-                          #        "steps_votes",
-                          #        "B_int_free",
-                          #        "A_int_free"),
-                          #include=F,
-                          id_refresh=100)
-  
-} else {
-  
-  unemp1_fit <- id_estimate(unemp1,model_type=2,
-                          vary_ideal_pts = 'splines',
-                          niters=300,
-                          warmup=300,
-                          spline_knots=5,
-                          spline_degree = 2,
-                          nchains=2,
-                          ncores=parallel::detectCores(),
-                          const_type = "items",prior_only = TRUE,
-                          restrict_ind_high = "105_919",
-                          restrict_ind_low="115_1050",
-                          fixtype="prefix",
-                          adapt_delta=0.95,
-                          # pars=c("steps_votes_grm",
-                          #        "steps_votes",
-                          #        "B_int_free",
-                          #        "A_int_free"),
-                          #include=F,
-                          id_refresh=100)
-
-unemp2_fit <- id_estimate(unemp1,model_type=2,
-                          vary_ideal_pts = 'splines',
-                          niters=300,
-                          warmup=300,
-                          spline_knots=5,
-                          spline_degree = 3,
-                          nchains=2,
-                          ncores=parallel::detectCores(),
-                          const_type = "items",
-                          restrict_ind_high = "105_919",
-                          restrict_ind_low="115_1050",
-                          fixtype="prefix",
-                          adapt_delta=0.95,
-                          # pars=c("steps_votes_grm",
-                          #        "steps_votes",
-                          #        "B_int_free",
-                          #        "A_int_free"),
-                          #include=F,
-                          id_refresh=100)
-
-unemp3_fit <- id_estimate(unemp1,model_type=2,
-                          vary_ideal_pts = 'splines',
-                          niters=300,
-                          warmup=300,
-                          spline_knots=5,
-                          spline_degree = 4,
-                          nchains=2,
-                          ncores=parallel::detectCores(),
-                          const_type = "items",
-                          restrict_ind_high = "105_919",
-                          restrict_ind_low="115_1050",
-                          fixtype="prefix",
-                          adapt_delta=0.95,
-                          # pars=c("steps_votes_grm",
-                          #        "steps_votes",
-                          #        "B_int_free",
-                          #        "A_int_free"),
-                          #include=F,
-                          id_refresh=100)
-  
-  
-}
-
-
-
-# save in non-local folder if in cluster
-
-if(cluster) {
-  
-  saveRDS(unemp1_fit,'/scratch/rmk7/unemp1_fit.rds')
-  saveRDS(unemp2_fit,'/scratch/rmk7/unemp2_fit.rds')
-  saveRDS(unemp3_fit,'/scratch/rmk7/unemp3_fit.rds')
-  
-} else {
-  
-  saveRDS(unemp1_fit,'data/unemp1_fit.rds')
-  saveRDS(unemp2_fit,'data/unemp2_fit.rds')
-  saveRDS(unemp3_fit,'data/unemp3_fit.rds')
-  
-}
-  
-} else {
-  
-  if(cluster) {
-    
-    unemp1_fit <- readRDS('/scratch/rmk7/unemp1_fit.rds')
-    unemp2_fit <- readRDS('/scratch/rmk7/unemp2_fit.rds')
-    unemp3_fit <- readRDS('/scratch/rmk7/unemp3_fit.rds')
-    
-  } else {
-    
-    unemp1_fit <- readRDS('data/unemp1_fit.rds')
-    unemp2_fit <- readRDS('data/unemp2_fit.rds')
-    unemp3_fit <- readRDS('data/unemp3_fit.rds')
-
-  }
-  
-
-}
+unemp1_fit <- readRDS('data/unempdouble_restrict1_fit.rds')
+unemp2_fit <- readRDS('data/unemp2_fit.rds')
+unemp3_fit <- readRDS('data/unemp3_fit.rds')
 
 ```
 
-```{r fitgp,eval=F}
+```{r fitgp}
 
-if(run_all) {
-  rm(unemp1)
-rollcalls <- readRDS('data/rollcalls.rds')
-unemp2 <- rollcalls %>% 
-  select(cast_code,rollnumber,
-         bioname,party_code,date,unemp_rate) %>% 
-  mutate(cast_code=recode_factor(cast_code,Abstention=NA_character_),
-         cast_code=as.numeric(cast_code)-1) %>% 
-  distinct %>% 
-  filter(date>lubridate::ymd("2008-06-01")) %>% 
-                 id_make(outcome_disc="cast_code",
-                         item_id="rollnumber",
-                  person_id="bioname",
-                  group_id="party_code",
-                  time_id = "date",
-                  remove_cov_int = T,
-                  person_cov = ~unemp_rate*party_code)
-rm(rollcalls)
-unemp2_fit <- id_estimate(unemp2,model_type=2,vary_ideal_pts = 'GP',
-                          niters=300,
-                          warmup=300,gpu=T,
-                          ncores=2,nchain=1,save_files="/scratch/rmk7",
-                          fixtype="prefix",
-                          restrict_ind_high = "R",
-                          restrict_ind_low="D",
-                         restrict_sd_low = 3,
-                          fix_low=0,
-                          use_groups = T,
-                         cmdstan_path_user="/home/rmk7/cmdstan",
-                         within_chain="threads",
-                         #  output_samples=100,
-                         #  pars=c("steps_votes_grm",
-                         #         "steps_votes",
-                         #         "B_int_free",
-                         #         "A_int_free"),
-                          id_refresh=100)
+unemp_gp_fit <- readRDS('data/unempdouble_restrict_gp_fit.rds')
 
-saveRDS(unemp2_fit,'data/unemp2_fit.rds')
-  
-} else {
-  unemp2_fit <- readRDS('data/unemp2_fit.rds')
-}
+```
+
+```{r loadothers}
+
+# unemp_ar_fit <- readRDS("data/unemp1_ar_fit.rds")
+# unemp_rw_fit <- readRDS("data/unemp1_rw_fit.rds")
+
+unemp_ar_fit <- readRDS("data/unempdouble_restrict1_ar_fit.rds")
+unemp_rw_fit <- readRDS("data/unemp1_rw_fit.rds")
 
 ```
 
 ```{r fitchina, include=F}
 
-if(run_all) {
-  rm(unemp1)
-rollcalls <- readRDS('data/rollcalls.rds') %>% 
-  select(cast_code,rollnumber,year,congress,
-         bioname,party_code,date,unemp_rate,
-         district_code,state_abbrev) %>% 
-  mutate(cast_code=recode_factor(cast_code,Abstention=NA_character_),
-         cast_code=as.numeric(cast_code)-1) %>% 
-  distinct %>% 
+rollcalls2 <- rollcalls %>% 
   mutate(decade=case_when(year<2000~1L,
                           year<2010~2L,
                           TRUE~3L)) %>% 
   filter(decade<3)
+
+
 load('data/andy_hall_jop/fh_final_analysis.rdata')
 
 x <- filter(x,!is.na(x)) %>% 
   distinct
 
-rollcalls <- left_join(rollcalls,select(x,dist,decade,x,z,state),
+rollcalls2 <- left_join(rollcalls2,select(x,dist,decade,x,z,state),
                        by=c(district_code="dist",
                             "decade",state_abbrev="state"))
 
-rollcalls <- filter(rollcalls,!is.na(x)) %>% 
-  mutate(item_id=paste0(congress,"_",rollnumber))
+# again, just load a fitted model from the cluster
 
-china_data <- id_make(rollcalls,outcome_disc="cast_code",
-                         item_id="item_id",
-                  person_id="bioname",
-                  group_id="party_code",
-                  time_id = "date",
-                  remove_cov_int = T,
-                  person_cov = ~unemp_rate*party_code*x)
-rm(rollcalls)
-china_fit1 <- id_estimate(china_data,model_type=2,
-                          vary_ideal_pts = 'splines',
-                          niters=300,
-                          warmup=300,
-                          spline_knots=2,
-                          spline_degree = 4,
-                          nchains=2,
-                          ncores=parallel::detectCores(),
-                          const_type = "items",
-                          restrict_ind_high = "105_238",
-                          restrict_ind_low="105_962",
-                          fixtype="prefix",
-                          adapt_delta=0.95,
-                          # pars=c("steps_votes_grm",
-                          #        "steps_votes",
-                          #        "B_int_free",
-                          #        "A_int_free"),
-                          #include=F,
-                          id_refresh=100)
-
-saveRDS(china_fit1,'data/china_fit1.rds')
-
-china_fit2 <- id_estimate(china_data,model_type=2,
-                          vary_ideal_pts = 'splines',
-                          niters=300,
-                          warmup=300,
-                          spline_knots=5,
-                          spline_degree = 3,
-                          nchains=2,
-                          ncores=parallel::detectCores(),
-                          const_type = "items",
-                          restrict_ind_high = "105_919",
-                          restrict_ind_low="115_1050",
-                          fixtype="prefix",
-                          adapt_delta=0.95,
-                          # pars=c("steps_votes_grm",
-                          #        "steps_votes",
-                          #        "B_int_free",
-                          #        "A_int_free"),
-                          #include=F,
-                          id_refresh=100)
-
-saveRDS(china_fit2,'data/china_fit2.rds')
-
-china_fit3 <- id_estimate(china_data,model_type=2,
-                          vary_ideal_pts = 'splines',
-                          niters=300,
-                          warmup=300,
-                          spline_knots=5,
-                          spline_degree = 4,
-                          nchains=2,
-                          ncores=parallel::detectCores(),
-                          const_type = "items",
-                          restrict_ind_high = "105_919",
-                          restrict_ind_low="115_1050",
-                          fixtype="prefix",
-                          adapt_delta=0.95,
-                          # pars=c("steps_votes_grm",
-                          #        "steps_votes",
-                          #        "B_int_free",
-                          #        "A_int_free"),
-                          #include=F,
-                          id_refresh=100)
-
-saveRDS(china_fit3,'data/china_fit3.rds')
-  
-} else {
-  china_fit1 <- readRDS('data/china_fit1.rds')
-  china_fit2 <- readRDS('data/china_fit2.rds')
-  china_fit3 <- readRDS('data/china_fit3.rds')
-}
+china_fit <- readRDS('data/china_double_restrict_fit1.rds')
 
 ```
 
-
 I first examine the overall distributions of the ideal point scores over time. Figure \@ref(fig:ardistconst) shows the ideal points for two Congressmen who had their ideal points constrained, Joe Linus Barton (a Republican) and Richard Edmund Neal (a Democrat). Unlike with static models, these two were selected not because they are the most ideologically extreme but rather because they served in Congress for nearly the entire sample period. As such, their long vote records help to identify the model over time. Figure \@ref(fig:ardistconst) shows very stable, though not ideologically extreme, trends for them both. Neal is known as a moderate, so it is not as surprising that his ideal point is modestly positive. Interestingly, the variance in their ideal points declines over time, perhaps suggesting gradual hardening of political positions.
+
+```{r calcmargeffs}
+
+
+
+```
 
 Based on this analysis of the constraints, we can infer that the positive side of the distribution represents more conservative ideology, while the negative side is more liberal. Using over-time models makes this interpretation more nuanced, of course, as it is possible for the meaning of the poles to change over time. We can plot the full combined distribution of all Congresspeople in Figure \@ref(fig:ardistall). This figure shows a fascinating evolution of the ideal points over time. At the beginning of Barton and Neal's careers, there were substantial numbers of conservative Democrats and liberal Republicans. By the end of their careers, the two poles of more liberal Democrats and more conservative Republicans clearly emerge. We can see how this distribution rotates over time by highlighting the two long-serving Congressmen in Figure \@ref(fig:ardistallconst). During the twenty-five year period in the data, Neal went from a more liberal member of the House to a moderate as more liberal memvbers joined the party, while Barton maintained his position in the middle of the Republican distribution by moving rightward over time.
 
@@ -1230,19 +956,21 @@ I next turn to the effect of unemployment on these distributions. One challenge 
 
 Because the latent scale is bi-directional, there are two sets of marginal effects that I need to calculate. For positive values of the latent scale, I average the effect of the covariates on ideal points $\phi$ across all values of positive discrimination parameters $\gamma_j>0$ for each posterior draw $s \in S$ and each discrimination parameter $j \in J$:
 
+```{=tex}
 \begin{equation}
 \frac{\partial \phi}{\partial Pr(Y_{ijrt}=1|\gamma_j>0)} = \frac{ \sum_{j=1}^J \Theta(X\phi_s' \gamma_{js})-0.5}{J}
 (\#eq:marg2)
 \end{equation}
-
+```
 In this equation, $\Theta(\cdot)$ represents an inverse link function that maps the ideal point values back to the observed outcome, such as a logit function for the inverse logit link (binary model) and the natural logarithm for the exponential link (Poisson distribution). For binary models with the inverse logit, I include a constant $0.5$ to calculate marginal changes in probability as $Pr(0.5)$ equals 0 on the logit scale. It is important to average this quantity for each posterior draw separately as the parameters are likely correlated in the posterior. I also calculate this statistic for all values of the discrimination parameters less than zero:
 
+```{=tex}
 \begin{equation}
 \frac{\partial \phi}{\partial Pr(Y_{ijrt}=1|\gamma_j<0)} = \frac{ \sum_{j=1}^J \Theta(X\phi_s' \gamma_{js})-0.5}{J}
 (\#eq:marg1)
 \end{equation}
-
-As a result we have two sets of marginal effects that represent the effect of the covariate weighted by the model's estimate as to whether a given item, in this case a rollcall vote, belongs to either side of the dimension. For example, if we assume that the lower end of the spectrum is liberal, then the marginal effect of $\phi$ for negative discrimination parameters will be weighted by the total amount of "liberalness" in the data. If there are many highly discriminating liberal bills, then the covariate's marginal effects on liberal votes will be much higher than if there are only a few discriminating liberal bills. Another way of conceptualizing this effect is how much a covariate prompts a given person to take a position that is consistent with a given direction of the latent scale. 
+```
+As a result we have two sets of marginal effects that represent the effect of the covariate weighted by the model's estimate as to whether a given item, in this case a rollcall vote, belongs to either side of the dimension. For example, if we assume that the lower end of the spectrum is liberal, then the marginal effect of $\phi$ for negative discrimination parameters will be weighted by the total amount of "liberalness" in the data. If there are many highly discriminating liberal bills, then the covariate's marginal effects on liberal votes will be much higher than if there are only a few discriminating liberal bills. Another way of conceptualizing this effect is how much a covariate prompts a given person to take a position that is consistent with a given direction of the latent scale.
 
 ```{r ardistconst, fig.cap="Over-time Ideal Points for Constrained Legislators by Month, 1990-2018",eval=FALSE}
 
@@ -1265,8 +993,7 @@ ggsave("constrained_dist.png")
 
 ```
 
-
-```{r ardistall, fig.cap="Over-time Ideal Points for All U.S. House Legislators by Month, 1990-2018"}
+```{r ardistall, fig.cap="Over-time Ideal Points for All U.S. House Legislators by Month, 1990-2018",eval=FALSE}
 
 dem_ids <- select(unemp1_fit@score_data@score_matrix,person_id,group_id) %>% 
   distinct %>% filter(group_id %in% c("D","R")) %>% 
@@ -1293,7 +1020,7 @@ ggsave("overlay_dist.png")
 
 ```
 
-```{r ar1plot,fig.cap="Effect of District-Level Unemployment Rates (AR1 Model) on Legislators' Ideal Points 1990-2018"}
+```{r ar1plot,fig.cap="Effect of District-Level Unemployment Rates (AR1 Model) on Legislators' Ideal Points 1990-2018",eval=FALSE}
 
 # load AR(1) fit and plot resulting data
 
@@ -1368,7 +1095,7 @@ outplot_rep <- id_plot_irf(unemp1_fit,label_high = "Conservative",
 
 ```
 
-```{r chinapl,fig.cap="Interaction of Unemployment Rates and Chinese Import Exposure on Legislative Votes 1990-2010"}
+```{r chinapl,fig.cap="Interaction of Unemployment Rates and Chinese Import Exposure on Legislative Votes 1990-2010",eval=FALSE}
 
 # load AR(1) fit and plot resulting data
 
@@ -1393,9 +1120,9 @@ ggsave("overall_eff_china.png")
 
 ```
 
-The ideal point marginal effects for the unemployment-ideal point interaction model are shown in Figure \@ref(fig:ar1plot). There are two coefficients that capture the interaction: the first is the Combined Republican effect, which represents the interaction term for Republican times Unemployment plus its constituent term, Unemployment. The effect of unemployment for Democrats is equal to the coefficient Unemployment as Democrats are the baseline category. 
+The ideal point marginal effects for the unemployment-ideal point interaction model are shown in Figure \@ref(fig:ar1plot). There are two coefficients that capture the interaction: the first is the Combined Republican effect, which represents the interaction term for Republican times Unemployment plus its constituent term, Unemployment. The effect of unemployment for Democrats is equal to the coefficient Unemployment as Democrats are the baseline category.
 
-On the whole, Figure \@ref(fig:ar1plot) shows that legislators in both parties tend to move to the left during economic recessions. This is likely due to pressures to increase redistributive spending during economic downturns. However, because the left-ward movement is greater for Democrats than for Republicans, hypothesis 2 has more support because on the whole Democrats end up farther to the left than Republicans. That is, even as both groups move to the left, Democrats move farther to the left, resulting in a legislature that is on the whole more polarized. However, it should be noted that this effect is slight, and is likely not a large contributing factor of well-known polarization between Democrats and Republicans in recent years. 
+On the whole, Figure \@ref(fig:ar1plot) shows that legislators in both parties tend to move to the left during economic recessions. This is likely due to pressures to increase redistributive spending during economic downturns. However, because the left-ward movement is greater for Democrats than for Republicans, hypothesis 2 has more support because on the whole Democrats end up farther to the left than Republicans. That is, even as both groups move to the left, Democrats move farther to the left, resulting in a legislature that is on the whole more polarized. However, it should be noted that this effect is slight, and is likely not a large contributing factor of well-known polarization between Democrats and Republicans in recent years.
 
 It is possible with the ideal point marginal effects to make precise statements about how unemployment affects legislative behavior in terms of the latent dimension. The effect magnitudes in the table appear over-stated as a one-unit change would equal a 100% increase in unemployment. For a more realistic 1% increase in unemployment, the resulting propensity to vote change is much smaller. For Republicans, a 1% increase in unemployment at the district level results in approximately a 0.1% decrease in voting for conservative bills. The effect is stronger for liberal bills: for a 1% increase in unemployment, voting for liberal bills increases by 0.18%. Because the values of discrimination do not need to be identical for both sides of the latent variable, the ideal point marginal effects are also not likely to be identical for both poles.
 
@@ -1405,24 +1132,25 @@ The advantage in employing these statistics is because ideal point marginal effe
 
 <!-- The GP model covariates have an identical interpretation to the AR(1) covariate effects as they are calculated on the underlying ideal point model which is the same between specifications. Interestingly, Figure \@reg(fig:gp1plot) shows different effects. This semi-parametric specification shows relatively weaker effects, though still in the same direction. MORE HERE ON THE GP MODEL WHEN IT'S DONE. -->
 
-<!-- It might appear at first that we should prefer the GP model's results as it is more "robust" than the AR(1) because it can incorporate a wide array of time-series processes. The GP model is indeed more flexible, but that flexibility comes at a cost. It is harder to give the effects in Figure \@ref(fig:gp1plot) a simple interpretation in terms of over-time inference. A hierarchical covariate in a GP model is the effect of unemployment averaged over the $TxT$ covariance matrix for *each person's ideal point trends*, which in this case are party-level ideal points. As such it is difficult to characterize how the covariate interacts with these time-series trends that remain non-transparent. It may be possible to obtain some kind of summary statement of GP time trends from posterior prediction given the estimates of each person's GP parameters, but I leave further decomposing GP results as an exercise for future research.  -->
+<!-- It might appear at first that we should prefer the GP model's results as it is more "robust" than the AR(1) because it can incorporate a wide array of time-series processes. The GP model is indeed more flexible, but that flexibility comes at a cost. It is harder to give the effects in Figure @ref(fig:gp1plot) a simple interpretation in terms of over-time inference. A hierarchical covariate in a GP model is the effect of unemployment averaged over the $TxT$ covariance matrix for *each person's ideal point trends*, which in this case are party-level ideal points. As such it is difficult to characterize how the covariate interacts with these time-series trends that remain non-transparent. It may be possible to obtain some kind of summary statement of GP time trends from posterior prediction given the estimates of each person's GP parameters, but I leave further decomposing GP results as an exercise for future research.  -->
 
-The advantage of the AR(1) model relative to the more complicated GP model is that it is fairly straightforward to interpret the coefficients. Because the ideal points in this model are stationary, any over-time covariate equals movement away from the time series' long-term average, or what is known in time-series terminology as a "shock." Furthermore, we know how each ideal point time series responds to these shocks from the AR(1) parameters $\psi_i$. A higher magnitude of these parameters means that the ideal points display higher auto-correlation, which in terms of the covariate indicates that the effect of the covariate will have a longer lasting effect over time. The sign of the autocorrelation parameter $\psi_i$ indicates in which direction the legislator moves given a time-series shock. A negative autocorrelation parameter will cause the legislator to oscillate in response to a shock, switching from more conservative to more liberal behavior between time points. A positive autocorrelation parameter means that the legislator responds to time-series shocks by slowly decaying to the long term mean without oscillating. 
+The advantage of the AR(1) model relative to the more complicated GP model is that it is fairly straightforward to interpret the coefficients. Because the ideal points in this model are stationary, any over-time covariate equals movement away from the time series' long-term average, or what is known in time-series terminology as a "shock." Furthermore, we know how each ideal point time series responds to these shocks from the AR(1) parameters $\psi_i$. A higher magnitude of these parameters means that the ideal points display higher auto-correlation, which in terms of the covariate indicates that the effect of the covariate will have a longer lasting effect over time. The sign of the autocorrelation parameter $\psi_i$ indicates in which direction the legislator moves given a time-series shock. A negative autocorrelation parameter will cause the legislator to oscillate in response to a shock, switching from more conservative to more liberal behavior between time points. A positive autocorrelation parameter means that the legislator responds to time-series shocks by slowly decaying to the long term mean without oscillating.
 
 What these magnitudes and sign changes imply for legislative behavior is a fascinating area for future research. To illustrate how these auto-correlation processes matter, I calculate impulse-response functions for each legislators' ideal points time series with respect to the unemployment covariate. An impulse response function measures the marginal effect of a covariate on a time series over time. For a given covariate $\phi$ and an ideal point time series $\alpha_{it}$, we can define it as follows for a given time point $t$ where the shock $\phi$ occurs:
 
+```{=tex}
 \begin{equation}
 \frac{\partial \alpha_{xt+1}}{\partial \phi} = \psi_i\phi
 \end{equation}
-
+```
 We can then iterate over future time periods $t$ by forward-substituting $\alpha_{xt}$ with the values of $\psi_i \phi$ from the prior time period:
 
+```{=tex}
 \begin{equation}
 \frac{\partial \alpha_{xt+2}}{\partial \phi} = \psi_i(\psi_i\phi)
 \end{equation}
-
+```
 This recursive algorithm can be run for an infinite number of time periods as the effect will never decay truly to zero, although in general ten time periods is usually more than sufficient to capture the impulse-response function dynamics. I calculate these impulse-response dynamics for the unemployment-party ID interaction on latent score marginal effects for each legislator. Figures \@ref(fig:irfdem) and \@ref(fig:irfrep) show these impulse-response functions for Democrat and Republican legislators respectively. What is interesting to note is that oscillation rather than slow decay is the dominant time-series behavior for legislators in both parties. We also see that there are substantial levels of autocorrelation with effects persisting through the whole 10-month period over which the impulse response functions were calculated.
-
 
 ```{r irfdem,fig.cap="Impulse Response Functions for Unemployment on Democrats' Ideal Points",eval=FALSE}
 
@@ -1439,15 +1167,13 @@ print(outplot_rep)
 ggsave("irf_rep.png")
 ```
 
-
-
 To obtain the effects in the covariate plots in Figure \@ref(fig:ar1plot), the covariate effect would need to be averaged over the time-series trends shown in these figures. In other words, while it might seem at first counter-intuitive that legislators would flip from side to side as a result of an unemployment shock, that is because the model estimates that in general these legislators tend to respond to such shocks through oscillation rather than slow decay. A positive effect from Figure \@ref(fig:ar1plot) will result in higher positive oscillations versus negative oscillations over time for these legislators. Again, this difference in time series behavior is substantively interesting, but would require further research to understand the reasons for why legislators respond to shocks in varying ways.
 
-Overall, the results of these models do show that legislative behavior changes during times of higher local unemployment. Furthermore, we can measure these movements in ideal points down to the monthly-level, permitting very precise statements about how legislative behavior changes. In general, the effects of 1% change in district-level unemployment on legislators are modest, though we would expect modest effects as this 1% change represents one-month's worth of unemployment data. Aggregated over time, these effects could grow to be substantial. 
+Overall, the results of these models do show that legislative behavior changes during times of higher local unemployment. Furthermore, we can measure these movements in ideal points down to the monthly-level, permitting very precise statements about how legislative behavior changes. In general, the effects of 1% change in district-level unemployment on legislators are modest, though we would expect modest effects as this 1% change represents one-month's worth of unemployment data. Aggregated over time, these effects could grow to be substantial.
 
 Finally I turn to the results of the Chinese import exposure model. The ideal point marginal effects for this model are shown in Figure \@ref(fig:chinapl). Unfortunately, it is not possible to read off the interactive relationship as the main effect is a continuous by continuous by binary variable interaction. The only way to interpret this relationship is by calculating the effect of the interaction for different values of Chinese import exposure per worker and party ID. This plot for the mean posterior values is shown in Figure \@ref(fig:chinaint). There is a strongly non-linear relationship between Chinese import exposure and unemployment. At low rates of Chinese import exposure, unemployment appears to have a weak effect on legislators in either party. At higher levels of import exposure, however, there is a much stronger relationship. In this case, it would appear that the relationship is strongly de-polarizing. Democrats with in districts with high unemployment and high import exposure tend to vote more conservative, while Republicans in similar districts tend to vote more liberal than other members of their party. This suggests that Chinese import exposure is indeed a strong moderating influence on the relationship between unemployment and voting behavior. Unfortunately, it is not possible to do a straightforward nested model comparison between the two-way and three-way interaction models, though further probing of the relationship could yield further insights into why these findings seem to run in opposite directions.
 
-```{r chinaint,fig.cap="Effect of Unemployment Conditional on Chinese Import Exposure per Worker, 1990-2010"}
+```{r chinaint,fig.cap="Effect of Unemployment Conditional on Chinese Import Exposure per Worker, 1990-2010",eval=FALSE}
 
 # need to extract the values of the covariates
 
@@ -1563,15 +1289,13 @@ ggsave("china_int_plot.png")
 
 ```
 
-
-
 # Discussion
 
-The aim of this paper was to put forward a general framework for ideal point estimation that would both integrate existing approaches while providing new areas for analysis, particularly in missing data and over-time inference. The intention is not to suggest, however, that this framework represents all that can be done with ideal points. This paper's approach is general and designed to fit a wide variety of applications, but investigating the intricacies of social situations will always require more custom modeling. The utility of this study is rather to promote the use of ideal point models as a core part of empirical research in political science, not just for legislative studies or rollcall voting data. 
+The aim of this paper was to put forward a general framework for ideal point estimation that would both integrate existing approaches while providing new areas for analysis, particularly in missing data and over-time inference. The intention is not to suggest, however, that this framework represents all that can be done with ideal points. This paper's approach is general and designed to fit a wide variety of applications, but investigating the intricacies of social situations will always require more custom modeling. The utility of this study is rather to promote the use of ideal point models as a core part of empirical research in political science, not just for legislative studies or rollcall voting data.
 
 The reason that ideal point models have wider applicability is because social choice processes where individuals decide between competing alternatives happen very often. If these alternatives are polarizing, or represent competing poles, than an ideal point model can help locate people's positions along the axis of competition while also determine the relative weight of the items they are choosing. The ultimate payoff is that this kind of modeling will help political scientists focus on inference on the constructs they care about, which are usually unobservable, such as partisanship, ethnic identity, corruption, and political ideology. Instead of being forced into arbitrary measurement decisions over the available indicators, political scientists can maximize the information in their data by collapsing multiple indicators to a single dimension.
 
-As a result, this paper largely sidesteps the debate about how to determine when ideal points represent political ideology. Defining a the latent construct can only be done in the context of a specific empirical application. The political ideology interpretation is most useful for American politics where legislators have considerable latitude in voting behavior, but this does not mean that ideal point representations of other polities or social situations are not as useful. So long as a social choice process is involved, ideal point models can extract useful information from noisy data. 
+As a result, this paper largely sidesteps the debate about how to determine when ideal points represent political ideology. Defining a the latent construct can only be done in the context of a specific empirical application. The political ideology interpretation is most useful for American politics where legislators have considerable latitude in voting behavior, but this does not mean that ideal point representations of other polities or social situations are not as useful. So long as a social choice process is involved, ideal point models can extract useful information from noisy data.
 
 # Conclusion
 
@@ -1583,15 +1307,9 @@ I implemented two new time-varying models for ideal points, the AR(1) stationary
 
 All of these models are available in an R package called `idealstan`. This package is designed to automate the sometimes arduous process of preparing data for ideal point modeling, including identifying parameters. Furthermore, the use of a single R package for all models enables researchers to compare different models on the same data with ease. Big data alternatives to standard Bayesian inference are also incorporated in the package to enable estimation of the ever larger data sets available to political scientists.
 
-
-
-
-
-
 <!-- With the Chinese import shock data, we can consider the following hypothesis: -->
 
 <!-- > H2: When monthly unemployment rates rise in districts with a higher exposure to Chinese import competition, legislators in each party become more polarized. -->
-
 
 <!-- This hypothesis expresses a conditional relationship that runs in the opposite direction of the first hypothesis. It would seem that, as existing literature has shown, exposure to Chinese import shocks shifts legislators' ideal points on trade policy and increases polarization, that there should be a strongly interactive relationshp between district-level unemployment and Chinese import exposure. When both are high, we would have a strong prior that legislators will polarize away from each other. This hypothesis can be tested with a three-way interaction of party ID, unemployment rates and Chinese shock exposure at the district level. -->
 
@@ -1602,5 +1320,3 @@ All of these models are available in an R package called `idealstan`. This packa
 <!-- Instead of testing overall polarization as H2 proposes, we can see if the movement in ideal points is concentrated on bills on trade policy by adding an indicator for trade-related legislation to the ideal point model and interacting it with party ID, unemployment, and China import shock exposure. -->
 
 # References
-
-
