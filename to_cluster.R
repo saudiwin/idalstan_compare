@@ -39,9 +39,9 @@ fit_type <- as.numeric(Sys.getenv("FITTYPE"))
 fit_type <- switch(fit_type,"spline1","spline2","spline3","china",
                    "GP","ar1","rw")
 
-modtype <- "double_restrict"
+modtype <- Sys.getenv("DATATYPE")
 
-spline_degree <- 4
+spline_degree <- 3
 
 niters <- 300
 nwarmup <- 300
@@ -49,14 +49,14 @@ nwarmup <- 300
 
 # set max treedepth (for spline models)
 
-max_treedepth <- 11
+max_treedepth <- as.numeric(as.numeric(Sys.getenv("TREEDEPTH")))
 
 # set restrict SD for pinned items
 
 restrict_sd <- .001
 
 
-## ----load_cong,include=F------------------------------------------------------------------------
+## ----create data ------------------------------------------------------------------------
 
 # UNCOMMENT COMPLETELY TO LOAD FROM RAW DATA
 # UNCOMMENT LINES WITH "readRDS" TO RUN FROM PRE-CALCULATED DATA
@@ -362,7 +362,7 @@ over_states <- readRDS('data/over_states.rds')
 
 
 
-## ----preparecong--------------------------------------------------------------------------------
+## ----more data creation--------------------------------------------------------------------------------
 
 # UNCOMMENT TO RUN FROM SCRATCH
 
@@ -464,7 +464,7 @@ over_states <- readRDS('data/over_states.rds')
 
 
 
-# Load rollcall data ------------------------------------------------------
+# Load created data ------------------------------------------------------
 
 
 rollcalls <- readRDS('data/rollcalls.rds') 
@@ -499,6 +499,34 @@ spline_knots_year <- c(min(collapse_rollcall$year),
                           max(collapse_rollcall$year))
 
 print(paste0("Processing model: ",fit_type))
+
+print(paste0("Data type is: ",modtype))
+
+if(modtype=="115") {
+  
+  rollcalls <- filter(rollcalls, congress==115)
+  restrict_ind_high <- "115_588"
+  restrict_ind_low <- "115_1050"
+  spline_knots_all <- NULL
+  spline_knots_china <- NULL
+  spline_knots_year <- NULL
+  time_id <- 'date_month'
+  
+} else {
+  
+  restrict_ind_high <-  c("102_409","109_33")
+  
+  if(fit_type=="china") {
+    
+    restrict_ind_low <- c("111_1","108_329")
+    
+  } else {
+    
+    restrict_ind_low <- c("115_1050","108_329")
+    
+  }
+  
+}
 
 
 ## ----runcong1-----------------------------------------------------------------------------------
@@ -577,10 +605,10 @@ if(test) {
                           nchains=2,
                           ncores=parallel::detectCores(),
                           const_type = "items",prior_only = prior_only,
-                          restrict_ind_high = "115_588",
+                          restrict_ind_high = restrict_ind_high,
                           restrict_sd_high = restrict_sd,
                           restrict_sd_low = restrict_sd,
-                          restrict_ind_low="115_1050",
+                          restrict_ind_low = restrict_ind_low,
                           fixtype="prefix",
                           adapt_delta=0.95,
                           # pars=c("steps_votes_grm",
@@ -599,8 +627,8 @@ unemp2_fit <- id_estimate(unemp1,model_type=2,
                           nchains=2,
                           ncores=parallel::detectCores(),
                           const_type = "items",
-                          restrict_ind_high = "115_588",
-                          restrict_ind_low="115_1050",
+                          restrict_ind_high = restrict_ind_high,
+                          restrict_ind_low = restrict_ind_low,
                           fixtype="prefix",
                           adapt_delta=0.95,
                           # pars=c("steps_votes_grm",
@@ -619,8 +647,8 @@ unemp3_fit <- id_estimate(unemp1,model_type=2,
                           nchains=2,
                           ncores=parallel::detectCores(),
                           const_type = "items",
-                          restrict_ind_high = "115_588",
-                          restrict_ind_low="115_1050",
+                          restrict_ind_high = restrict_ind_high,
+                          restrict_ind_low = restrict_ind_low,
                           fixtype="prefix",
                           adapt_delta=0.95,
                           # pars=c("steps_votes_grm",
@@ -643,8 +671,8 @@ unemp3_fit <- id_estimate(unemp1,model_type=2,
                               nchains=2,
                               ncores=parallel::detectCores(),
                               const_type = "items",prior_only = prior_only,
-                              restrict_ind_high = c("102_409","109_33"),
-                              restrict_ind_low=c("115_1050","108_329"),
+                              restrict_ind_high = restrict_ind_high,
+                              restrict_ind_low = restrict_ind_low,
                               restrict_sd_high = restrict_sd,
                               restrict_sd_low = restrict_sd,
                               max_treedepth=max_treedepth,
@@ -657,7 +685,7 @@ unemp3_fit <- id_estimate(unemp1,model_type=2,
                               #include=F,
                               id_refresh=100)
     
-    saveRDS(unemp1_fit,paste0("/scratch/rmk7/unemp",modtype,"1_fit.rds"))
+    saveRDS(unemp1_fit,paste0("/scratch/rmk7/unemp",modtype,"_",max_treedepth,"_","1_fit.rds"))
     
   }
   
@@ -672,8 +700,8 @@ unemp3_fit <- id_estimate(unemp1,model_type=2,
                               nchains=2,
                               ncores=parallel::detectCores(),
                               const_type = "items",
-                              restrict_ind_high = c("102_409","109_33"),
-                              restrict_ind_low=c("115_1050","108_329"),
+                              restrict_ind_high = restrict_ind_high,
+                              restrict_ind_low = restrict_ind_low,
                               restrict_sd_high = restrict_sd,
                               restrict_sd_low = restrict_sd,
                               max_treedepth=max_treedepth,
@@ -686,7 +714,7 @@ unemp3_fit <- id_estimate(unemp1,model_type=2,
                               #include=F,
                               id_refresh=100)
     
-    saveRDS(unemp2_fit,paste0("/scratch/rmk7/unemp",modtype,"2_fit.rds"))
+    saveRDS(unemp2_fit,paste0("/scratch/rmk7/unemp",modtype,"_",max_treedepth,"_","2_fit.rds"))
     
     
   }
@@ -703,8 +731,8 @@ unemp3_fit <- id_estimate(unemp1,model_type=2,
                               nchains=2,
                               ncores=parallel::detectCores(),
                               const_type = "items",
-                              restrict_ind_high = c("102_409","109_33"),
-                              restrict_ind_low=c("115_1050","108_329"),
+                              restrict_ind_high = restrict_ind_high,
+                              restrict_ind_low = restrict_ind_low,
                               restrict_sd_low = restrict_sd,
                               restrict_sd_high = restrict_sd,
                               max_treedepth=max_treedepth,
@@ -717,7 +745,7 @@ unemp3_fit <- id_estimate(unemp1,model_type=2,
                               #include=F,
                               id_refresh=100)
     
-   saveRDS( unemp3_fit,paste0("/scratch/rmk7/unemp",modtype,"3_fit.rds"))
+   saveRDS( unemp3_fit,paste0("/scratch/rmk7/unemp",modtype,"_",max_treedepth,"_","3_fit.rds"))
     
   }
   
@@ -732,7 +760,6 @@ unemp3_fit <- id_estimate(unemp1,model_type=2,
   
   if(fit_type=="GP") {
     
-    rollcalls <- readRDS('data/rollcalls.rds')
     unemp2 <- rollcalls %>%
       select(cast_code,rollnumber,
              bioname,party_code,date,unemp_rate,congress,year) %>%
@@ -745,7 +772,7 @@ unemp3_fit <- id_estimate(unemp1,model_type=2,
               item_id="item_id",
               person_id="bioname",
               group_id="party_code",
-              time_id = "year",
+              time_id = time_id,
               remove_cov_int = T,
               person_cov = ~unemp_rate*party_code)
 
@@ -755,8 +782,8 @@ unemp3_fit <- id_estimate(unemp1,model_type=2,
                               ncores=parallel::detectCores(),nchain=2,
                               fixtype="prefix",
                               const_type = "items",
-                              restrict_ind_high = c("102_409","109_33"),
-                              restrict_ind_low=c("115_1050","108_329"),
+                              restrict_ind_high = restrict_ind_high,
+                              restrict_ind_low = restrict_ind_low,
                               restrict_sd_low = restrict_sd,
                               restrict_sd_high = restrict_sd,
                               use_groups = F,
@@ -767,7 +794,7 @@ unemp3_fit <- id_estimate(unemp1,model_type=2,
                               #         "A_int_free"),
                               id_refresh=100)
     
-   saveRDS(unemp_gp_fit, paste0("/scratch/rmk7/unemp",modtype,"_gp_fit.rds"))
+   saveRDS(unemp_gp_fit, paste0("/scratch/rmk7/unemp",modtype,"_",max_treedepth,"_","_gp_fit.rds"))
     
   }
 
@@ -777,7 +804,6 @@ unemp3_fit <- id_estimate(unemp1,model_type=2,
 
 if(fit_type=="ar1") {
   
-  rollcalls <- readRDS('data/rollcalls.rds')
   unemp2 <- rollcalls %>%
     select(cast_code,rollnumber,
            bioname,party_code,date,unemp_rate,congress,year) %>%
@@ -790,7 +816,7 @@ if(fit_type=="ar1") {
             item_id="item_id",
             person_id="bioname",
             group_id="party_code",
-            time_id = "year",
+            time_id = time_id,
             remove_cov_int = T,
             person_cov = ~unemp_rate*party_code)
   
@@ -803,8 +829,8 @@ if(fit_type=="ar1") {
                             nchains=2,
                             ncores=parallel::detectCores(),
                             const_type = "items",prior_only = prior_only,
-                            restrict_ind_high = c("102_409","109_33"),
-                            restrict_ind_low=c("115_1050","108_329"),
+                            restrict_ind_high = restrict_ind_high,
+                            restrict_ind_low = restrict_ind_low,
                             restrict_sd_low = restrict_sd,
                             restrict_sd_high = restrict_sd,
                             fixtype="prefix",
@@ -816,7 +842,7 @@ if(fit_type=="ar1") {
                             #include=F,
                             id_refresh=100)
   
-  saveRDS(unemp1_ar_fit, paste0("/scratch/rmk7/unemp",modtype,"1_ar_fit.rds"))
+  saveRDS(unemp1_ar_fit, paste0("/scratch/rmk7/unemp",modtype,"_",max_treedepth,"_","1_ar_fit.rds"))
   
   
 }
@@ -825,7 +851,6 @@ if(fit_type=="ar1") {
 
 if(fit_type=="rw") {
   
-  rollcalls <- readRDS('data/rollcalls.rds')
   unemp2 <- rollcalls %>%
     select(cast_code,rollnumber,
            bioname,party_code,date,unemp_rate,congress,year) %>%
@@ -838,7 +863,7 @@ if(fit_type=="rw") {
             item_id="item_id",
             person_id="bioname",
             group_id="party_code",
-            time_id = "year",
+            time_id = time_id,
             remove_cov_int = T,
             person_cov = ~unemp_rate*party_code)
   
@@ -852,8 +877,8 @@ if(fit_type=="rw") {
                                nchains=2,
                                ncores=parallel::detectCores(),
                                const_type = "items",prior_only = prior_only,
-                               restrict_ind_high = c("102_409","109_33"),
-                               restrict_ind_low=c("115_1050","108_329"),
+                               restrict_ind_high = restrict_ind_high,
+                               restrict_ind_low = restrict_ind_low,
                                restrict_sd_low = restrict_sd,
                                restrict_sd_high = restrict_sd,
                                fixtype="prefix",
@@ -865,7 +890,7 @@ if(fit_type=="rw") {
                                #include=F,
                                id_refresh=100)
   
-  saveRDS(unemp1_rw_fit, paste0("/scratch/rmk7/unemp",modtype,"1_rw_fit.rds"))
+  saveRDS(unemp1_rw_fit, paste0("/scratch/rmk7/unemp",modtype,"_",max_treedepth,"_","1_rw_fit.rds"))
   
   
 }
@@ -876,7 +901,7 @@ if(fit_type=="rw") {
 
 if(fit_type=="china") {
   
-  rollcalls <- readRDS('data/rollcalls.rds') %>% 
+  rollcalls <- rollcalls %>% 
     select(cast_code,rollnumber,year,
            bioname,party_code,date_month,unemp_rate,
            district_code,state_abbrev,congress) %>% 
@@ -919,8 +944,10 @@ if(fit_type=="china") {
                             nchains=2,
                             ncores=parallel::detectCores(),
                             const_type = "items",
-                            restrict_ind_high = c("102_409","109_33"),
+                            restrict_ind_high = restrict_ind_high,
                             restrict_ind_low=c("111_1","108_329"),
+                            restrict_sd_high = restrict_sd,
+                            restrict_sd_low = restrict_sd,
                             fixtype="prefix",
                             adapt_delta=0.95,max_treedepth=max_treedepth,
                             # pars=c("steps_votes_grm",
@@ -930,7 +957,7 @@ if(fit_type=="china") {
                             #include=F,
                             id_refresh=100)
   
-  saveRDS(china_fit1,paste0('/scratch/rmk7/china_',modtype,'_fit1.rds'))
+  saveRDS(china_fit1,paste0('/scratch/rmk7/china_',modtype,"_",max_treedepth,"_",'_fit1.rds'))
   
   
 }
