@@ -6,20 +6,32 @@ library(marginaleffects)
 library(modelsummary)
 library(bayesplot)
 
-setwd("~/idalstan_compare/")
+rollcalls <- readRDS('data/rollcalls.rds') %>% 
+  filter(congress==115)
 
-rollcalls <- readRDS('data/rollcalls.rds') 
+# create unemployment series as year-on-year changes
+
+unemp_changes <- select(rollcalls, bioname, year, month, unemp_rate) %>% 
+  distinct %>% 
+  group_by(bioname) %>% 
+  arrange(bioname, month, year) %>% 
+  mutate(unemp_rate_yoy=unemp_rate - lag(unemp_rate),
+         unemp_rate_yoy=coalesce(unemp_rate_yoy, 0))
+
+rollcalls <- left_join(rollcalls, select(ungroup(unemp_changes),
+                                         -unemp_rate),
+                       by=c('bioname','year','month'))
 
 set.seed(01022024)
 
 unemp1 <- rollcalls %>% 
   select(cast_code,rollnumber,congress,
-         bioname,party_code,date_month,unemp_rate) %>% 
+         bioname,party_code,date_month,unemp_rate_yoy) %>% 
   mutate(item=paste0(congress,"_",rollnumber),
          cast_code=recode_factor(cast_code,Abstention=NA_character_),
          cast_code=as.numeric(cast_code)-1,
          bioname=factor(bioname),
-         unemp_rate=100*unemp_rate,
+         unemp_rate_yoy=100*unemp_rate_yoy,
          bioname=relevel(bioname,"DeFAZIO, Peter Anthony")) %>% 
   distinct %>% 
   filter(party_code %in% c("R","D")) %>% 
@@ -27,8 +39,8 @@ unemp1 <- rollcalls %>%
 
 # drop legislators who vote on fewer than 25 unanimous bills
 
-check_bills <- group_by(unemp1,item,cast_code) %>% count %>% 
-  group_by(item) %>% 
+check_bills <- group_by(unemp1,item,party_code,cast_code) %>% count %>% 
+  group_by(item,party_code) %>% 
   summarize(prop=n[cast_code==1] / sum(n),
             n_vote=sum(n)) %>% 
   ungroup %>% 
@@ -59,21 +71,23 @@ unemp1_obj <- test_mod_data %>%
           person_id="bioname",
           group_id="party_code",
           time_id = "date_month",
-          person_cov = ~unemp_rate*party_code)
+          person_cov = ~unemp_rate_yoy*party_code)
 
 test_mod <- id_estimate(unemp1_obj,model_type=2,
                           vary_ideal_pts = 'splines',
                           niters=300,
-                          warmup=300,
+                          warmup=600,
                           spline_knots=NULL,
                           spline_degree = 3,
                           nchains=2,
                           ncores=parallel::detectCores(),
                           const_type = "items",prior_only = FALSE,
-                          restrict_ind_high = "115_588",
+                          restrict_ind_high = c("115_251","115_986","115_1","115_632"),
                           restrict_sd_high = .001,
-                          restrict_sd_low = .001,
-                          restrict_ind_low="115_1050",
+                          restrict_sd_low = .001,restrict_var = F,
+                          restrict_ind_low=c("115_433","115_988","115_4","115_396"),
+                        person_sd=1,
+                        time_var = 1,
                           fixtype="prefix",
                           adapt_delta=0.95,
                           # pars=c("steps_votes_grm",
@@ -94,16 +108,16 @@ test_mod <- readRDS("data/unemp1_test.rds")
 eps <- 1e-4
 
 new_data1 <- mutate(test_mod_data,
-                     unemp_rate = unemp_rate - eps / 2)
+                     unemp_rate_yoy = unemp_rate_yoy - eps / 2)
 
 new_data2 <- mutate(test_mod_data,
-                    unemp_rate = unemp_rate + eps / 2)
+                    unemp_rate_yoy = unemp_rate_yoy + eps / 2)
 
 draws <- sample(1:600, 100)
 
-test_mod_pred1 <- id_post_pred(test_mod,newdata=new_data1,use_cores=8,type="epred",
+test_mod_pred1 <- id_post_pred(test_mod,newdata=new_data1,use_cores=15,type="epred",
                                draws=draws)
-test_mod_pred2 <- id_post_pred(test_mod,newdata=new_data2,use_cores=8,type="epred",
+test_mod_pred2 <- id_post_pred(test_mod,newdata=new_data2,use_cores=15,type="epred",
                                draws=draws)
 
 # walk over both predictions to get item and overall effects
@@ -220,3 +234,29 @@ by_party %>%
           subtitle="Marginal Effect of Unemployment Mediated by Legislator Ideal Point and Bill Discrimination")
 
 ggsave("rollcalls_115.jpg",height=7,width=7)
+
+by_party %>% 
+  ungroup %>% 
+  mutate(group_id=factor(group_id,levels=c("D","R"),
+                         labels=c("Democrats", "Republicans")),
+         item_rank=rank(mean_est)) %>% 
+  filter(!(item_orig %in% c("115_1050","115_588"))) %>% 
+  ggplot(aes(y=mean_est,
+             x=item_rank)) +
+  geom_ribbon(aes(ymin=low_est,
+                     ymax=high_est,
+                     fill=group_id),alpha=0.5) +
+  #facet_wrap(~group_id) +
+  ggthemes::theme_tufte() + 
+  #scale_fill_viridis_c(name="Discrimination") +
+  coord_flip() +
+  labs(y="Marginal Change in Probability of Voting",
+       x="Rollcalls") +
+  geom_hline(yintercept=0,linetype=2) +
+  #ggdark::dark_mode() +
+  theme(axis.text.y=element_blank(),
+        axis.ticks.y=element_blank()) +
+  ggtitle("Marginal Effect of District Monthly Unemployment on Rollcall Votes in 115th Congress",
+          subtitle="Marginal Effect of Unemployment Mediated by Legislator Ideal Point and Bill Discrimination")
+
+ggsave("rollcalls_overlay_115.jpg",height=7,width=7)
