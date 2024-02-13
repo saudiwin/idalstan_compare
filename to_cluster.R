@@ -41,10 +41,11 @@ fit_type <- switch(fit_type,"spline1","spline2","spline3","china",
 
 modtype <- Sys.getenv("DATATYPE")
 
-spline_degree <- 3
+spline_degree <- 4
 
 niters <- 300
-nwarmup <- 300
+nwarmup <- 500
+nchains <- 3
 
 
 # set max treedepth (for spline models)
@@ -469,6 +470,19 @@ over_states <- readRDS('data/over_states.rds')
 
 rollcalls <- readRDS('data/rollcalls.rds') 
 
+# create unemployment series as year-on-year changes
+
+unemp_changes <- select(rollcalls, bioname, year, month, unemp_rate) %>% 
+  distinct %>% 
+  group_by(bioname) %>% 
+  arrange(bioname, month, year) %>% 
+  mutate(unemp_rate_yoy=unemp_rate - lag(unemp_rate),
+         unemp_rate_yoy=coalesce(unemp_rate_yoy, 0))
+
+rollcalls <- left_join(rollcalls, select(ungroup(unemp_changes),
+                                         -unemp_rate),
+                       by=c('bioname','year','month'))
+
 # need to figure out knots
 
 collapse_rollcall <- group_by(rollcalls, congress) %>% 
@@ -505,8 +519,8 @@ print(paste0("Data type is: ",modtype))
 if(modtype=="115") {
   
   rollcalls <- filter(rollcalls, congress==115)
-  restrict_ind_high <- "115_588"
-  restrict_ind_low <- "115_1050"
+  restrict_ind_high <- c("115_251","115_986","115_1","115_632")
+  restrict_ind_low <- c("115_433","115_988","115_4","115_396")
   spline_knots_all <- NULL
   spline_knots_china <- NULL
   spline_knots_year <- NULL
@@ -534,12 +548,12 @@ if(modtype=="115") {
 
 unemp1 <- rollcalls %>% 
   select(cast_code,rollnumber,congress,
-         bioname,party_code,date_month,unemp_rate) %>% 
+         bioname,party_code,date_month,unemp_rate_yoy) %>% 
   mutate(item=paste0(congress,"_",rollnumber),
          cast_code=recode_factor(cast_code,Abstention=NA_character_),
          cast_code=as.numeric(cast_code)-1,
          bioname=factor(bioname),
-         unemp_rate=100*unemp_rate,
+         unemp_rate_yoy=100*unemp_rate_yoy,
          bioname=relevel(bioname,"DeFAZIO, Peter Anthony")) %>% 
   distinct %>% 
   filter(party_code %in% c("R","D")) %>% 
@@ -547,15 +561,16 @@ unemp1 <- rollcalls %>%
 
 # drop legislators who vote on fewer than 25 unanimous bills
 
-check_bills <- group_by(unemp1,item,cast_code) %>% count %>% 
-  group_by(item) %>% 
+
+check_bills <- group_by(unemp1,item,party_code,cast_code) %>% count %>% 
+  group_by(item,party_code) %>% 
   summarize(prop=n[cast_code==1] / sum(n),
             n_vote=sum(n)) %>% 
   ungroup %>% 
   mutate(prop=ifelse(prop==.5,
-                          sample(c(.49,.51),1),
+                     sample(c(.49,.51),1),
                      prop),
-    util_func=(1 / sqrt((.5 - prop)^2))*n_vote) %>% 
+         util_func=(1 / sqrt((.5 - prop)^2))*n_vote) %>% 
   arrange(desc(util_func))
 
 legis_count <- group_by(unemp1, item) %>% 
@@ -592,7 +607,7 @@ unemp1 <- anti_join(unemp1, filter(legis_count, n_votes_nonunam<25),by="bioname"
                   person_id="bioname",
                   group_id="party_code",
                   time_id = "date_month",
-                  person_cov = ~unemp_rate*party_code)
+                  person_cov = ~unemp_rate_yoy*party_code)
 
 if(test) {
   
@@ -602,7 +617,7 @@ if(test) {
                           warmup=nwarmup,
                           spline_knots=spline_knots_all,
                           spline_degree = spline_degree-2,
-                          nchains=2,
+                          nchains=nchains,
                           ncores=parallel::detectCores(),
                           const_type = "items",prior_only = prior_only,
                           restrict_ind_high = restrict_ind_high,
@@ -624,7 +639,7 @@ unemp2_fit <- id_estimate(unemp1,model_type=2,
                           warmup=nwarmup,
                           spline_knots=spline_knots_all,
                           spline_degree = spline_degree - 1,
-                          nchains=2,
+                          nchains=nchains,
                           ncores=parallel::detectCores(),
                           const_type = "items",
                           restrict_ind_high = restrict_ind_high,
@@ -644,7 +659,7 @@ unemp3_fit <- id_estimate(unemp1,model_type=2,
                           warmup=nwarmup,
                           spline_knots=spline_knots_all,
                           spline_degree = spline_degree,
-                          nchains=2,
+                          nchains=nchains,
                           ncores=parallel::detectCores(),
                           const_type = "items",
                           restrict_ind_high = restrict_ind_high,
@@ -662,19 +677,25 @@ unemp3_fit <- id_estimate(unemp1,model_type=2,
   
   if(fit_type=="spline1") {
     
-    unemp1_fit <- id_estimate(unemp1,model_type=2,
+    unemp1_fit <- id_estimate(unemp1,model_type=1,
                               vary_ideal_pts = 'splines',
                               niters=niters,
                               warmup=nwarmup,
                               spline_knots=spline_knots_all,
                               spline_degree = spline_degree - 2,
-                              nchains=2,
+                              nchains=nchains,
                               ncores=parallel::detectCores(),
                               const_type = "items",prior_only = prior_only,
                               restrict_ind_high = restrict_ind_high,
                               restrict_ind_low = restrict_ind_low,
                               restrict_sd_high = restrict_sd,
-                              restrict_sd_low = restrict_sd,
+                              restrict_sd_low = restrict_sd,restrict_var = FALSE,
+                              person_sd = 3,
+                              time_var = 1,
+                              diff_reg_sd = 3,
+                              diff_miss_sd = 3,
+                              discrim_reg_sd= 3,
+                              discrim_miss_sd = 3,fix_high = 2,fix_low = -2,
                               max_treedepth=max_treedepth,
                               fixtype="prefix",
                               adapt_delta=0.95,
@@ -691,19 +712,25 @@ unemp3_fit <- id_estimate(unemp1,model_type=2,
   
   if(fit_type=="spline2") {
     
-    unemp2_fit <- id_estimate(unemp1,model_type=2,
+    unemp2_fit <- id_estimate(unemp1,model_type=1,
                               vary_ideal_pts = 'splines',
                               niters=niters,
                               warmup=nwarmup,
                               spline_knots=spline_knots_all,
                               spline_degree = spline_degree - 1,
-                              nchains=2,
+                              nchains=nchains,
                               ncores=parallel::detectCores(),
                               const_type = "items",
                               restrict_ind_high = restrict_ind_high,
                               restrict_ind_low = restrict_ind_low,
                               restrict_sd_high = restrict_sd,
-                              restrict_sd_low = restrict_sd,
+                              restrict_sd_low = restrict_sd,restrict_var = FALSE,
+                              person_sd = 3,fix_high = 2,fix_low = -2,
+                              diff_reg_sd = 3,
+                              diff_miss_sd = 3,
+                              discrim_reg_sd= 3,
+                              discrim_miss_sd = 3,
+                              time_var = 1,
                               max_treedepth=max_treedepth,
                               fixtype="prefix",
                               adapt_delta=0.95,
@@ -722,19 +749,25 @@ unemp3_fit <- id_estimate(unemp1,model_type=2,
   if(fit_type=="spline3") {
     
     
-    unemp3_fit <- id_estimate(unemp1,model_type=2,
+    unemp3_fit <- id_estimate(unemp1,model_type=1,
                               vary_ideal_pts = 'splines',
                               niters=niters,
                               warmup=nwarmup,
                               spline_knots=spline_knots_all,
                               spline_degree = spline_degree,
-                              nchains=2,
+                              nchains=nchains,
                               ncores=parallel::detectCores(),
                               const_type = "items",
                               restrict_ind_high = restrict_ind_high,
                               restrict_ind_low = restrict_ind_low,
                               restrict_sd_low = restrict_sd,
-                              restrict_sd_high = restrict_sd,
+                              restrict_sd_high = restrict_sd,restrict_var = FALSE,
+                              person_sd = 3,fix_high = 2,fix_low = -2,
+                              diff_reg_sd = 3,
+                              diff_miss_sd = 3,
+                              discrim_reg_sd= 3,
+                              discrim_miss_sd = 3,
+                              time_var = 1,
                               max_treedepth=max_treedepth,
                               fixtype="prefix",
                               adapt_delta=0.95,
@@ -762,21 +795,22 @@ unemp3_fit <- id_estimate(unemp1,model_type=2,
     
     unemp2 <- rollcalls %>%
       select(cast_code,rollnumber,
-             bioname,party_code,date,unemp_rate,congress,year) %>%
+             bioname,party_code,date,unemp_rate_yoy,congress,year,date_month) %>%
       mutate(cast_code=recode_factor(cast_code,Abstention=NA_character_),
              cast_code=as.numeric(cast_code)-1,
              item_id=paste0(congress,"_",rollnumber)) %>%
+      filter(party_code %in% c("R","D")) %>% 
       distinct %>%
       #filter(date>lubridate::ymd("2008-06-01")) %>%
       id_make(outcome_disc="cast_code",
               item_id="item_id",
               person_id="bioname",
               group_id="party_code",
-              time_id = time_id,
+              time_id = "date_month",
               remove_cov_int = T,
-              person_cov = ~unemp_rate*party_code)
+              person_cov = ~unemp_rate_yoy*party_code)
 
-    unemp_gp_fit <- id_estimate(unemp2,model_type=2,vary_ideal_pts = 'GP',
+    unemp_gp_fit <- id_estimate(unemp2,model_type=1,vary_ideal_pts = 'GP',
                               niters=niters,
                               warmup=nwarmup,prior_only=prior_only,
                               ncores=parallel::detectCores(),nchain=2,
@@ -784,8 +818,12 @@ unemp3_fit <- id_estimate(unemp1,model_type=2,
                               const_type = "items",
                               restrict_ind_high = restrict_ind_high,
                               restrict_ind_low = restrict_ind_low,
-                              restrict_sd_low = restrict_sd,
+                              restrict_sd_low = restrict_sd,restrict_var = FALSE,
                               restrict_sd_high = restrict_sd,
+                              diff_reg_sd = 3,fix_high = 2,fix_low = -2,
+                              diff_miss_sd = 3,
+                              discrim_reg_sd= 3,
+                              discrim_miss_sd = 3,
                               use_groups = F,
                               #  output_samples=100,
                               #  pars=c("steps_votes_grm",
@@ -806,34 +844,39 @@ if(fit_type=="ar1") {
   
   unemp2 <- rollcalls %>%
     select(cast_code,rollnumber,
-           bioname,party_code,date,unemp_rate,congress,year) %>%
+           bioname,party_code,date,unemp_rate_yoy,congress,year,date_month) %>%
     mutate(cast_code=recode_factor(cast_code,Abstention=NA_character_),
            cast_code=as.numeric(cast_code)-1,
            item_id=paste0(congress,"_",rollnumber)) %>%
+    filter(party_code %in% c("R","D")) %>% 
     distinct %>%
     #filter(date>lubridate::ymd("2008-06-01")) %>%
     id_make(outcome_disc="cast_code",
             item_id="item_id",
             person_id="bioname",
             group_id="party_code",
-            time_id = time_id,
+            time_id = "date_month",
             remove_cov_int = T,
-            person_cov = ~unemp_rate*party_code)
+            person_cov = ~unemp_rate_yoy*party_code)
   
-  unemp1_ar_fit <- id_estimate(unemp2,model_type=2,
+  unemp1_ar_fit <- id_estimate(unemp2,model_type=1,
                             vary_ideal_pts = 'AR1',
                             niters=niters,
                             warmup=nwarmup,
                             spline_knots=spline_knots_year,
                             spline_degree = spline_degree,
-                            nchains=2,
+                            nchains=nchains,
                             ncores=parallel::detectCores(),
                             const_type = "items",prior_only = prior_only,
                             restrict_ind_high = restrict_ind_high,
                             restrict_ind_low = restrict_ind_low,
                             restrict_sd_low = restrict_sd,
                             restrict_sd_high = restrict_sd,
-                            fixtype="prefix",
+                            diff_reg_sd = 3,fix_high = 2,fix_low = -2,
+                            diff_miss_sd = 3,
+                            discrim_reg_sd= 3,
+                            discrim_miss_sd = 3,
+                            fixtype="prefix",restrict_var = FALSE,
                             adapt_delta=0.95,max_treedepth=max_treedepth,
                             # pars=c("steps_votes_grm",
                             #        "steps_votes",
@@ -853,35 +896,40 @@ if(fit_type=="rw") {
   
   unemp2 <- rollcalls %>%
     select(cast_code,rollnumber,
-           bioname,party_code,date,unemp_rate,congress,year) %>%
+           bioname,party_code,date,unemp_rate_yoy,congress,year,date_month) %>%
     mutate(cast_code=recode_factor(cast_code,Abstention=NA_character_),
            cast_code=as.numeric(cast_code)-1,
            item_id=paste0(congress,"_",rollnumber)) %>%
+    filter(party_code %in% c("R","D")) %>% 
     distinct %>%
     #filter(date>lubridate::ymd("2008-06-01")) %>%
     id_make(outcome_disc="cast_code",
             item_id="item_id",
             person_id="bioname",
             group_id="party_code",
-            time_id = time_id,
+            time_id = "date_month",
             remove_cov_int = T,
-            person_cov = ~unemp_rate*party_code)
+            person_cov = ~unemp_rate_yoy*party_code)
   
-  unemp1_rw_fit <- id_estimate(unemp2,model_type=2,
+  unemp1_rw_fit <- id_estimate(unemp2,model_type=1,
                                vary_ideal_pts = 'random_walk',
                                niters=niters,
                                # more warmup as having some convergence issues
                                warmup=nwarmup,
                                spline_knots=spline_knots_year,
                                spline_degree = spline_degree,
-                               nchains=2,
+                               nchains=nchains,
                                ncores=parallel::detectCores(),
                                const_type = "items",prior_only = prior_only,
                                restrict_ind_high = restrict_ind_high,
                                restrict_ind_low = restrict_ind_low,
                                restrict_sd_low = restrict_sd,
                                restrict_sd_high = restrict_sd,
-                               fixtype="prefix",
+                               fixtype="prefix",restrict_var = FALSE,
+                               diff_reg_sd = 3,fix_high = 2,fix_low = -2,
+                               diff_miss_sd = 3,
+                               discrim_reg_sd= 3,
+                               discrim_miss_sd = 3,
                                adapt_delta=0.95,max_treedepth=max_treedepth,
                                # pars=c("steps_votes_grm",
                                #        "steps_votes",
@@ -903,7 +951,7 @@ if(fit_type=="china") {
   
   rollcalls <- rollcalls %>% 
     select(cast_code,rollnumber,year,
-           bioname,party_code,date_month,unemp_rate,
+           bioname,party_code,date_month,unemp_rate_yoy,
            district_code,state_abbrev,congress) %>% 
     mutate(cast_code=recode_factor(cast_code,Abstention=NA_character_),
            cast_code=as.numeric(cast_code)-1,
@@ -930,7 +978,7 @@ if(fit_type=="china") {
                         group_id="party_code",
                         time_id = "date_month",
                         remove_cov_int = T,
-                        person_cov = ~unemp_rate*party_code*x)
+                        person_cov = ~unemp_rate_yoy*party_code*x)
   rm(rollcalls)
   
   # note one ID bill is set differently as there is no 115th Congress
@@ -941,7 +989,7 @@ if(fit_type=="china") {
                             warmup=nwarmup,prior_only = prior_only,
                             spline_knots=spline_knots_china,
                             spline_degree = spline_degree,
-                            nchains=2,
+                            nchains=nchains,
                             ncores=parallel::detectCores(),
                             const_type = "items",
                             restrict_ind_high = restrict_ind_high,
@@ -1019,9 +1067,9 @@ ggsave("overall_dist.png")
 
 id_plot_cov(unemp1_fit,label_high = "Conservative",
             label_low="Liberal",pred_outcome = "Yes",
-            new_cov_names = c(`unemp_rate:party_codeR`="Republican X\nUnemployment",
-                              `unemp_rate:party_codeI`="Independent X\nUnemployment",
-                              unemp_rate="Unemployment",
+            new_cov_names = c(`unemp_rate_yoy:party_codeR`="Republican X\nUnemployment",
+                              `unemp_rate_yoy:party_codeI`="Independent X\nUnemployment",
+                              unemp_rate_yoy="Unemployment",
                               party_codeR="Republican",
                               party_codeI="Independent",
                               `(Intercept)`="Intercept"),
@@ -1040,9 +1088,9 @@ ggsave("overall_eff_ar1.png")
 ## 
 ## id_plot_cov(unemp2_fit,label_high = "Conservative",
 ##             label_low="Liberal",pred_outcome = "Yes",
-##             new_cov_names = c(`unemp_rate:party_codeR`="Republican X\nUnemployment",
-##                               `unemp_rate:party_codeI`="Independent X\nUnemployment",
-##                               unemp_rate="Unemployment",
+##             new_cov_names = c(`unemp_rate_yoy:party_codeR`="Republican X\nUnemployment",
+##                               `unemp_rate_yoy:party_codeI`="Independent X\nUnemployment",
+##                               unemp_rate_yoy="Unemployment",
 ##                               party_codeR="Republican",
 ##                               party_codeI="Independent",
 ##                               `(Intercept)`="Intercept"),
@@ -1068,7 +1116,7 @@ ggsave("overall_eff_ar1.png")
 ##             time_label= "Months Since Unemployment Rate Increase",
 ##             line_color='black',
 ##             include=dem_ids$person_id,
-##             cov_name = c("unemp_rate"),
+##             cov_name = c("unemp_rate_yoy"),
 ##             use_ci=F)
 ## 
 ## dem_ids <- select(unemp1_fit@score_data@score_matrix,person_id,group_id) %>%
@@ -1083,7 +1131,7 @@ ggsave("overall_eff_ar1.png")
 ##             time_label= "Months Since Unemployment Rate Increase",
 ##             line_color='black',
 ##             include=dem_ids$person_id,
-##             cov_name = c("unemp_rate"),
+##             cov_name = c("unemp_rate_yoy"),
 ##             use_ci=F)
 ## 
 
@@ -1094,14 +1142,14 @@ ggsave("overall_eff_ar1.png")
 
 id_plot_cov(china_fit1,label_high = "Conservative",
             label_low="Liberal",pred_outcome = "Yes",
-            new_cov_names = c(`unemp_rate:party_codeR`="Republican X\nUnemployment",
-                              `unemp_rate:party_codeI`="Independent X\nUnemployment",
-                              unemp_rate="Unemployment",
+            new_cov_names = c(`unemp_rate_yoy:party_codeR`="Republican X\nUnemployment",
+                              `unemp_rate_yoy:party_codeI`="Independent X\nUnemployment",
+                              unemp_rate_yoy="Unemployment",
                               x="Import Exposure\nPer Worker",
                               `(Intercept)`="Intercept",
-                              `unemp_rate:x`="Unemployment X\nImports",
-                              `unemp_rate:party_codeR:x`="Unemployment X\nRepublican\nImports",
-                              `unemp_rate:party_codeI:x`="Unemployment X\nIndependent\nImports",
+                              `unemp_rate_yoy:x`="Unemployment X\nImports",
+                              `unemp_rate_yoy:party_codeR:x`="Unemployment X\nRepublican\nImports",
+                              `unemp_rate_yoy:party_codeI:x`="Unemployment X\nIndependent\nImports",
                               `party_codeR:x`="Republican X\nImports",
                               `party_codeI:x`="Independent X\nImports"),
             # recalc_vals = c("Republican X\nUnemployment",
