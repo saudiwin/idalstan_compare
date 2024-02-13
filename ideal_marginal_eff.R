@@ -62,9 +62,9 @@ unemp1_obj <- test_mod_data %>%
           person_cov = ~unemp_rate*party_code)
 
 test_mod <- id_estimate(unemp1_obj,model_type=2,
-                          vary_ideal_pts = 'splines',
-                          niters=300,
-                          warmup=300,
+                          vary_ideal_pts = 'random_walk',
+                          niters=1,
+                          warmup=1,
                           spline_knots=NULL,
                           spline_degree = 3,
                           nchains=2,
