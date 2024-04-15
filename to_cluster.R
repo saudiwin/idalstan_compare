@@ -580,7 +580,17 @@ collapse_restrict <- group_by(check_bills1,congress) %>%
                                       rollnumber[abs(rollnumber - quantile(rollnumber[polarity==-1],.66)) == min(abs(rollnumber - quantile(rollnumber[polarity==-1],.66)))],
                                       max(rollnumber[polarity==-1])))) %>% 
   mutate(restrict_ind_high=paste0(congress, "_", restrict_ind_high),
-         restrict_ind_low=paste0(congress, "_", restrict_ind_low))
+         restrict_ind_low=paste0(congress, "_", restrict_ind_low)) %>% 
+  mutate(restrict_ind_high=if_else(restrict_ind_high==last(restrict_ind_high),
+                                   "115_1205",
+                                   restrict_ind_high),
+         restrict_ind_low=if_else(restrict_ind_low==last(restrict_ind_low),
+                                   "115_1141",
+                                   restrict_ind_low))
+
+  # switch up the last two to be near the actual end of the time series
+
+  
 
 legis_count <- group_by(unemp1, item) %>% 
   mutate(unan=all(cast_code[!is.na(cast_code)]==1) || all(cast_code[!is.na(cast_code)]==0)) %>% 
