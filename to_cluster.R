@@ -41,6 +41,8 @@ fit_type <- switch(fit_type,"spline1","spline2","spline3","china",
 
 modtype <- Sys.getenv("DATATYPE")
 
+is_missing <- as.numeric(Sys.getenv("MISSING"))
+
 spline_degree <- 4
 
 niters <- 300
@@ -727,7 +729,7 @@ if(test) {
   
   if(fit_type=="spline1") {
     
-    unemp1_fit <- id_estimate(unemp1,model_type=1,
+    unemp1_fit <- id_estimate(unemp1,model_type=is_missing,
                               vary_ideal_pts = 'splines',
                               niters=niters,
                               warmup=nwarmup,
@@ -756,13 +758,13 @@ if(test) {
                               #include=F,
                               id_refresh=100)
     
-    saveRDS(unemp1_fit,paste0("/scratch/rmk7/unemp",modtype,"_",max_treedepth,"_","1_fit.rds"))
+    saveRDS(unemp1_fit,paste0("/scratch/rmk7/unemp",modtype,is_missing,"_",max_treedepth,"_","1_fit.rds"))
     
   }
   
   if(fit_type=="spline2") {
     
-    unemp2_fit <- id_estimate(unemp1,model_type=1,
+    unemp2_fit <- id_estimate(unemp1,model_type=is_missing,
                               vary_ideal_pts = 'splines',
                               niters=niters,
                               warmup=nwarmup,
@@ -791,7 +793,7 @@ if(test) {
                               #include=F,
                               id_refresh=100)
     
-    saveRDS(unemp2_fit,paste0("/scratch/rmk7/unemp",modtype,"_",max_treedepth,"_","2_fit.rds"))
+    saveRDS(unemp2_fit,paste0("/scratch/rmk7/unemp",modtype,is_missing,"_",max_treedepth,"_","2_fit.rds"))
     
     
   }
@@ -799,7 +801,7 @@ if(test) {
   if(fit_type=="spline3") {
     
     
-    unemp3_fit <- id_estimate(unemp1,model_type=1,
+    unemp3_fit <- id_estimate(unemp1,model_type=is_missing,
                               vary_ideal_pts = 'splines',
                               niters=niters,
                               warmup=nwarmup,
@@ -828,7 +830,7 @@ if(test) {
                               #include=F,
                               id_refresh=100)
     
-    saveRDS( unemp3_fit,paste0("/scratch/rmk7/unemp",modtype,"_",max_treedepth,"_","3_fit.rds"))
+    saveRDS( unemp3_fit,paste0("/scratch/rmk7/unemp",modtype,is_missing,"_",max_treedepth,"_","3_fit.rds"))
     
   }
   
