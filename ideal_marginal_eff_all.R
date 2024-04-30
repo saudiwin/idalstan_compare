@@ -72,7 +72,7 @@ unemp1_obj <- test_mod_data %>%
 
 # load different fitted models 
 
-mod_list <- c("spline1","spline2","spline3")
+mod_list <- Sys.getenv("MODTYPE")
 
 lapply(mod_list, function(m) {
   
@@ -99,11 +99,11 @@ lapply(mod_list, function(m) {
   draws <- sample(1:dim(l_full)[1], 200)
   
   test_mod_pred1 <- id_post_pred(test_mod,newdata=new_data1,
-                                 use_cores=floor(parallel::detectCores()/2),
+                                 use_cores=parallel::detectCores(),
                                  type="epred",
                                  draws=draws)
   test_mod_pred2 <- id_post_pred(test_mod,newdata=new_data2,
-                                 use_cores=floor(parallel::detectCores()/2),
+                                 use_cores=parallel::detectCores(),
                                  type="epred",
                                  draws=draws)
   
