@@ -96,7 +96,7 @@ lapply(mod_list, function(m) {
   
   l_full <- test_mod@stan_samples$draws("L_full")
   
-  draws <- sample(1:dim(l_full)[1], 200)
+  draws <- sample(1:dim(l_full)[1], 100)
   
   test_mod_pred1 <- id_post_pred(test_mod,newdata=new_data1,
                                  use_cores=parallel::detectCores(),
