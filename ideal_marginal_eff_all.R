@@ -72,11 +72,10 @@ unemp1_obj <- test_mod_data %>%
 
 # load different fitted models 
 
-mod_list <- Sys.getenv("MODTYPE")
+m <- Sys.getenv("MODTYPE")
 
-lapply(mod_list, function(m) {
-  
-  m_loc <- switch(m,
+
+m_loc <- switch(m,
                   spline1="/scratch/rmk7/unempall_12_1_fit.rds",
                   spline2="/scratch/rmk7/unempall_12_2_fit.rds",
                   spline3="/scratch/rmk7/unempall_12_3_fit.rds")
@@ -223,7 +222,7 @@ lapply(mod_list, function(m) {
     ggtitle("Marginal Effect of District Monthly Unemployment on Rollcall Votes in 115th Congress",
             subtitle="Marginal Effect of Unemployment Mediated by Legislator Ideal Point and Bill Discrimination")
   
-  ggsave(paste0("/scratch/rmk7/rollcalls_115_",m,".jpg"),height=7,width=7)
+  ggsave(paste0("/scratch/rmk7/rollcalls_all_",m,".jpg"),height=7,width=7)
   
   by_party %>% 
     ungroup %>% 
@@ -249,11 +248,8 @@ lapply(mod_list, function(m) {
     ggtitle("Marginal Effect of District Monthly Unemployment on Rollcall Votes in 115th Congress",
             subtitle="Marginal Effect of Unemployment Mediated by Legislator Ideal Point and Bill Discrimination")
   
-  ggsave(paste0("/scratch/rmk7/rollcalls_overlay_115_",m,".jpg"),height=7,width=7)
-  
-  
-  
-})
+  ggsave(paste0("/scratch/rmk7/rollcalls_overlay_all_",m,".jpg"),height=7,width=7)
+
 
 # test_mod <- id_estimate(unemp1_obj,model_type=2,
 #                           vary_ideal_pts = 'splines',
