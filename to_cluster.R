@@ -56,7 +56,7 @@ max_treedepth <- as.numeric(as.numeric(Sys.getenv("TREEDEPTH")))
 
 # set restrict SD for pinned items
 
-restrict_sd <- .001
+restrict_sd <- .0001
 
 
 ## ----create data ------------------------------------------------------------------------
@@ -534,6 +534,11 @@ unemp1 <- rollcalls %>%
   distinct %>% 
   filter(party_code %in% c("R","D")) %>% 
   mutate(party_code=factor(party_code))
+
+group_legis <- group_by(unemp1, congress, bioname) %>% 
+  summarize(num_votes=sum(!is.na(cast_code)),
+            num_miss=sum(is.na(cast_code)),
+            missing_rate=num_miss/num_votes)
 
 # drop legislators who vote on fewer than 25 unanimous bills
 
