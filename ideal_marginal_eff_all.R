@@ -98,11 +98,12 @@ m_loc <- switch(m,
   draws <- sample(1:dim(l_full)[1], 100)
   
   test_mod_pred1 <- id_post_pred(test_mod,newdata=new_data1,
-                                 use_cores=parallel::detectCores(),
+                                 use_cores=floor(parallel::detectCores()/1.5),item_subset=levels(test_mod_data$item_id)[1:5],
                                  type="epred",
                                  draws=draws)
   test_mod_pred2 <- id_post_pred(test_mod,newdata=new_data2,
-                                 use_cores=parallel::detectCores(),
+                                 use_cores=floor(parallel::detectCores()/1.5),
+                                 item_subset=levels(test_mod_data$item_id)[1:5],
                                  type="epred",
                                  draws=draws)
   
