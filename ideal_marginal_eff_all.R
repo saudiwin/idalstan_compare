@@ -6,6 +6,10 @@ library(marginaleffects)
 library(modelsummary)
 library(bayesplot)
 
+# figure out which model to run
+num_partition <- 15
+partition <- as.numeric(Sys.getenv("FITTYPE"))
+
 rollcalls <- readRDS('data/rollcalls.rds')
 
 # create unemployment series as year-on-year changes
@@ -97,18 +101,27 @@ m_loc <- switch(m,
   
   draws <- sample(1:dim(l_full)[1], 100)
   
+  # figure out this partition\
+  
+  remainder <- length(levels(test_mod_data$item_id)) %% num_partition
+  
+  indices <- c(rep(1:num_partition, each=floor(length(levels(test_mod_data$item_id))/num_partition)),
+               rep(num_partition, times=remainder))
+  
   test_mod_pred1 <- id_post_pred(test_mod,newdata=new_data1,
-                                 use_cores=floor(parallel::detectCores()/1.5),item_subset=levels(test_mod_data$item_id)[1:5],
+                                 use_cores=floor(parallel::detectCores()/2),item_subset=levels(test_mod_data$item_id)[indices==partition],
                                  type="epred",
                                  draws=draws)
   test_mod_pred2 <- id_post_pred(test_mod,newdata=new_data2,
-                                 use_cores=floor(parallel::detectCores()/1.5),
-                                 item_subset=levels(test_mod_data$item_id)[1:5],
+                                 use_cores=floor(parallel::detectCores()/2),
+                                 item_subset=levels(test_mod_data$item_id)[indices==partition],
                                  type="epred",
                                  draws=draws)
   
-  saveRDS(test_mod_pred1, paste0("/scratch/rmk7/unemp_all_pred1_",m,".rds"))
-  saveRDS(test_mod_pred2, paste0("/scratch/rmk7/unemp_all_pred2_",m,".rds"))
+  saveRDS(test_mod_pred1, paste0("/scratch/rmk7/unemp_all_pred1_",m,"_partition",partition,
+                                 ".rds"))
+  saveRDS(test_mod_pred2, paste0("/scratch/rmk7/unemp_all_pred2_",m,"_partition",partition,
+                                 ".rds"))
   
   # walk over both predictions to get item and overall effects
   # AMEs per item
