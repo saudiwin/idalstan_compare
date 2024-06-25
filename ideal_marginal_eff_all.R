@@ -64,7 +64,8 @@ num_days <- distinct(unemp1,bioname,date_month) %>%
   count(bioname)
 
 test_mod_data <- anti_join(unemp1, filter(legis_count, n_votes_nonunam<25),by="bioname") %>% 
-  anti_join(filter(num_days,n<10),by="bioname")
+  anti_join(filter(num_days,n<10),by="bioname") %>% 
+  mutate(item=factor(item))
 
 unemp1_obj <- test_mod_data %>% 
   id_make(outcome_disc="cast_code",
@@ -99,17 +100,20 @@ m_loc <- switch(m,
   
   l_full <- test_mod@stan_samples$draws("L_full")
   
-  draws <- sample(1:dim(l_full)[1], 100)
+  #draws <- sample(1:dim(l_full)[1], 100)
+  
+  draws <- readRDS("data/draws.rds")
   
   # figure out this partition\
   
-  remainder <- length(levels(test_mod_data$item_id)) %% num_partition
+  remainder <- length(levels(test_mod_data$item)) %% num_partition
   
-  indices <- c(rep(1:num_partition, each=floor(length(levels(test_mod_data$item_id))/num_partition)),
+  indices <- c(rep(1:num_partition, each=floor(length(levels(test_mod_data$item))/num_partition)),
                rep(num_partition, times=remainder))
   
   test_mod_pred1 <- id_post_pred(test_mod,newdata=new_data1,
-                                 use_cores=floor(parallel::detectCores()/2),item_subset=levels(test_mod_data$item_id)[indices==partition],
+                                 use_cores=floor(parallel::detectCores()/2),
+                                 item_subset=levels(test_mod_data$item)[indices==partition],
                                  type="epred",
                                  draws=draws)
   test_mod_pred2 <- id_post_pred(test_mod,newdata=new_data2,
