@@ -586,6 +586,7 @@ collapse_restrict <- group_by(check_bills1,congress) %>%
                                ifelse(all(congress!=max_congress), 
                                       rollnumber[abs(rollnumber - quantile(rollnumber[polarity==-1],.66)) == min(abs(rollnumber - quantile(rollnumber[polarity==-1],.66)))],
                                       max(rollnumber[polarity==-1])))) %>% 
+  ungroup %>% 
   mutate(restrict_ind_high=paste0(congress, "_", restrict_ind_high),
          restrict_ind_low=paste0(congress, "_", restrict_ind_low)) %>% 
   mutate(restrict_ind_high=if_else(restrict_ind_high==last(restrict_ind_high),
@@ -654,7 +655,12 @@ if(modtype=="115") {
     
     restrict_ind_high <- collapse_restrict$restrict_ind_high[collapse_restrict$congress<112]
     restrict_ind_low <- collapse_restrict$restrict_ind_low[collapse_restrict$congress<112]
-    restrict_ind_low <- restrict_ind_high[-length(restrict_ind_high)]
+    
+    # one drops out of the china data
+    
+    restrict_ind_low <- restrict_ind_low[restrict_ind_low!="111_1127"]
+    
+    #restrict_ind_low <- restrict_ind_high[-length(restrict_ind_high)]
     
   } else {
     
@@ -1053,7 +1059,7 @@ if(fit_type=="china") {
                             ncores=parallel::detectCores(),
                             const_type = "items",
                             restrict_ind_high = restrict_ind_high,
-                            restrict_ind_low=c("111_1","108_329"),
+                            restrict_ind_low=restrict_ind_low,
                             restrict_sd_high = restrict_sd,
                             restrict_sd_low = restrict_sd,
                             fixtype="prefix",
