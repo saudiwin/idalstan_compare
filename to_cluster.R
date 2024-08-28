@@ -36,6 +36,7 @@ cluster <- TRUE
 
 fit_type <- as.numeric(Sys.getenv("FITTYPE"))
 
+
 fit_type <- switch(fit_type,"spline1","spline2","spline3","china",
                    "GP","ar1","rw")
 
@@ -876,7 +877,7 @@ if(fit_type=="GP") {
             remove_cov_int = T,
             person_cov = ~unemp_rate_yoy*party_code)
   
-  unemp_gp_fit <- id_estimate(unemp2,model_type=1,vary_ideal_pts = 'GP',
+  unemp_gp_fit <- id_estimate(unemp2,model_type=is_missing,vary_ideal_pts = 'GP',
                               niters=niters,
                               warmup=nwarmup,prior_only=prior_only,
                               ncores=parallel::detectCores(),nchain=2,
@@ -898,7 +899,7 @@ if(fit_type=="GP") {
                               #         "A_int_free"),
                               id_refresh=100)
   
-  saveRDS(unemp_gp_fit, paste0("/scratch/rmk7/unemp",modtype,"_",max_treedepth,"_","_gp_fit.rds"))
+  saveRDS(unemp_gp_fit, paste0("/scratch/rmk7/unemp",modtype,"_",is_missing,"_",max_treedepth,"_","_gp_fit.rds"))
   
 }
 
@@ -925,7 +926,7 @@ if(fit_type=="ar1") {
             remove_cov_int = T,
             person_cov = ~unemp_rate_yoy*party_code)
   
-  unemp1_ar_fit <- id_estimate(unemp2,model_type=1,
+  unemp1_ar_fit <- id_estimate(unemp2,model_type=is_missing,
                                vary_ideal_pts = 'AR1',
                                niters=niters,
                                warmup=nwarmup,
@@ -951,7 +952,7 @@ if(fit_type=="ar1") {
                                #include=F,
                                id_refresh=100)
   
-  saveRDS(unemp1_ar_fit, paste0("/scratch/rmk7/unemp",modtype,"_",max_treedepth,"_","1_ar_fit.rds"))
+  saveRDS(unemp1_ar_fit, paste0("/scratch/rmk7/unemp",modtype,"_",is_missing,"_",max_treedepth,"_","1_ar_fit.rds"))
   
   
 }
@@ -977,7 +978,7 @@ if(fit_type=="rw") {
             remove_cov_int = T,
             person_cov = ~unemp_rate_yoy*party_code)
   
-  unemp1_rw_fit <- id_estimate(unemp2,model_type=1,
+  unemp1_rw_fit <- id_estimate(unemp2,model_type=is_missing,
                                vary_ideal_pts = 'random_walk',
                                niters=niters,
                                # more warmup as having some convergence issues
@@ -1004,7 +1005,7 @@ if(fit_type=="rw") {
                                #include=F,
                                id_refresh=100)
   
-  saveRDS(unemp1_rw_fit, paste0("/scratch/rmk7/unemp",modtype,"_",max_treedepth,"_","1_rw_fit.rds"))
+  saveRDS(unemp1_rw_fit, paste0("/scratch/rmk7/unemp",modtype,"_",is_missing,"_",max_treedepth,"_","1_rw_fit.rds"))
   
   
 }
@@ -1049,7 +1050,7 @@ if(fit_type=="china") {
   
   # note one ID bill is set differently as there is no 115th Congress
   
-  china_fit1 <- id_estimate(china_data,model_type=2,
+  china_fit1 <- id_estimate(china_data,model_type=is_missing,
                             vary_ideal_pts = 'splines',
                             niters=niters,
                             warmup=nwarmup,prior_only = prior_only,
@@ -1071,7 +1072,7 @@ if(fit_type=="china") {
                             #include=F,
                             id_refresh=100)
   
-  saveRDS(china_fit1,paste0('/scratch/rmk7/china_',modtype,"_",max_treedepth,"_",'_fit1.rds'))
+  saveRDS(china_fit1,paste0('/scratch/rmk7/china_',modtype,"_",is_missing,"_",max_treedepth,"_",'_fit1.rds'))
   
   
 }
