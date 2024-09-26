@@ -501,19 +501,19 @@ For the spline specifications, I consider splines of degrees 2, 3 and 4 while us
 
 As a result, I do find that the simpler time series models, i.e. the splines, are more stable and easier to identify with this dataset and the same eight restrictions on item discriminations. @fig-rhat shows convergence diagnostics for all models employing the split-Rhat metric, which measures the ratio of variance of a Markov chain to itself over time and to other chains run independently. For this estimation, three chains were run with 500 post-warmup draws each, providing a difficult test for convergence. Only one model, the spline model with the 2nd-degree spline, had all of its parameters with an Rhat of less than 1.1 with three independent chains, as is commonly advised for Markov Chain Monte Carlo convergence. The other model that converged reasonably well was the random walk specification, though that model had a non-trivial number--236--of parameters with Rhats greater than 1.1, signifying that it did not completely converge to a single mode of posterior density.
 
-```{r loadmodels,include=FALSE,eval=FALSE}
+```{r loadmodels,include=FALSE}
 
-unemp1_fit <- readRDS('data/unemp115_12_1_fit.rds')
-unemp2_fit <- readRDS('data/unemp115_12_2_fit.rds')
-unemp3_fit <- readRDS('data/unemp115_12_3_fit.rds')
+unemp1_fit <- readRDS('data/unemp1152_12_1_fit.rds')
+unemp2_fit <- readRDS('data/unemp1152_12_2_fit.rds')
+unemp3_fit <- readRDS('data/unemp1152_12_3_fit.rds')
 
-unemp1_all_fit <- readRDS('data/unempall2_12_1_fit.rds')
-unemp2_all_fit <- readRDS('data/unempall_12_2_fit.rds')
-unemp3_all_fit <- readRDS('data/unempall_12_3_fit.rds')
+# unemp1_all_fit <- readRDS('data/unempall2_12_1_fit.rds')
+# unemp2_all_fit <- readRDS('data/unempall_12_2_fit.rds')
+# unemp3_all_fit <- readRDS('data/unempall_12_3_fit.rds')
 
-unemp_gp_fit <- readRDS('data/unemp115_12__gp_fit.rds')
-unemp_ar_fit <- readRDS("data/unemp115_12_1_ar_fit.rds")
-unemp_rw_fit <- readRDS("data/unemp115_12_1_rw_fit.rds")
+unemp_gp_fit <- readRDS('data/unemp115_2_12__gp_fit.rds')
+unemp_ar_fit <- readRDS("data/unemp115_2_12_1_ar_fit.rds")
+unemp_rw_fit <- readRDS("data/unemp115_2_12_1_rw_fit.rds")
 
 rhats1 <- id_plot_rhats(unemp1_fit) + ggtitle("Spline 2nd Degree") + labs(caption="",x="") + xlim(c(0.95, 2))
 rhats2 <- id_plot_rhats(unemp2_fit) + ggtitle("Spline 3rd Degree") + labs(caption="",y="",x="") + xlim(c(0.95, 2))

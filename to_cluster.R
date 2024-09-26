@@ -522,7 +522,6 @@ print(paste0("Data type is: ",modtype))
 
 ## ----runcong1-----------------------------------------------------------------------------------
 
-
 unemp1 <- rollcalls %>% 
   select(cast_code,rollnumber,congress,
          bioname,party_code,date_month,unemp_rate_yoy) %>% 
@@ -610,13 +609,6 @@ legis_count <- group_by(unemp1, item) %>%
 
 num_days <- distinct(unemp1,bioname,date_month) %>% 
   count(bioname)
-
-if(test) {
-  
-  # only use a subset of bills from full time period
-  
-  unemp1 <- filter(unemp1, (item %in% sample(unique(item),
-                                             3000)) | item %in% c(c("102_409","109_33"),c("115_1050","108_329")))
   
   # use only last congress
   
@@ -624,18 +616,11 @@ if(test) {
   #   filter((item %in% sample(unique(item),
   #                                  200)) | item %in% c("115_588",c("115_1050","108_329")))
   # 
-}
 
 # you had to have voted on at least 10 separate days
 
 unemp1 <- anti_join(unemp1, filter(legis_count, n_votes_nonunam<25),by="bioname") %>% 
-  anti_join(filter(num_days,n<10),by="bioname") %>% 
-  id_make(outcome_disc="cast_code",
-          item_id="item",
-          person_id="bioname",
-          group_id="party_code",
-          time_id = "date_month",
-          person_cov = ~unemp_rate_yoy*party_code)
+  anti_join(filter(num_days,n<10),by="bioname")
 
 
 # set restrictions --------------------------------------------------------
@@ -649,6 +634,8 @@ if(modtype=="115") {
   spline_knots_china <- NULL
   spline_knots_year <- NULL
   time_id <- 'date_month'
+  
+  unemp1 <- filter(unemp1, congress==115)
   
 } else {
   
@@ -673,71 +660,13 @@ if(modtype=="115") {
   
 }
 
-if(test) {
-  
-  unemp1_fit <- id_estimate(unemp1,model_type=2,
-                            vary_ideal_pts = 'splines',
-                            niters=niters,
-                            warmup=nwarmup,
-                            spline_knots=spline_knots_all,
-                            spline_degree = spline_degree-2,
-                            nchains=nchains,
-                            ncores=parallel::detectCores(),
-                            const_type = "items",prior_only = prior_only,
-                            restrict_ind_high = restrict_ind_high,
-                            restrict_sd_high = restrict_sd,
-                            restrict_sd_low = restrict_sd,
-                            restrict_ind_low = restrict_ind_low,
-                            fixtype="prefix",
-                            adapt_delta=0.95,
-                            # pars=c("steps_votes_grm",
-                            #        "steps_votes",
-                            #        "B_int_free",
-                            #        "A_int_free"),
-                            #include=F,
-                            id_refresh=100)
-  
-  unemp2_fit <- id_estimate(unemp1,model_type=2,
-                            vary_ideal_pts = 'splines',
-                            niters=niters,
-                            warmup=nwarmup,
-                            spline_knots=spline_knots_all,
-                            spline_degree = spline_degree - 1,
-                            nchains=nchains,
-                            ncores=parallel::detectCores(),
-                            const_type = "items",
-                            restrict_ind_high = restrict_ind_high,
-                            restrict_ind_low = restrict_ind_low,
-                            fixtype="prefix",
-                            adapt_delta=0.95,
-                            # pars=c("steps_votes_grm",
-                            #        "steps_votes",
-                            #        "B_int_free",
-                            #        "A_int_free"),
-                            #include=F,
-                            id_refresh=100)
-  
-  unemp3_fit <- id_estimate(unemp1,model_type=2,
-                            vary_ideal_pts = 'splines',
-                            niters=niters,
-                            warmup=nwarmup,
-                            spline_knots=spline_knots_all,
-                            spline_degree = spline_degree,
-                            nchains=nchains,
-                            ncores=parallel::detectCores(),
-                            const_type = "items",
-                            restrict_ind_high = restrict_ind_high,
-                            restrict_ind_low = restrict_ind_low,
-                            fixtype="prefix",
-                            adapt_delta=0.95,
-                            # pars=c("steps_votes_grm",
-                            #        "steps_votes",
-                            #        "B_int_free",
-                            #        "A_int_free"),
-                            #include=F,
-                            id_refresh=100)
-  
-} else {
+unemp1 <- unemp1  %>% 
+  id_make(outcome_disc="cast_code",
+          item_id="item",
+          person_id="bioname",
+          group_id="party_code",
+          time_id = "date_month",
+          person_cov = ~unemp_rate_yoy*party_code)
   
   if(fit_type=="spline1") {
     
