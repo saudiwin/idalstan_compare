@@ -34,15 +34,21 @@ create_data <- F
 
 cluster <- TRUE
 
-fit_type <- as.numeric(Sys.getenv("FITTYPE"))
+#fit_type <- as.numeric(Sys.getenv("FITTYPE"))
 
 
-fit_type <- switch(fit_type,"spline1","spline2","spline3","china",
-                   "GP","ar1","rw")
+#fit_type <- switch(fit_type,"spline1","spline2","spline3","china",
+#                   "GP","ar1","rw")
 
-modtype <- Sys.getenv("DATATYPE")
+fit_type <- "spline1"
 
-is_missing <- as.numeric(Sys.getenv("MISSING"))
+#modtype <- Sys.getenv("DATATYPE")
+
+modtype <- "115"
+
+#is_missing <- as.numeric(Sys.getenv("MISSING"))
+
+is_missing <- 1
 
 spline_degree <- 4
 
@@ -53,7 +59,9 @@ nchains <- 3
 
 # set max treedepth (for spline models)
 
-max_treedepth <- as.numeric(as.numeric(Sys.getenv("TREEDEPTH")))
+#max_treedepth <- as.numeric(as.numeric(Sys.getenv("TREEDEPTH")))
+
+max_treedepth <- 12
 
 # set restrict SD for pinned items
 
@@ -598,6 +606,32 @@ collapse_restrict <- group_by(check_bills1,congress) %>%
 
   # switch up the last two to be near the actual end of the time series
 
+  # need to double-check to make sure there are none where the majority of the other 
+  # party voted in favor 
+
+restrict_check_low <- filter(unemp1, item %in% collapse_restrict$restrict_ind_low) %>% 
+  group_by(item,party_code, cast_code) %>% 
+  count %>% 
+  filter(!is.na(cast_code)) %>% 
+  spread(key = "party_code",value="n") %>% 
+  mutate(D=coalesce(D, 0),
+         R=coalesce(R, 0)) %>% 
+  filter(cast_code==1,D<2*R)
+  
+restrict_check_high <- filter(unemp1, item %in% collapse_restrict$restrict_ind_high) %>% 
+  group_by(item,party_code, cast_code) %>% 
+  count %>% 
+  filter(!is.na(cast_code)) %>% 
+  spread(key = "party_code",value="n") %>% 
+  mutate(D=coalesce(D, 0),
+         R=coalesce(R, 0)) %>% 
+  filter(cast_code==1,R<2*D)
+
+# need to remove these restrictions from the data
+
+collapse_restrict <- mutate(collapse_restrict,
+                            restrict_ind_high=ifelse(restrict_ind_high %in% unique(restrict_check_high$item), NA,restrict_ind_high),
+                            restrict_ind_low=ifelse(restrict_ind_low %in% unique(restrict_check_low$item), NA,restrict_ind_low))
   
 
 legis_count <- group_by(unemp1, item) %>% 
@@ -679,8 +713,8 @@ unemp1 <- unemp1  %>%
                               nchains=nchains,
                               ncores=parallel::detectCores(),
                               const_type = "items",prior_only = prior_only,
-                              restrict_ind_high = restrict_ind_high,
-                              restrict_ind_low = restrict_ind_low,
+                              restrict_ind_high = restrict_ind_high[!is.na(restrict_ind_high)],
+                              restrict_ind_low = restrict_ind_low[!is.na(restrict_ind_low)],
                               restrict_sd_high = restrict_sd,
                               restrict_sd_low = restrict_sd,restrict_var = FALSE,
                               person_sd = 3,discrim_miss_scale = 2,
@@ -700,7 +734,7 @@ unemp1 <- unemp1  %>%
                               #include=F,
                               id_refresh=100)
     
-    saveRDS(unemp1_fit,paste0("/scratch/rmk7/unemp",modtype,is_missing,"_",max_treedepth,"_","1_fit.rds"))
+    saveRDS(unemp1_fit,paste0("data/",modtype,is_missing,"_",max_treedepth,"_","1_fit.rds"))
     
   }
   
@@ -715,8 +749,8 @@ unemp1 <- unemp1  %>%
                               nchains=nchains,
                               ncores=parallel::detectCores(),
                               const_type = "items",
-                              restrict_ind_high = restrict_ind_high,
-                              restrict_ind_low = restrict_ind_low,
+                              restrict_ind_high = restrict_ind_high[!is.na(restrict_ind_high)],
+                              restrict_ind_low = restrict_ind_low[!is.na(restrict_ind_low)],
                               restrict_sd_high = restrict_sd,
                               restrict_sd_low = restrict_sd,restrict_var = FALSE,
                               person_sd = 3,fix_high = 2,fix_low = -2,
@@ -753,8 +787,8 @@ unemp1 <- unemp1  %>%
                               nchains=nchains,
                               ncores=parallel::detectCores(),
                               const_type = "items",
-                              restrict_ind_high = restrict_ind_high,
-                              restrict_ind_low = restrict_ind_low,
+                              restrict_ind_high = restrict_ind_high[!is.na(restrict_ind_high)],
+                              restrict_ind_low = restrict_ind_low[!is.na(restrict_ind_low)],
                               restrict_sd_low = restrict_sd,
                               restrict_sd_high = restrict_sd,restrict_var = FALSE,
                               person_sd = 3,fix_high = 2,fix_low = -2,
@@ -774,12 +808,10 @@ unemp1 <- unemp1  %>%
                               #include=F,
                               id_refresh=100)
     
-    saveRDS( unemp3_fit,paste0("/scratch/rmk7/unemp",modtype,is_missing,"_",max_treedepth,"_","3_fit.rds"))
+    saveRDS( unemp3_fit,paste0("data/unemp",modtype,is_missing,"_",max_treedepth,"_","3_fit.rds"))
     
   }
   
-  
-}
 
 
 
@@ -812,8 +844,8 @@ if(fit_type=="GP") {
                               ncores=parallel::detectCores(),nchain=2,
                               fixtype="prefix",
                               const_type = "items",
-                              restrict_ind_high = restrict_ind_high,
-                              restrict_ind_low = restrict_ind_low,
+                              restrict_ind_high = restrict_ind_high[!is.na(restrict_ind_high)],
+                              restrict_ind_low = restrict_ind_low[!is.na(restrict_ind_low)],
                               restrict_sd_low = restrict_sd,restrict_var = FALSE,
                               restrict_sd_high = restrict_sd,
                               diff_reg_sd = 3,fix_high = 2,fix_low = -2,
@@ -864,8 +896,8 @@ if(fit_type=="ar1") {
                                nchains=nchains,
                                ncores=parallel::detectCores(),
                                const_type = "items",prior_only = prior_only,
-                               restrict_ind_high = restrict_ind_high,
-                               restrict_ind_low = restrict_ind_low,
+                               restrict_ind_high = restrict_ind_high[!is.na(restrict_ind_high)],
+                               restrict_ind_low = restrict_ind_low[!is.na(restrict_ind_low)],
                                restrict_sd_low = restrict_sd,
                                restrict_sd_high = restrict_sd,
                                diff_reg_sd = 3,fix_high = 2,fix_low = -2,
@@ -917,8 +949,8 @@ if(fit_type=="rw") {
                                nchains=nchains,
                                ncores=parallel::detectCores(),
                                const_type = "items",prior_only = prior_only,
-                               restrict_ind_high = restrict_ind_high,
-                               restrict_ind_low = restrict_ind_low,
+                               restrict_ind_high = restrict_ind_high[!is.na(restrict_ind_high)],
+                               restrict_ind_low = restrict_ind_low[!is.na(restrict_ind_low)],
                                restrict_sd_low = restrict_sd,
                                restrict_sd_high = restrict_sd,
                                fixtype="prefix",restrict_var = FALSE,
@@ -988,8 +1020,8 @@ if(fit_type=="china") {
                             nchains=nchains,
                             ncores=parallel::detectCores(),
                             const_type = "items",
-                            restrict_ind_high = restrict_ind_high,
-                            restrict_ind_low=restrict_ind_low,
+                            restrict_ind_high = restrict_ind_high[!is.na(restrict_ind_high)],
+                            restrict_ind_low=restrict_ind_low[!is.na(restrict_ind_low)],
                             restrict_sd_high = restrict_sd,
                             restrict_sd_low = restrict_sd,
                             fixtype="prefix",
