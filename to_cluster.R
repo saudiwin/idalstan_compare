@@ -694,6 +694,8 @@ if(modtype=="115") {
   
 }
 
+# data file for all models that follow
+
 unemp1 <- unemp1  %>% 
   id_make(outcome_disc="cast_code",
           item_id="item",
@@ -821,24 +823,24 @@ unemp1 <- unemp1  %>%
 
 if(fit_type=="GP") {
   
-  unemp2 <- rollcalls %>%
-    select(cast_code,rollnumber,
-           bioname,party_code,date,unemp_rate_yoy,congress,year,date_month) %>%
-    mutate(cast_code=recode_factor(cast_code,Abstention=NA_character_),
-           cast_code=as.numeric(cast_code)-1,
-           item_id=paste0(congress,"_",rollnumber)) %>%
-    filter(party_code %in% c("R","D")) %>% 
-    distinct %>%
-    #filter(date>lubridate::ymd("2008-06-01")) %>%
-    id_make(outcome_disc="cast_code",
-            item_id="item_id",
-            person_id="bioname",
-            group_id="party_code",
-            time_id = "date_month",
-            remove_cov_int = T,
-            person_cov = ~unemp_rate_yoy*party_code)
+  # unemp2 <- rollcalls %>%
+  #   select(cast_code,rollnumber,
+  #          bioname,party_code,date,unemp_rate_yoy,congress,year,date_month) %>%
+  #   mutate(cast_code=recode_factor(cast_code,Abstention=NA_character_),
+  #          cast_code=as.numeric(cast_code)-1,
+  #          item_id=paste0(congress,"_",rollnumber)) %>%
+  #   filter(party_code %in% c("R","D")) %>% 
+  #   distinct %>%
+  #   #filter(date>lubridate::ymd("2008-06-01")) %>%
+  #   id_make(outcome_disc="cast_code",
+  #           item_id="item_id",
+  #           person_id="bioname",
+  #           group_id="party_code",
+  #           time_id = "date_month",
+  #           remove_cov_int = T,
+  #           person_cov = ~unemp_rate_yoy*party_code)
   
-  unemp_gp_fit <- id_estimate(unemp2,model_type=is_missing,vary_ideal_pts = 'GP',
+  unemp_gp_fit <- id_estimate(unemp1,model_type=is_missing,vary_ideal_pts = 'GP',
                               niters=niters,
                               warmup=nwarmup,prior_only=prior_only,
                               ncores=parallel::detectCores(),nchain=2,
@@ -870,24 +872,7 @@ if(fit_type=="GP") {
 
 if(fit_type=="ar1") {
   
-  unemp2 <- rollcalls %>%
-    select(cast_code,rollnumber,
-           bioname,party_code,date,unemp_rate_yoy,congress,year,date_month) %>%
-    mutate(cast_code=recode_factor(cast_code,Abstention=NA_character_),
-           cast_code=as.numeric(cast_code)-1,
-           item_id=paste0(congress,"_",rollnumber)) %>%
-    filter(party_code %in% c("R","D")) %>% 
-    distinct %>%
-    #filter(date>lubridate::ymd("2008-06-01")) %>%
-    id_make(outcome_disc="cast_code",
-            item_id="item_id",
-            person_id="bioname",
-            group_id="party_code",
-            time_id = "date_month",
-            remove_cov_int = T,
-            person_cov = ~unemp_rate_yoy*party_code)
-  
-  unemp1_ar_fit <- id_estimate(unemp2,model_type=is_missing,
+  unemp1_ar_fit <- id_estimate(unemp1,model_type=is_missing,
                                vary_ideal_pts = 'AR1',
                                niters=niters,
                                warmup=nwarmup,
@@ -922,24 +907,7 @@ if(fit_type=="ar1") {
 
 if(fit_type=="rw") {
   
-  unemp2 <- rollcalls %>%
-    select(cast_code,rollnumber,
-           bioname,party_code,date,unemp_rate_yoy,congress,year,date_month) %>%
-    mutate(cast_code=recode_factor(cast_code,Abstention=NA_character_),
-           cast_code=as.numeric(cast_code)-1,
-           item_id=paste0(congress,"_",rollnumber)) %>%
-    filter(party_code %in% c("R","D")) %>% 
-    distinct %>%
-    #filter(date>lubridate::ymd("2008-06-01")) %>%
-    id_make(outcome_disc="cast_code",
-            item_id="item_id",
-            person_id="bioname",
-            group_id="party_code",
-            time_id = "date_month",
-            remove_cov_int = T,
-            person_cov = ~unemp_rate_yoy*party_code)
-  
-  unemp1_rw_fit <- id_estimate(unemp2,model_type=is_missing,
+  unemp1_rw_fit <- id_estimate(unemp1,model_type=is_missing,
                                vary_ideal_pts = 'random_walk',
                                niters=niters,
                                # more warmup as having some convergence issues
