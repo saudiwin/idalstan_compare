@@ -6,6 +6,8 @@ author:
     email: rmk7@nyu.edu
     corresponding: true
 date: last-modified
+execute: 
+  cache: true
 date-format: long
 format: pdf
 linestretch: 1.5
@@ -40,21 +42,11 @@ require(forcats)
 library(patchwork)
 library(posterior)
 
-# set to true to run all models (will take a long time)
-run_all <- F
+# set to true to create all analyses from fitted idealstan models
+# requires significant time and RAM (especially the latter)
+run_all <- T
 
-# whether to use a subset of items for identification
-
-test <- T
-
-# whether to use the prior predictive distribution for all models
-
-prior_only <- FALSE
-
-# set to true to create congressional datasets (will take a long time)
-create_data <- F
-
-cluster <- FALSE
+# see file to_cluster.R for the fitting of the actual idealstan models
 
 # load the datas
 
@@ -100,13 +92,13 @@ num_days <- distinct(unemp1,bioname,date_month) %>%
 
 \newpage
 
-While ideal point models were conceived as a way to measure ideology in the U.S. Congress, this powerful measurement tool has wide applicability as a general tool for analyzing social situations. Political scientists have continued to apply the ideal point model to new datasets and empirical challenges, such as Twitter data [@barbera2015; @kubinec2018], the United Nations Security Council [@bailey2017], state capacity [@hanson2021], democracy [@coppedge2019; @pemstein2017], campaign finance data [@bonica2014] and legislative speech [@lauderdale2016]. Through these applications, it has become apparent that the ideal point model has utility for a considerable number of measurement problems in the social sciences so long as available data are imperfect proxies of the concept of interest. To encourage further usage of this model, and to help address difficult measurement problems in political science, this paper extends the existing ideal point model in terms of mixed continuous and discrete outcome distributions, time processes and missing data, while building from a Bayesian framework for inference and incorporating computational advances for the purposes of analyzing big data sets [@martin2002; @martin2011a; @barbera2015; @kropko2013; @carroll2009; @bafumi2005; @jackman2004; @imai2016a; @lewis2018; @goplerud2019; @caughey2018].
+While ideal point models were conceived as a way to measure ideology in the U.S. Congress, this powerful measurement tool has wide applicability as a general tool for analyzing social data with nontrivial measurement error. For example, political scientists have recently applied the canonical ideal point model to new datasets and empirical challenges, such as Twitter data [@barbera2015; @kubinec2018], the United Nations Security Council [@bailey2017], state capacity [@hanson2021], democracy [@coppedge2019; @pemstein2017], campaign finance data [@bonica2014] and legislative speech [@lauderdale2016]. Through these applications, it has become apparent that the ideal point model has utility for a considerable number of measurement problems in the social sciences so long as available data are imperfect proxies of the concept of interest. To encourage further usage of this model, and to help address difficult measurement problems in political science, this paper generalizes the parameterization and implementation of the standard ideal point model to address challenges related to non-ignorable missing data, robust inference for time-varying data, and new estimands for the effect of covariates on ideal point-related measures [@martin2002; @martin2011a; @barbera2015; @kropko2013; @carroll2009; @bafumi2005; @jackman2004; @imai2016a; @lewis2018; @goplerud2019; @caughey2018].
 
-I show in this paper that combining advances in Bayesian computation with flexible time processes in the form of splines can solve a particularly difficult problem of scaling sparse data with measurement error, such as that available from finely grained time series in social media and other digital sources. While existing applications of dynamic ideal points are generally at a relatively high level of aggregation, such as the Congressional session [@carroll2009] or the judicial session [@martin2002], social media data like Twitter/X/Bluesky can be available in minute by minute increments [@kubinec2018; @eady2024], not to mention the wealth of revealed preference information available in TikTok, Youtube, and other sources. However, existing time-series methods for ideal points are difficult to employ with sparse data, and for that reason I present splines as a way of estimating restricted polynomials that can separate time trends from measurement noise. To illustrate the method, I estimate monthly time-varying ideal points for Congresspeople in the House in the 115th Congress.
+In particular, I show in this paper that combining advances in Bayesian computation with flexible time processes in the form of splines can solve a particularly difficult problem of scaling sparse data with measurement error, such as that available from finely grained time series in social media and other digital sources. While existing applications of dynamic ideal points are generally at a relatively high level of aggregation, such as the Congressional session [@carroll2009] or the judicial session [@martin2002], social media data like Twitter/X/Bluesky can be available in minute by minute increments [@kubinec2018; @eady2024], not to mention the wealth of revealed preference information available in TikTok, Youtube, and other sources. However, existing time-series methods for ideal points are difficult to employ with sparse data, and for that reason I present splines as a way of estimating restricted polynomials that can separate time trends from measurement noise. To illustrate the method, I estimate monthly time-varying ideal points for Congresspeople in the House in from 1990 to 2018, which are the first such granular measures available. I also compare multiple time-series processes, including random walks, AR(1), and Gaussian processes versus splines for the 115th Congress to show how modeling choices for time can lead to different conclusions about the nature of time-varying ideal point measures.
 
-In addition, I show in this paper how Bayesian post-estimation [@gill2020] enables the calculation of a new quantity of interest from ideal point models: ideal point marginal effects. I define an ideal point marginal effect as the unit change in the set of items for a unit change in a covariate that is mediated by a given person's ideal point. This quantity, which is estimated separately for each item (i.e., each bill or vote) in the data, enables us to understand how an external covariate can influence a person's decision-making while taking into account the relative latent position of the items on which they are taking positions. I illustrate this method with an analysis of the association between monthly district-level unemployment rates and voting behavior in the 115th Congress.
+Finally, I also show in this paper how Bayesian post-estimation [@gill2020] enables the calculation of a new quantity of interest from ideal point models: *ideal point marginal effects*. I define an ideal point marginal effect as the unit change in the set of items for a unit change in a covariate that is mediated by a given person's ideal point. This quantity, which is estimated separately for each item (i.e., each bill or vote) in the data, enables us to understand how an external covariate can influence a person's decision-making while taking into account the relative latent position of the items on which they are taking positions. I illustrate this method with an analysis of the association between monthly district-level unemployment rates and monthly Congressional ideal points from 1990 to 2018.
 
-All the models in this paper can be fit with the R package `idealstan`, which employs the probabilistic programming language Stan to allow for a wide variety of models to be fit within one joint framework. Furthermore, the application of Hamiltonian Monte Carlo and its associated diagnostics permits very robust inference of difficult posterior geometry, ensuring that measurement inferences are stable [@carpenter2017]. Combining missing-data inference, time-varying inference and inference over joint distributions provides scholars with a multi-purpose tool for tackling measurement challenges that can extend the reach and applicability of the ideal point model.
+All the models in this paper can be fit with the R package `idealstan`, which employs the probabilistic programming language Stan to allow for a wide variety of models to be fit within one joint framework. Furthermore, the application of Hamiltonian Monte Carlo and its associated diagnostics permits very robust inference of difficult posterior geometry, ensuring that measurement inferences are stable [@carpenter2017]. This implementation makes use of novel computational methods to parallelize MCMC calculations so that much bigger models can be fit with full Bayesian inference than was previously possible. As I discuss, even larger models can be fit with approximate inference methods, though only for limited applications. This new parameterization of ideal points that combines missing-data inference, time-varying inference and inference over joint distributions provides scholars with a multi-purpose tool for tackling difficult measurement challenges across the social sciences.
 
 # Latent Variables as Statistical Deduction
 
@@ -164,13 +156,13 @@ The ideal points are given a tight $N(0,1)$ prior to constrain the scale for ide
 
 $$
 \alpha_i \sim N(X\phi',1)
-$$ {eq-hier}
+$$ {#eq-hier}
 
 I also consider the possibility of including hierarchical covariates to predict the discrimination of the $J$ items, which has not been estimated previously in the literature though it is straightforward in a Bayesian framework:
 
 $$
 \gamma_j \sim N(X\phi',1)
-$$ {eq-hieritem}
+$$ {#eq-hieritem}
 
 Given this definition of the model, I next show how this framework can incorporate missing data when not all of $Y_{ij}$ is observed, time-varying inference when $\alpha_i$ is measured at different points in time and the estimation of diverse distributions for $Y_{ij}$ whether singly or jointly.
 
@@ -415,10 +407,11 @@ However, this sample-average quantity is less interesting as it averages over it
 
 The power of numerical differentiation is in allowing flexible linear model specifications. For example, to calculate these marginal effects when including a squared term for $x$, we simply extend the formula by including this term in the limit,
 
+```{=tex}
 \begin{equation}
 \frac{\partial_j Y_{itj=j}}{\partial_j x} \left( g(\gamma_j(\alpha_{it} + \phi_1 x + \phi_2 x^2) - \beta_j) \right) = lim_{\epsilon\rightarrow0}\frac{\begin{split} &g(\gamma_j(\alpha_{it} + \phi_1 (x + \epsilon) + \phi_2((x + \epsilon)^2)) - \beta_j)\\ - &g(\gamma_j(\alpha_{it} + \phi_1 (x-\epsilon) + \phi_2((x - \epsilon)^2)) - \beta_j)\end{split}}{2\epsilon}
 \end{equation}
-
+```
 and so on for any differentiable function of $x$.
 
 Finally, it is important to note that because all the parameters in @eq-idealderiv have posterior distributions, it is trivial to obtain uncertainty in these estimates by iterating @eq-idealderiv over the number of posterior draws. The main computational cost is calculating model predictions over $x + \epsilon$ and $x - \epsilon$, although this computation is embarrassingly parallel in the items $j$ and thus not a constraint given adequate computational resources.
@@ -489,12 +482,13 @@ In addition, we might think that any polarization may be assymetric in terms of 
 
 > H2: When monthly unemployment rates rise, the resulting polarization of legislative voting behavior is moderated by each legislator's party affiliation.
 
+```{=html}
 <!--# With the Chinese import shock data, we might surmise that polarization will increase among legislators in districts where Chinese import exposure per worker is very high. This kind of polarization could arise either by increasing divergence on trade-related legislation [@hall2015] or via increased foreign policy hostility to China [@kuk2017].
 
 > H2: When monthly unemployment rates rise in districts with a higher exposure to Chinese import competition, legislators in each party become more polarized.
 
 This hypothesis expresses a conditional relationship that runs in the opposite direction of the first hypothesis. It would seem that, as existing literature has shown, exposure to Chinese import shocks shifts legislators' ideal points on trade policy and increases polarization, that there should be a strongly interactive relationshp between district-level unemployment and Chinese import exposure. When both are high, we would have a strong prior that legislators will polarize away from each other. This hypothesis can be tested with a three-way interaction of party ID, unemployment rates and Chinese shock exposure at the district level. -->
-
+```
 To test these hypotheses, I fit each of the described time-series models separately to rollcall vote data from the 115th Congress. I do not include the 1st-stage missing-data selection equation. Recorded absences are fairly low for this session of Congress, and so this additional level of complexity is not as useful, especially when the aim is inference on covariates. To identify the model, I pin the discrimination parameters $\gamma_j$ for four party-line votes in which all Republicans voted for a measure as +1, and four Democrat party-line votes in which all Democrats voted against a measure as -1. Utilizing the same pinned parameters for all models allows me to compare their relative ability to obtain identification of a single rotation of the ideal points.
 
 For the spline specifications, I consider splines of degrees 2, 3 and 4 while using only one knot (i.e., one polynomial function for the whole time period). If I were modeling multiple Congressional sessions, it would be possible to use one knot per session to allow for period effects in the time series. With only one Congressional session, however, a single polynomial function is sufficient as it would not be expected for a member of Congress to switch their ideological position in a noticeable way more than once or twice per term.
@@ -503,6 +497,8 @@ As a result, I do find that the simpler time series models, i.e. the splines, ar
 
 ```{r loadmodels,include=FALSE}
 
+if(run_all) {
+  
 unemp1_fit <- readRDS('data/unemp1152_12_1_fit.rds')
 unemp2_fit <- readRDS('data/unemp1152_12_2_fit.rds')
 unemp3_fit <- readRDS('data/unemp1152_12_3_fit.rds')
@@ -516,11 +512,42 @@ unemp_ar_fit <- readRDS("data/unemp115_2_12_1_ar_fit.rds")
 unemp_rw_fit <- readRDS("data/unemp115_2_12_1_rw_fit.rds")
 
 rhats1 <- id_plot_rhats(unemp1_fit) + ggtitle("Spline 2nd Degree") + labs(caption="",x="") + xlim(c(0.95, 2))
+
+saveRDS(rhats1, "data/rhats1.rds")
+
 rhats2 <- id_plot_rhats(unemp2_fit) + ggtitle("Spline 3rd Degree") + labs(caption="",y="",x="") + xlim(c(0.95, 2))
+
+saveRDS(rhats2, "data/rhats2.rds")
+
 rhats3 <- id_plot_rhats(unemp3_fit) + ggtitle("Spline 4th Degree") + labs(caption="",y="",x="") + xlim(c(0.95, 2))
+
+saveRDS(rhats3, "data/rhats3.rds")
+
 rhatgp <- id_plot_rhats(unemp_gp_fit) + ggtitle("Gaussian Process") + labs(caption="") + xlim(c(0.95, 2))
+
+saveRDS(rhatgp, "data/rhatgp.rds")
+
 rhatar <- id_plot_rhats(unemp_ar_fit) + ggtitle("AR(1)") + labs(caption="",y="") + xlim(c(0.95, 2))
+
+saveRDS(rhatar, "data/rhatar.rds")
+
 rhatrw <- id_plot_rhats(unemp_rw_fit) + ggtitle("Random Walk") + labs(caption="",y="") + xlim(c(0.95, 2))
+
+saveRDS(rhatrw, "data/rhatrw.rds")
+  
+} else {
+  
+  rhats1 <- readRDS("data/rhats1.rds")
+  rhats2 <- readRDS("data/rhats2.rds")
+  rhats3 <- readRDS("data/rhats3.rds")
+  rhatar <- readRDS("data/rhatar.rds")
+  rhatrw <- readRDS("data/rhatrw.rds")
+  rhatgp <- readRDS("data/rhatgp.rds")
+  
+  
+}
+
+
 
 ```
 
@@ -538,47 +565,72 @@ rhats1 + rhats2 + rhats3 + rhatgp + rhatar + rhatrw +
 
 ```
 
-
 I next examine the overall distributions of the ideal point scores over time for each model in @fig-alldist. To help with plotting these distributions, uncertainty intervals are removed, and the scale is limited to ideal point scores of -3 to +3. As can be seen, the different methods have differing interpretations of ideal point trajectories, although most of the parameterizations show periods where voting appears to be less polarized in the middle of 2017. As might be expected, while on average the two parties remain well-separated, in practice there are periods of more bipartisan cooperation. This type of monthly heterogeneity is masked when the ideal points are aggregated to the yearly level, and is a substantively interesting form of variation.
 
 ```{r distscomp}
 #| include: false
 
-d2 <- unemp2_fit@stan_samples$draws("lp__") %>% apply(2,mean)
-d3 <- unemp3_fit@stan_samples$draws("lp__") %>% apply(2,mean)
-dgp <- unemp_gp_fit@stan_samples$draws("lp__") %>% apply(2,mean)
-dar <- unemp_ar_fit@stan_samples$draws("lp__") %>% apply(2,mean)
-drw <- unemp_rw_fit@stan_samples$draws("lp__") %>% apply(2,mean)
+# d2 <- unemp2_fit@stan_samples$draws("lp__") %>% apply(2,mean)
+# d3 <- unemp3_fit@stan_samples$draws("lp__") %>% apply(2,mean)
+# dgp <- unemp_gp_fit@stan_samples$draws("lp__") %>% apply(2,mean)
+# dar <- unemp_ar_fit@stan_samples$draws("lp__") %>% apply(2,mean)
+# drw <- unemp_rw_fit@stan_samples$draws("lp__") %>% apply(2,mean)
+# 
+# m2 <- which(d2==max(d2))
+# m3 <- which(d3==max(d3))
+# mgp <- which(dgp==max(dgp))
+# mar <- which(dar==max(dar))
+# mrw <- which(drw==max(drw))
 
-m2 <- which(d2==max(d2))
-m3 <- which(d3==max(d3))
-mgp <- which(dgp==max(dgp))
-mar <- which(dar==max(dar))
-mrw <- which(drw==max(drw))
-
-un1 <- id_plot_legis_dyn(unemp1_fit,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
+if(run_all) {
+  
+  un1 <- id_plot_legis_dyn(unemp1_fit,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
                               D="blue",I="green"),name="") + ggtitle("Spline of 2nd Degree") + labs(y="") +
   scale_x_date(guide = guide_axis(n.dodge = 2))
+  
+  saveRDS(un1, "data/un1.rds")
 
 un2 <- id_plot_legis_dyn(unemp2_fit,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
                               D="blue",I="green"),name="") + ggtitle("Spline of 3rd Degree") + labs(y="") +
   scale_x_date(guide = guide_axis(n.dodge = 2))
 
+  saveRDS(un2, "data/un2.rds")
+
 un3 <- id_plot_legis_dyn(unemp3_fit,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
                               D="blue",I="green"),name="") + ggtitle("Spline of 4th Degree") + labs(y="") +
   scale_x_date(guide = guide_axis(n.dodge = 2))
+
+  saveRDS(un3, "data/un3.rds")
 
 gp <- id_plot_legis_dyn(unemp_gp_fit,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
                               D="blue",I="green"),name="") + ggtitle("Gaussian Process") + labs(y="") +
   scale_x_date(guide = guide_axis(n.dodge = 2))
 
+  saveRDS(gp, "data/gp.rds")
+
 ar <- id_plot_legis_dyn(unemp_ar_fit,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
                               D="blue",I="green"),name="") + ggtitle("AR(1) Process") + labs(y="") +
   scale_x_date(guide = guide_axis(n.dodge = 2))
 
+  saveRDS(ar, "data/ar.rds")
+
 rw <- id_plot_legis_dyn(unemp_rw_fit,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
                               D="blue",I="green"),name="") + ggtitle("Random Walk") +
   scale_x_date(guide = guide_axis(n.dodge = 2)) + labs(y="")
+
+  saveRDS(rw, "data/rw.rds")
+  
+} else {
+  
+  un1 <- readRDS("data/un1.rds")
+  un2 <- readRDS("data/un2.rds")
+  un3 <- readRDS("data/un3.rds")
+  rw <- readRDS("data/rw.rds")
+  ar <- readRDS("data/ar.rds")
+  gp <- readRDS("data/gp.rds")
+}
+
+
 
 
 ```
@@ -601,30 +653,60 @@ un1 + un2 + un3 + ar + gp + rw + plot_layout(nrow=2,
 ```{r distscompamash}
 #| include: false
 
-un1_a <- id_plot_legis_dyn(unemp1_fit,include="AMASH, Justin",
-                         use_ci=F,plot_text = F) + scale_color_manual(values=c(R="red",
+if(run_all) {
+  
+  un1_a <- id_plot_legis_dyn(unemp1_fit,include="AMASH, Justin",
+                         use_ci=T,plot_text = F) + scale_color_manual(values=c(R="red",
                               D="blue",I="green"),name="") + ggtitle("Spline of 2nd Degree") + labs(y="") +
-  scale_x_date(guide = guide_axis(n.dodge = 2))
+  scale_x_date(guide = guide_axis(n.dodge = 2)) + 
+    scale_y_reverse()
+  
+  saveRDS(un1_a, "data/un1_a.rds")
 
-un2_a <- id_plot_legis_dyn(unemp2_fit,use_ci=F,include="AMASH, Justin",plot_text = F) + scale_color_manual(values=c(R="red",
+un2_a <- id_plot_legis_dyn(unemp2_fit,use_ci=T,include="AMASH, Justin",plot_text = F) + scale_color_manual(values=c(R="red",
                               D="blue",I="green"),name="") + ggtitle("Spline of 3rd Degree") + labs(y="") +
-  scale_x_date(guide = guide_axis(n.dodge = 2))
+  scale_x_date(guide = guide_axis(n.dodge = 2)) +
+  scale_y_reverse()
+ 
+  saveRDS(un2_a, "data/un1_a.rds")
 
-un3_a <- id_plot_legis_dyn(unemp3_fit,use_ci=F,include="AMASH, Justin",plot_text = F) + scale_color_manual(values=c(R="red",
+un3_a <- id_plot_legis_dyn(unemp3_fit,use_ci=T,include="AMASH, Justin",plot_text = F) + scale_color_manual(values=c(R="red",
                               D="blue",I="green"),name="") + ggtitle("Spline of 4th Degree") + labs(y="") +
   scale_x_date(guide = guide_axis(n.dodge = 2))
+  
+  saveRDS(un3_a, "data/un3_a.rds")
 
-gp_a <- id_plot_legis_dyn(unemp_gp_fit,use_ci=F,include="AMASH, Justin",plot_text = F) + scale_color_manual(values=c(R="red",
+gp_a <- id_plot_legis_dyn(unemp_gp_fit,use_ci=T,include="AMASH, Justin",plot_text = F) + scale_color_manual(values=c(R="red",
                               D="blue",I="green"),name="") + ggtitle("Gaussian Process") + labs(y="") +
   scale_x_date(guide = guide_axis(n.dodge = 2))
 
-ar_a <- id_plot_legis_dyn(unemp_ar_fit,use_ci=F,include="AMASH, Justin",plot_text = F) + scale_color_manual(values=c(R="red",
+  saveRDS(gp_a, "data/gp_a.rds")
+
+ar_a <- id_plot_legis_dyn(unemp_ar_fit,use_ci=T,include="AMASH, Justin",plot_text = F) + scale_color_manual(values=c(R="red",
                               D="blue",I="green"),name="") + ggtitle("AR(1) Process") + labs(y="") +
   scale_x_date(guide = guide_axis(n.dodge = 2))
 
-rw_a <- id_plot_legis_dyn(unemp_rw_fit,use_ci=F,include="AMASH, Justin",plot_text = F) + scale_color_manual(values=c(R="red",
+  saveRDS(ar_a, "data/ar_a.rds")
+
+rw_a <- id_plot_legis_dyn(unemp_rw_fit,use_ci=T,include="AMASH, Justin",plot_text = F) + scale_color_manual(values=c(R="red",
                               D="blue",I="green"),name="") + ggtitle("Random Walk") +
-  scale_x_date(guide = guide_axis(n.dodge = 2)) + labs(y="")
+  scale_x_date(guide = guide_axis(n.dodge = 2)) + labs(y="") +
+  scale_y_reverse()
+
+  saveRDS(rw_a, "data/rw_a.rds")
+  
+} else {
+  
+  un1_a <- readRDS("data/un1_a.rds")
+  un2_a <- readRDS("data/un1_a.rds")
+  un3_a <- readRDS("data/un1_a.rds")
+  gp_a <- readRDS("data/gp_a.rds")
+  rw_a <- readRDS("data/rw_a.rds")
+  ar_a <- readRDS("data/ar_a.rds")
+  
+}
+
+
 
 
 ```
@@ -644,6 +726,83 @@ un1_a + un2_a + un3_a + ar_a + gp_a + rw_a + plot_layout(nrow=2,
 
 ```
 
+```{r distscompamash1}
+#| include: false
+
+if(run_all) {
+  
+  un1_a1 <- id_plot_legis_dyn(unemp1_fit,include="AMASH, Justin",
+                         use_ci=T,plot_text = F) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("Spline of 2nd Degree") + labs(y="") +
+  scale_x_date(guide = guide_axis(n.dodge = 2)) + 
+    scale_y_reverse()
+  
+  saveRDS(un1_a1, "data/un1_a1.rds")
+
+un2_a1 <- id_plot_legis_dyn(unemp2_fit,use_ci=T,include="AMASH, Justin",plot_text = F) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("Spline of 3rd Degree") + labs(y="") +
+  scale_x_date(guide = guide_axis(n.dodge = 2)) +
+  scale_y_reverse()
+ 
+  saveRDS(un2_a1, "data/un1_a1.rds")
+
+un3_a1 <- id_plot_legis_dyn(unemp3_fit,use_ci=T,include="AMASH, Justin",plot_text = F) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("Spline of 4th Degree") + labs(y="") +
+  scale_x_date(guide = guide_axis(n.dodge = 2))
+  
+  saveRDS(un3_a1, "data/un3_a1.rds")
+
+gp_a1 <- id_plot_legis_dyn(unemp_gp_fit,use_ci=T,include="AMASH, Justin",plot_text = F) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("Gaussian Process") + labs(y="") +
+  scale_x_date(guide = guide_axis(n.dodge = 2))
+
+  saveRDS(gp_a1, "data/gp_a1.rds")
+
+ar_a1 <- id_plot_legis_dyn(unemp_ar_fit,use_ci=T,include="AMASH, Justin",plot_text = F) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("AR(1) Process") + labs(y="") +
+  scale_x_date(guide = guide_axis(n.dodge = 2))
+
+  saveRDS(ar_a1, "data/ar_a1.rds")
+
+rw_a1 <- id_plot_legis_dyn(unemp_rw_fit,use_ci=T,include="AMASH, Justin",plot_text = F) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("Random Walk") +
+  scale_x_date(guide = guide_axis(n.dodge = 2)) + labs(y="") +
+  scale_y_reverse()
+
+  saveRDS(rw_a1, "data/rw_a1.rds")
+  
+} else {
+  
+  un1_a1 <- readRDS("data/un1_a1.rds")
+  un2_a1 <- readRDS("data/un1_a1.rds")
+  un3_a1 <- readRDS("data/un1_a1.rds")
+  gp_a1 <- readRDS("data/gp_a1.rds")
+  rw_a1 <- readRDS("data/rw_a1.rds")
+  ar_a1 <- readRDS("data/ar_a1.rds")
+  
+}
+
+
+
+
+```
+
+```{r distsamash1}
+#| label: fig-amashdist1
+#| fig-cap: "Comparison of Justin Amash Time-varying Ideal Points for the 115th Congress without Missing Votes"
+#| message: false
+#| warning: false
+#| fig-height: 6
+#| fig-width: 6
+
+un1_a1 + un2_a1 + un3_a1 + ar_a1 + gp_a1 + rw_a1 + plot_layout(nrow=2,
+                                             guides="collect") + 
+  plot_annotation(caption="Posterior average values shown for 115th Congress legislator ideal points.\nItem discrimination for Republican party-line votes was constrained to be positive.") & theme(legend.position = "top",
+                                                                                                                                                                                                    plot.title=element_text(size=9))
+
+```
+
+
 We can see as well that the more flexible methods that estimate one parameter per time point--AR(1), random walk and Gaussian processes--do not reveal much additional variation of interest beyond the much simpler spline models. The Guassian process model does show more individual-level heterogeneity, but on the whole the party-level trends are if anything more stable. Of course, the model is not completely identified, so it could be that some of the heterogeneity is being masked for that reason.
 
 I next look at the coefficients $\phi$ that relate the legislator-level covariates to the ideal points scores. These values are shown in @tbl-coef. Because some models did not adequately converge across chains, I only use the chain that had the highest posterior log-probability. As can be seen, there is variation across the models in terms of the magnitude and even the sign of the coefficients. There is relatively less variation between splines of different degree, which in addition the descriptive plots in @fig-alldist, suggests that the specific form of the spline is relatively minor, at least when studying legislative ideal point processes. In a situation in which a latent variable changed more quickly, it could be more necessary to have a higher spline degree and more knots as well.
@@ -652,34 +811,22 @@ I next look at the coefficients $\phi$ that relate the legislator-level covariat
 #| label: tbl-coef
 #| tbl-cap: Coefficients of Legislator Hierarchical Covariates ($\phi$)
 
-d2 <- unemp2_fit@stan_samples$draws("lp__") %>% apply(2,mean)
-d3 <- unemp3_fit@stan_samples$draws("lp__") %>% apply(2,mean)
-dgp <- unemp_gp_fit@stan_samples$draws("lp__") %>% apply(2,mean)
-dar <- unemp_ar_fit@stan_samples$draws("lp__") %>% apply(2,mean)
-drw <- unemp_rw_fit@stan_samples$draws("lp__") %>% apply(2,mean)
-
-m2 <- which(d2==max(d2))
-m3 <- which(d3==max(d3))
-mgp <- which(dgp==max(dgp))
-mar <- which(dar==max(dar))
-mrw <- which(drw==max(drw))
-
 s1_cov <- unemp1_fit@stan_samples$draws("legis_x") %>% 
   summarize_draws %>% 
   mutate(Model="Spline 2nd Degree")
-s2_cov <- unemp2_fit@stan_samples$draws("legis_x")[,m2,] %>% 
+s2_cov <- unemp2_fit@stan_samples$draws("legis_x") %>% 
   summarize_draws %>% 
   mutate(Model="Spline 3rd Degree")
-s3_cov <- unemp3_fit@stan_samples$draws("legis_x")[,m3,] %>% 
+s3_cov <- unemp3_fit@stan_samples$draws("legis_x") %>% 
   summarize_draws %>% 
   mutate(Model="Spline 4th Degree")
-sgp_cov <- unemp_gp_fit@stan_samples$draws("legis_x")[,mgp,] %>% 
+sgp_cov <- unemp_gp_fit@stan_samples$draws("legis_x") %>% 
   summarize_draws %>% 
   mutate(Model="Gaussian Process")
-sar_cov <- unemp_ar_fit@stan_samples$draws("legis_x")[,mar,] %>% 
+sar_cov <- unemp_ar_fit@stan_samples$draws("legis_x") %>% 
   summarize_draws %>% 
   mutate(Model="AR(1)")
-srw_cov <- unemp_rw_fit@stan_samples$draws("legis_x")[,mrw,] %>% 
+srw_cov <- unemp_rw_fit@stan_samples$draws("legis_x") %>% 
   summarize_draws %>% 
   mutate(Model="Random Walk")
 
@@ -708,8 +855,6 @@ We can next examine the ideal point marginal effects of unemployment. Given that
 by_party <- readRDS("data/by_party.rds")
 
 ```
-
-
 
 ```{r calcmargeffs}
 #| label: fig-allplot
@@ -776,9 +921,9 @@ by_party %>%
 
 ```
 
-
 Overall, the results of these models do show that legislative behavior changes during times of higher local unemployment. Furthermore, we can measure these movements in ideal points down to the monthly-level, permitting very precise statements about how legislative behavior changes. In general, the effects of 1% change in district-level unemployment on legislators are modest, though we would expect modest effects as this 1% change represents one-month's worth of unemployment data. Aggregated over time, these effects could grow to be substantial.
 
+````{=html}
 <!-- Finally I turn to the results of the Chinese import exposure model. The ideal point marginal effects for this model are shown in Figure \@ref(fig:chinapl). Unfortunately, it is not possible to read off the interactive relationship as the main effect is a continuous by continuous by binary variable interaction. The only way to interpret this relationship is by calculating the effect of the interaction for different values of Chinese import exposure per worker and party ID. This plot for the mean posterior values is shown in Figure \@ref(fig:chinaint). There is a strongly non-linear relationship between Chinese import exposure and unemployment. At low rates of Chinese import exposure, unemployment appears to have a weak effect on legislators in either party. At higher levels of import exposure, however, there is a much stronger relationship. In this case, it would appear that the relationship is strongly de-polarizing. Democrats with in districts with high unemployment and high import exposure tend to vote more conservative, while Republicans in similar districts tend to vote more liberal than other members of their party. This suggests that Chinese import exposure is indeed a strong moderating influence on the relationship between unemployment and voting behavior. Unfortunately, it is not possible to do a straightforward nested model comparison between the two-way and three-way interaction models, though further probing of the relationship could yield further insights into why these findings seem to run in opposite directions.
 
 ```{r chinaint,fig.cap="Effect of Unemployment Conditional on Chinese Import Exposure per Worker, 1990-2010",eval=FALSE}
@@ -897,7 +1042,8 @@ ggsave("china_int_plot.png")
 
 ```
  -->
- 
+````
+
 # Discussion
 
 The aim of this paper was to put forward a general framework for ideal point estimation that would both integrate existing approaches while providing new areas for analysis, particularly in missing data and over-time inference. The intention is not to suggest, however, that this framework represents all that can be done with ideal points. This paper's approach is general and designed to fit a wide variety of applications, but investigating the intricacies of social situations will always require more custom modeling. The utility of this study is rather to promote the use of ideal point models as a core part of empirical research in political science, not just for legislative studies or rollcall voting data.
