@@ -11,12 +11,7 @@ require(dplyr)
 require(ggplot2)
 require(tidyr)
 require(readr)
-#require(blscrapeR)
 require(lubridate)
-#require(tigris)
-#require(sf)
-#require(areal)
-require(missRanger)
 require(idealstan)
 require(forcats)
 
@@ -59,7 +54,7 @@ max_treedepth <- 12
 
 # set restrict SD for pinned items
 
-restrict_sd <- .0001
+restrict_sd <- .01
 
 
 ## ----create data ------------------------------------------------------------------------
@@ -364,7 +359,7 @@ if(create_data) {
 
 
 
-over_states <- readRDS('/work/rkubinec/over_states.rds')
+over_states <- readRDS('data/over_states.rds')
 
 
 
