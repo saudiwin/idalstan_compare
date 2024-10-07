@@ -761,7 +761,7 @@ unemp1 <- unemp1  %>%
                               #include=F,
                               id_refresh=100)
     
-    saveRDS(unemp2_fit,paste0("/scratch/rmk7/unemp",modtype,is_missing,"_",max_treedepth,"_","2_fit.rds"))
+    saveRDS(unemp2_fit,paste0("/work/rkubinec/unemp",modtype,is_missing,"_",max_treedepth,"_","2_fit.rds"))
     
     
   }
@@ -851,7 +851,7 @@ if(fit_type=="GP") {
                               #         "A_int_free"),
                               id_refresh=100)
   
-  saveRDS(unemp_gp_fit, paste0("/scratch/rmk7/unemp",modtype,"_",is_missing,"_",max_treedepth,"_","_gp_fit.rds"))
+  saveRDS(unemp_gp_fit, paste0("/work/rkubinec/unemp",modtype,"_",is_missing,"_",max_treedepth,"_","_gp_fit.rds"))
   
 }
 
@@ -887,7 +887,7 @@ if(fit_type=="ar1") {
                                #include=F,
                                id_refresh=100)
   
-  saveRDS(unemp1_ar_fit, paste0("/scratch/rmk7/unemp",modtype,"_",is_missing,"_",max_treedepth,"_","1_ar_fit.rds"))
+  saveRDS(unemp1_ar_fit, paste0("/work/rkubinec/unemp",modtype,"_",is_missing,"_",max_treedepth,"_","1_ar_fit.rds"))
   
   
 }
@@ -923,7 +923,7 @@ if(fit_type=="rw") {
                                #include=F,
                                id_refresh=100)
   
-  saveRDS(unemp1_rw_fit, paste0("/scratch/rmk7/unemp",modtype,"_",is_missing,"_",max_treedepth,"_","1_rw_fit.rds"))
+  saveRDS(unemp1_rw_fit, paste0("/work/rkubinec/unemp",modtype,"_",is_missing,"_",max_treedepth,"_","1_rw_fit.rds"))
   
   
 }
@@ -990,7 +990,7 @@ if(fit_type=="china") {
                             #include=F,
                             id_refresh=100)
   
-  saveRDS(china_fit1,paste0('/scratch/rmk7/china_',modtype,"_",is_missing,"_",max_treedepth,"_",'_fit1.rds'))
+  saveRDS(china_fit1,paste0('/work/rkubinec/china_',modtype,"_",is_missing,"_",max_treedepth,"_",'_fit1.rds'))
   
   
 }
