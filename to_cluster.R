@@ -29,15 +29,20 @@ create_data <- F
 
 cluster <- TRUE
 
-fit_type <- as.numeric(Sys.getenv("FITTYPE"))
+#fit_type <- as.numeric(Sys.getenv("FITTYPE"))
 
+fit_type <- 1
 
 fit_type <- switch(fit_type,"spline1","spline2","spline3","china",
                   "GP","ar1","rw")
 
-modtype <- Sys.getenv("DATATYPE")
+#modtype <- Sys.getenv("DATATYPE")
 
-is_missing <- as.numeric(Sys.getenv("MISSING"))
+modtype <- "115"
+
+#is_missing <- as.numeric(Sys.getenv("MISSING"))
+
+is_missing <- 1
 
 spline_degree <- 4
 
@@ -54,7 +59,7 @@ max_treedepth <- 12
 
 # set restrict SD for pinned items
 
-restrict_sd <- .01
+restrict_sd <- .001
 
 
 ## ----create data ------------------------------------------------------------------------
