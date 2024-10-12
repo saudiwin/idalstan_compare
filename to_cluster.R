@@ -59,7 +59,7 @@ max_treedepth <- as.numeric(as.numeric(Sys.getenv("TREEDEPTH")))
 
 # set restrict SD for pinned items
 
-restrict_sd <- .001
+restrict_sd <- .0001
 
 
 ## ----create data ------------------------------------------------------------------------
