@@ -70,16 +70,16 @@ restrict_sd <- .001
 
 if(create_data) {
   # load county-level unemployment & other data
-  # countun <- read_delim('/work/rkubinec/la_county.txt',delim="\t")
+  # countun <- read_delim('/anvil/scratch/x-rkubinec/la_county.txt',delim="\t")
   #
   # countun <- mutate(countun,series_id=trimws(series_id)) %>%
   #   filter(period!="M13")
-  # saveRDS(countun,'/work/rkubinec/countun.rds')
+  # saveRDS(countun,'/anvil/scratch/x-rkubinec/countun.rds')
   
-  # countun <- readRDS('/work/rkubinec/countun.rds')
+  # countun <- readRDS('/anvil/scratch/x-rkubinec/countun.rds')
   
   # # load series indicators
-  # id_data <- read_tsv('/work/rkubinec/la_series.txt')
+  # id_data <- read_tsv('/anvil/scratch/x-rkubinec/la_series.txt')
   #
   # county_series <- filter(id_data,measure_code %in% c("04","06"),
   #                         area_type_code=="F") %>%
@@ -109,9 +109,9 @@ if(create_data) {
   #          -unemployed_rate) %>%
   #   distinct
   #
-  # saveRDS(bls_fips,'/work/rkubinec/bls_fips.rds')
+  # saveRDS(bls_fips,'/anvil/scratch/x-rkubinec/bls_fips.rds')
   
-  # bls_fips <- readRDS('/work/rkubinec/bls_fips.rds')
+  # bls_fips <- readRDS('/anvil/scratch/x-rkubinec/bls_fips.rds')
   #
   # # merge in FIPS codes and drop unnecessary data
   #
@@ -146,9 +146,9 @@ if(create_data) {
   #
   # county_series <- left_join(county_series,fips_state,by=c(fips_state='state_code'))
   
-  # saveRDS(county_series,'/work/rkubinec/county_series.rds')
+  # saveRDS(county_series,'/anvil/scratch/x-rkubinec/county_series.rds')
   
-  # county_series <- readRDS('/work/rkubinec/county_series.rds')
+  # county_series <- readRDS('/anvil/scratch/x-rkubinec/county_series.rds')
   
   # Now we want to merge with congressional district
   
@@ -160,10 +160,10 @@ if(create_data) {
   # albers <- "+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=37.5 +lon_0=-96 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs"
   
   # we  need districts for each apportionment (4 going back to the 1980s)
-  # districts2018 <- st_read('/work/rkubinec/congress_shape/districtShapes/districts114.shp') %>% st_transform(albers)
-  # districts2008 <- st_read('/work/rkubinec/congress_shape/districtShapes/districts110.shp') %>% st_transform(albers)
-  # districts1998 <- st_read('/work/rkubinec/congress_shape/districtShapes/districts105.shp') %>% st_transform(albers)
-  # districts1988 <- st_read('/work/rkubinec/congress_shape/districtShapes/districts100.shp') %>% st_transform(albers)
+  # districts2018 <- st_read('/anvil/scratch/x-rkubinec/congress_shape/districtShapes/districts114.shp') %>% st_transform(albers)
+  # districts2008 <- st_read('/anvil/scratch/x-rkubinec/congress_shape/districtShapes/districts110.shp') %>% st_transform(albers)
+  # districts1998 <- st_read('/anvil/scratch/x-rkubinec/congress_shape/districtShapes/districts105.shp') %>% st_transform(albers)
+  # districts1988 <- st_read('/anvil/scratch/x-rkubinec/congress_shape/districtShapes/districts100.shp') %>% st_transform(albers)
   #
   # dist_list <- list(d2018=districts2018,
   #                   d2008=districts2008,
@@ -174,11 +174,11 @@ if(create_data) {
   # dist_list <- lapply(dist_list,function(d) {
   #   left_join(d,distinct(select(fips_all,state_name,state_code)),by=c(STATENAME='state_name'))
   # })
-  # saveRDS(dist_list,'/work/rkubinec/dist_list.rds')
+  # saveRDS(dist_list,'/anvil/scratch/x-rkubinec/dist_list.rds')
   
   # county_space <- tigris::counties() %>%
   #   st_as_sf
-  # saveRDS(county_space,'/work/rkubinec/county_space.rds')
+  # saveRDS(county_space,'/anvil/scratch/x-rkubinec/county_space.rds')
   
   
   # merge in our county data
@@ -223,12 +223,12 @@ if(create_data) {
   # # interpolate across districts
   #
   #
-  # county_space <- readRDS('/work/rkubinec/county_space.rds') %>%
+  # county_space <- readRDS('/anvil/scratch/x-rkubinec/county_space.rds') %>%
   #               st_transform(albers) %>%
   #             st_buffer(dist = 0) %>%
   #   select(STATEFP,COUNTYFP,GEOID,geometry)
   #
-  # dist_list <- readRDS('/work/rkubinec/dist_list.rds') %>%
+  # dist_list <- readRDS('/anvil/scratch/x-rkubinec/dist_list.rds') %>%
   #   lapply(st_buffer,dist=0) %>%
   #   lapply(select,DISTRICT,ID,geometry)
   #
@@ -241,10 +241,10 @@ if(create_data) {
   #              type = "extensive", weight = "total") %>%
   #     aw_weight(areaVar = "area", totalVar = "totalArea",
   #             areaWeight = "areaWeight") %>%
-  #     saveRDS(paste0('/work/rkubinec/',d,'_int.rds'))
+  #     saveRDS(paste0('/anvil/scratch/x-rkubinec/',d,'_int.rds'))
   # })
   #
-  # all_ints_names <- rev(list.files(path = "/work/rkubinec/",pattern="int.rds",full.names = T))
+  # all_ints_names <- rev(list.files(path = "/anvil/scratch/x-rkubinec/",pattern="int.rds",full.names = T))
   #
   # # we can now load up one intersection at a time and average the covariates
   #
@@ -334,7 +334,7 @@ if(create_data) {
   
   #merge district covariates
   
-  # dist_state <- readRDS('/work/rkubinec/dist_list.rds') %>%
+  # dist_state <- readRDS('/anvil/scratch/x-rkubinec/dist_list.rds') %>%
   #   lapply(function(d) st_drop_geometry(d)) %>%
   #   lapply(select,ID,
   #          DISTRICT,
@@ -359,7 +359,7 @@ if(create_data) {
   #
   # over_states %>%
   #   filter(DISTRICT!='98') %>%
-  #   saveRDS('/work/rkubinec/over_states.rds')
+  #   saveRDS('/anvil/scratch/x-rkubinec/over_states.rds')
 }
 
 
@@ -376,14 +376,14 @@ over_states <- readRDS('data/over_states.rds')
 # 
 # # need Congress rollcall info
 # 
-# rollinfo <- read_csv('/work/rkubinec/Hall_rollcalls.csv')
+# rollinfo <- read_csv('/anvil/scratch/x-rkubinec/Hall_rollcalls.csv')
 # 
 # unam_roll <- filter(rollinfo,
 #                     yea_count==0|nay_count==0)
 # 
 # # member votes
 # 
-# rollcalls <- read_csv('/work/rkubinec/Hall_votes.csv') %>% 
+# rollcalls <- read_csv('/anvil/scratch/x-rkubinec/Hall_votes.csv') %>% 
 #   filter(congress>100)
 # 
 # #remove unanmous votes
@@ -395,7 +395,7 @@ over_states <- readRDS('data/over_states.rds')
 # 
 # # need member info
 # 
-# meminfo <- read_csv('/work/rkubinec/Hall_members.csv')
+# meminfo <- read_csv('/anvil/scratch/x-rkubinec/Hall_members.csv')
 # 
 # # merge member info with rollcall data
 # 
@@ -462,7 +462,7 @@ over_states <- readRDS('data/over_states.rds')
 # rollcalls$date_month <- rollcalls$date
 # day(rollcalls$date_month) <- 1
 
-# saveRDS(rollcalls,'/work/rkubinec/rollcalls.rds')
+# saveRDS(rollcalls,'/anvil/scratch/x-rkubinec/rollcalls.rds')
 
 # remove unnecesssary objects
 
@@ -730,7 +730,7 @@ unemp1 <- unemp1  %>%
                               #include=F,
                               id_refresh=100)
     
-    saveRDS(unemp1_fit,paste0("/work/rkubinec/",modtype,is_missing,"_",max_treedepth,"_","1_fit.rds"))
+    saveRDS(unemp1_fit,paste0("/anvil/scratch/x-rkubinec/",modtype,is_missing,"_",max_treedepth,"_","1_fit.rds"))
     
   }
   
@@ -766,7 +766,7 @@ unemp1 <- unemp1  %>%
                               #include=F,
                               id_refresh=100)
     
-    saveRDS(unemp2_fit,paste0("/work/rkubinec/unemp",modtype,is_missing,"_",max_treedepth,"_","2_fit.rds"))
+    saveRDS(unemp2_fit,paste0("/anvil/scratch/x-rkubinec/unemp",modtype,is_missing,"_",max_treedepth,"_","2_fit.rds"))
     
     
   }
@@ -804,7 +804,7 @@ unemp1 <- unemp1  %>%
                               #include=F,
                               id_refresh=100)
     
-    saveRDS( unemp3_fit,paste0("/work/rkubinec/unemp",modtype,is_missing,"_",max_treedepth,"_","3_fit.rds"))
+    saveRDS( unemp3_fit,paste0("/anvil/scratch/x-rkubinec/unemp",modtype,is_missing,"_",max_treedepth,"_","3_fit.rds"))
     
   }
   
@@ -856,7 +856,7 @@ if(fit_type=="GP") {
                               #         "A_int_free"),
                               id_refresh=100)
   
-  saveRDS(unemp_gp_fit, paste0("/work/rkubinec/unemp",modtype,"_",is_missing,"_",max_treedepth,"_","_gp_fit.rds"))
+  saveRDS(unemp_gp_fit, paste0("/anvil/scratch/x-rkubinec/unemp",modtype,"_",is_missing,"_",max_treedepth,"_","_gp_fit.rds"))
   
 }
 
@@ -892,7 +892,7 @@ if(fit_type=="ar1") {
                                #include=F,
                                id_refresh=100)
   
-  saveRDS(unemp1_ar_fit, paste0("/work/rkubinec/unemp",modtype,"_",is_missing,"_",max_treedepth,"_","1_ar_fit.rds"))
+  saveRDS(unemp1_ar_fit, paste0("/anvil/scratch/x-rkubinec/unemp",modtype,"_",is_missing,"_",max_treedepth,"_","1_ar_fit.rds"))
   
   
 }
@@ -928,7 +928,7 @@ if(fit_type=="rw") {
                                #include=F,
                                id_refresh=100)
   
-  saveRDS(unemp1_rw_fit, paste0("/work/rkubinec/unemp",modtype,"_",is_missing,"_",max_treedepth,"_","1_rw_fit.rds"))
+  saveRDS(unemp1_rw_fit, paste0("/anvil/scratch/x-rkubinec/unemp",modtype,"_",is_missing,"_",max_treedepth,"_","1_rw_fit.rds"))
   
   
 }
@@ -951,7 +951,7 @@ if(fit_type=="china") {
                             year<2010~2L,
                             TRUE~3L)) %>% 
     filter(decade<3)
-  load('/work/rkubinec/andy_hall_jop/fh_final_analysis.rdata')
+  load('/anvil/scratch/x-rkubinec/andy_hall_jop/fh_final_analysis.rdata')
   
   x <- filter(x,!is.na(x)) %>% 
     distinct
@@ -995,7 +995,7 @@ if(fit_type=="china") {
                             #include=F,
                             id_refresh=100)
   
-  saveRDS(china_fit1,paste0('/work/rkubinec/china_',modtype,"_",is_missing,"_",max_treedepth,"_",'_fit1.rds'))
+  saveRDS(china_fit1,paste0('/anvil/scratch/x-rkubinec/china_',modtype,"_",is_missing,"_",max_treedepth,"_",'_fit1.rds'))
   
   
 }
@@ -1003,7 +1003,7 @@ if(fit_type=="china") {
 
 ## ----ardistconst, fig.cap="Over-time Ideal Points for Constrained Legislators by Month, 1990-2018",eval=FALSE----
 ## 
-## #unemp1_fit <- readRDS("/work/rkubinec/unemp1_run1fit.rds")
+## #unemp1_fit <- readRDS("/anvil/scratch/x-rkubinec/unemp1_run1fit.rds")
 ## 
 ## # need to calculate ideal points manually b/c of hierarchical covariates
 ## library(posterior)
