@@ -499,9 +499,13 @@ As a result, I do find that the simpler time series models, i.e. the splines, ar
 
 if(run_all) {
   
-unemp1_fit <- readRDS('data/1152_12_1_fit.rds')
-unemp2_fit <- readRDS('data/unemp1152_12_2_fit.rds')
-unemp3_fit <- readRDS('data/unemp1152_12_3_fit.rds')
+unemp1_fit <- readRDS('data/1151_12_1_fit.rds')
+unemp2_fit <- readRDS('data/unemp1151_12_2_fit.rds')
+unemp3_fit <- readRDS('data/unemp1151_12_3_fit.rds')
+
+unemp1_fitm <- readRDS('data/1152_12_1_fit.rds')
+unemp2_fitm <- readRDS('data/unemp1152_12_2_fit.rds')
+unemp3_fitm <- readRDS('data/unemp1152_12_3_fit.rds')
 
 # unemp1_all_fit <- readRDS('data/unempall2_12_1_fit.rds')
 # unemp2_all_fit <- readRDS('data/unempall_12_2_fit.rds')
@@ -658,17 +662,15 @@ if(run_all) {
   un1_a <- id_plot_legis_dyn(unemp1_fit,include="AMASH, Justin",
                          use_ci=T,plot_text = F) + scale_color_manual(values=c(R="red",
                               D="blue",I="green"),name="") + ggtitle("Spline of 2nd Degree") + labs(y="") +
-  scale_x_date(guide = guide_axis(n.dodge = 2)) + 
-    scale_y_reverse()
+  scale_x_date(guide = guide_axis(n.dodge = 2))
   
   saveRDS(un1_a, "data/un1_a.rds")
 
 un2_a <- id_plot_legis_dyn(unemp2_fit,use_ci=T,include="AMASH, Justin",plot_text = F) + scale_color_manual(values=c(R="red",
                               D="blue",I="green"),name="") + ggtitle("Spline of 3rd Degree") + labs(y="") +
-  scale_x_date(guide = guide_axis(n.dodge = 2)) +
-  scale_y_reverse()
+  scale_x_date(guide = guide_axis(n.dodge = 2))
  
-  saveRDS(un2_a, "data/un1_a.rds")
+  saveRDS(un2_a, "data/un2_a.rds")
 
 un3_a <- id_plot_legis_dyn(unemp3_fit,use_ci=T,include="AMASH, Justin",plot_text = F) + scale_color_manual(values=c(R="red",
                               D="blue",I="green"),name="") + ggtitle("Spline of 4th Degree") + labs(y="") +
@@ -698,8 +700,8 @@ rw_a <- id_plot_legis_dyn(unemp_rw_fit,use_ci=T,include="AMASH, Justin",plot_tex
 } else {
   
   un1_a <- readRDS("data/un1_a.rds")
-  un2_a <- readRDS("data/un1_a.rds")
-  un3_a <- readRDS("data/un1_a.rds")
+  un2_a <- readRDS("data/un2_a.rds")
+  un3_a <- readRDS("data/un3_a.rds")
   gp_a <- readRDS("data/gp_a.rds")
   rw_a <- readRDS("data/rw_a.rds")
   ar_a <- readRDS("data/ar_a.rds")
@@ -710,6 +712,66 @@ rw_a <- id_plot_legis_dyn(unemp_rw_fit,use_ci=T,include="AMASH, Justin",plot_tex
 
 
 ```
+
+```{r distscompwalz}
+#| include: false
+
+if(run_all) {
+  
+  un1_tw <- id_plot_legis_dyn(unemp1_fit,include="WALZ, Tim",
+                         use_ci=T,plot_text = F) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("Spline of 2nd Degree") + labs(y="") +
+  scale_x_date(guide = guide_axis(n.dodge = 2))
+  
+  saveRDS(un1_tw, "data/un1_tw.rds")
+
+un2_tw <- id_plot_legis_dyn(unemp2_fit,use_ci=T,include="WALZ, Tim",plot_text = F) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("Spline of 3rd Degree") + labs(y="") +
+  scale_x_date(guide = guide_axis(n.dodge = 2))
+ 
+  saveRDS(un2_tw, "data/un2_tw.rds")
+
+un3_tw <- id_plot_legis_dyn(unemp3_fit,use_ci=T,include="WALZ, Tim",plot_text = F) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("Spline of 4th Degree") + labs(y="") +
+  scale_x_date(guide = guide_axis(n.dodge = 2))
+  
+  saveRDS(un3_tw, "data/un3_tw.rds")
+
+gp_tw <- id_plot_legis_dyn(unemp_gp_fit,use_ci=T,include="WALZ, Tim",plot_text = F) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("Gaussian Process") + labs(y="") +
+  scale_x_date(guide = guide_axis(n.dodge = 2))
+
+  saveRDS(gp_tw, "data/gp_tw.rds")
+
+ar_tw <- id_plot_legis_dyn(unemp_ar_fit,use_ci=T,include="WALZ, Tim",plot_text = F) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("AR(1) Process") + labs(y="") +
+  scale_x_date(guide = guide_axis(n.dodge = 2))
+
+  saveRDS(ar_tw, "data/ar_tw.rds")
+
+rw_tw <- id_plot_legis_dyn(unemp_rw_fit,use_ci=T,include="WALZ, Tim",plot_text = F) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("Random Walk") +
+  scale_x_date(guide = guide_axis(n.dodge = 2)) + labs(y="") +
+  scale_y_reverse()
+
+  saveRDS(rw_tw, "data/rw_tw.rds")
+  
+} else {
+  
+  un1_tw <- readRDS("data/un1_tw.rds")
+  un2_tw <- readRDS("data/un2_tw.rds")
+  un3_tw <- readRDS("data/un3_tw.rds")
+  gp_tw <- readRDS("data/gp_tw.rds")
+  rw_tw <- readRDS("data/rw_tw.rds")
+  ar_tw <- readRDS("data/ar_tw.rds")
+  
+}
+
+
+
+
+```
+
 
 ```{r distsamash}
 #| label: fig-amashdist
@@ -799,6 +861,50 @@ un1_a1 + un2_a1 + un3_a1 + ar_a1 + gp_a1 + rw_a1 + plot_layout(nrow=2,
                                              guides="collect") + 
   plot_annotation(caption="Posterior average values shown for 115th Congress legislator ideal points.\nItem discrimination for Republican party-line votes was constrained to be positive.") & theme(legend.position = "top",
                                                                                                                                                                                                     plot.title=element_text(size=9))
+
+```
+
+```{r absence}
+#| fig-cap: "Time-varying Absence Rates in the 115th Senate"
+
+# need vertical lines for beginning of sessions
+
+rollcalls %>% 
+  arrange(congress, date) %>% 
+  group_by(congress) %>%      
+  mutate(session_day_counter = ifelse(row_number()==n(),date_month,NA_Date_)) %>% 
+  ungroup() %>% 
+  filter(party_code %in% c("R","D")) %>% 
+  group_by(party_code,date_month,session_day_counter) %>% 
+  summarise(`Absences`=mean(cast_code=="Abstention"),
+            session_day_counter=session_day_counter[1]) %>% 
+  ggplot(aes(y=Absences,x=date_month)) +
+  geom_line(aes(colour=party_code,linetype=party_code)) +
+  stat_smooth(aes(linetype=party_code),method="lm") +
+  geom_vline(aes(xintercept=session_day_counter),linetype=3) +
+  theme_minimal() + 
+  ylim(c(0,0.27))
+
+```
+
+```{r olsabs}
+
+rollcalls_abs <- rollcalls %>% 
+  arrange(congress, date) %>% 
+  group_by(congress) %>%      
+  mutate(session_day_counter = as.numeric(date) - min(as.numeric(date)) + 1) %>% 
+  ungroup() %>% 
+  filter(party_code %in% c("R","D")) %>% 
+  group_by(party_code,date_month,congress) %>% 
+  summarise(`Absences`=mean(cast_code=="Abstention"),
+            session_day_counter=max(session_day_counter))
+
+c1 <- lm(Absences ~ session_day_counter + 
+             I(session_day_counter^2) + 
+           I(session_day_counter^3) +
+             factor(congress),data=rollcalls_abs)
+
+plot_predictions(c1,condition = "session_day_counter")
 
 ```
 
