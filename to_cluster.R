@@ -521,6 +521,8 @@ print(paste0("Processing model: ",fit_type))
 
 print(paste0("Data type is: ",modtype))
 
+print(paste0("Missing type is: ",is_missing))
+
 
 ## ----runcong1-----------------------------------------------------------------------------------
 
@@ -951,7 +953,7 @@ if(fit_type=="china") {
                             year<2010~2L,
                             TRUE~3L)) %>% 
     filter(decade<3)
-  load('/lustre/scratch/rkubinec/andy_hall_jop/fh_final_analysis.rdata')
+  load('data/andy_hall_jop/fh_final_analysis.rdata')
   
   x <- filter(x,!is.na(x)) %>% 
     distinct
