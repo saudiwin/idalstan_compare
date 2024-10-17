@@ -11,8 +11,8 @@ execute:
 date-format: long
 format: pdf
 linestretch: 1.5
-abstract: 'This  paper presents an item-response theory parameterization of ideal points that employs advances in Bayesian computation to permit more flexible distributions, missing data mechanisms, quantities of interest and time-series processes. For missing data, the model implements a two-stage selection adjustment to account for non-ignorable missingness. The model includes  a variety of time-series processes, such as a random walk, AR(1), Gaussian processes, and splines. To better understand how external covariates affect ideal points, I put forward a new item-level quantity of interest, ideal point marginal effects, that are defined as the percent change in supporting an item (bill) for a one-unit change in a person-specific covariate. I demonstrate the utility of the package with a study of monthly district-level unemployment and voting behavior in the 115th Congress of the United States. All of these models are available via the R package `idealstan` with Hamiltonian Markov Chain Monte Carlo in Stan.'
-bibliography: "/Users/rmk7/firmbook/BibTexDatabase.bib"
+abstract: 'This  paper presents a Bayesian version of the ideal point model that employs advances in computation and probabilistic programming to permit inference given non-ignorable missing data, diverse distributions, time-series processes, and hierarchical covariates. Furthermore, to better understand how external covariates affect ideal points, I put forward a new item-level quantity of interest, ideal point marginal effects, that are defined as the percent change in supporting an item (bill) for a one-unit change in a person-specific covariate. With this package, I provide the first monthly ideal point estimates for legislators in the U.S. House from 1990 to 2018 that include district-level unemployment as an external covariate. I further demonstrate the utility of the package with a study of voting behavior in the 115th Congress of the United States that reveals how the choice different time series processes affects inference and under what conditions abstention from votes is likely due to strategic behavior. All of these models are available via the R package `idealstan` with Hamiltonian Markov Chain Monte Carlo in Stan.'
+bibliography: "BibTexDatabase.bib"
 fig-cap-location: top
 filters:
   - authors-block
@@ -41,6 +41,7 @@ require(idealstan)
 require(forcats)
 library(patchwork)
 library(posterior)
+library(marginaleffects)
 
 # set to true to create all analyses from fitted idealstan models
 # requires significant time and RAM (especially the latter)
@@ -92,13 +93,13 @@ num_days <- distinct(unemp1,bioname,date_month) %>%
 
 \newpage
 
-While ideal point models were conceived as a way to measure ideology in the U.S. Congress, this powerful measurement tool has wide applicability as a general tool for analyzing social data with nontrivial measurement error. For example, political scientists have recently applied the canonical ideal point model to new datasets and empirical challenges, such as Twitter data [@barbera2015; @kubinec2018], the United Nations Security Council [@bailey2017], state capacity [@hanson2021], democracy [@coppedge2019; @pemstein2017], campaign finance data [@bonica2014] and legislative speech [@lauderdale2016]. Through these applications, it has become apparent that the ideal point model has utility for a considerable number of measurement problems in the social sciences so long as available data are imperfect proxies of the concept of interest. To encourage further usage of this model, and to help address difficult measurement problems in political science, this paper generalizes the parameterization and implementation of the standard ideal point model to address challenges related to non-ignorable missing data, robust inference for time-varying data, and new estimands for the effect of covariates on ideal point-related measures [@martin2002; @martin2011a; @barbera2015; @kropko2013; @carroll2009; @bafumi2005; @jackman2004; @imai2016a; @lewis2018; @goplerud2019; @caughey2018].
+While ideal point models were conceived as a way to measure ideology in the U.S. Congress, this powerful measurement tool has wide applicability as a general tool for analyzing social data with substantial measurement error. For example, political scientists have recently applied the canonical ideal point model to new datasets and empirical challenges, such as Twitter data [@barbera2015; @kubinec2018], the United Nations Security Council [@bailey2017], state capacity [@hanson2021], democracy [@coppedge2019; @pemstein2017], campaign finance data [@bonica2014] and legislative speech [@lauderdale2016]. Through these applications, it has become apparent that the ideal point model has utility for a considerable number of measurement problems in the social sciences so long as available data are imperfect proxies of the concept of interest. To encourage further usage of this model, and to help address difficult measurement problems across the social sciences, this paper takes advantage of recent advances in Bayesian computation to broaden the implementation of the standard ideal point model to address challenges related to non-ignorable missing data, robust inference for time-varying data, as well as new estimands to better understand the effect of external covariates on ideal points [@martin2002; @martin2011a; @barbera2015; @kropko2013; @carroll2009; @bafumi2005; @jackman2004; @imai2016a; @lewis2018; @goplerud2019; @caughey2018].
 
-In particular, I show in this paper that combining advances in Bayesian computation with flexible time processes in the form of splines can solve a particularly difficult problem of scaling sparse data with measurement error, such as that available from finely grained time series in social media and other digital sources. While existing applications of dynamic ideal points are generally at a relatively high level of aggregation, such as the Congressional session [@carroll2009] or the judicial session [@martin2002], social media data like Twitter/X/Bluesky can be available in minute by minute increments [@kubinec2018; @eady2024], not to mention the wealth of revealed preference information available in TikTok, Youtube, and other sources. However, existing time-series methods for ideal points are difficult to employ with sparse data, and for that reason I present splines as a way of estimating restricted polynomials that can separate time trends from measurement noise. To illustrate the method, I estimate monthly time-varying ideal points for Congresspeople in the House in from 1990 to 2018, which are the first such granular measures available. I also compare multiple time-series processes, including random walks, AR(1), and Gaussian processes versus splines for the 115th Congress to show how modeling choices for time can lead to different conclusions about the nature of time-varying ideal point measures.
+I show in this paper that combining advances in Bayesian computation with flexible time processes in the form of splines can solve a particularly difficult problem of scaling sparse data with measurement error, such as that available from finely grained time series in social media and other digital sources. While existing applications of dynamic ideal points are generally at a relatively high level of aggregation, such as the Congressional session [@carroll2009] or the judicial session [@martin2002], social media data like Twitter/X and Bluesky can be available in minute by minute increments [@kubinec2018; @eady2024], not to mention the wealth of revealed preference information available in TikTok, Youtube, and other sources. However, existing time-series methods for ideal points are difficult to employ with sparse data, and for that reason I present splines as a way of estimating restricted polynomials that can separate time trends from measurement noise. To apply the method, I estimate monthly time-varying ideal points for Congresspeople in the House in from 1990 to 2018, which are the first such granular measures available. I also compare multiple time-series processes, including random walks, AR(1), and Gaussian processes versus splines for the 115th Congress to show how modeling choices for time can lead to different conclusions about the nature of time-varying ideal point measures.
 
-Finally, I also show in this paper how Bayesian post-estimation [@gill2020] enables the calculation of a new quantity of interest from ideal point models: *ideal point marginal effects*. I define an ideal point marginal effect as the unit change in the set of items for a unit change in a covariate that is mediated by a given person's ideal point. This quantity, which is estimated separately for each item (i.e., each bill or vote) in the data, enables us to understand how an external covariate can influence a person's decision-making while taking into account the relative latent position of the items on which they are taking positions. I illustrate this method with an analysis of the association between monthly district-level unemployment rates and monthly Congressional ideal points from 1990 to 2018.
+Finally, I also show in this paper how Bayesian post-estimation [@gill2020] enables the calculation of a new quantity of interest from ideal point models: *ideal point marginal effects*. I define an ideal point marginal effect as the unit change in the set of items for a unit change in a covariate that is mediated by a given person's ideal point. This quantity, which is estimated separately for each item (i.e., each bill or vote) in the data, enables us to understand how an external covariate can influence a person's decision-making while taking into account the relative latent position of the items on which they are taking positions. I illustrate this method with an analysis of the association between monthly district-level unemployment rates and monthly Congressional ideal points for both the full sample and for the 115th Congress.
 
-All the models in this paper can be fit with the R package `idealstan`, which employs the probabilistic programming language Stan to allow for a wide variety of models to be fit within one joint framework. Furthermore, the application of Hamiltonian Monte Carlo and its associated diagnostics permits very robust inference of difficult posterior geometry, ensuring that measurement inferences are stable [@carpenter2017]. This implementation makes use of novel computational methods to parallelize MCMC calculations so that much bigger models can be fit with full Bayesian inference than was previously possible. As I discuss, even larger models can be fit with approximate inference methods, though only for limited applications. This new parameterization of ideal points that combines missing-data inference, time-varying inference and inference over joint distributions provides scholars with a multi-purpose tool for tackling difficult measurement challenges across the social sciences.
+All the models in this paper can be fit with the R package `idealstan`, which employs the probabilistic programming language Stan to allow for a wide variety of models to be fit within one joint framework. Furthermore, the application of Hamiltonian Monte Carlo and its associated diagnostics permits very robust inference of difficult posterior geometry, ensuring that measurement inferences are stable [@carpenter2017]. This implementation makes use of novel computational methods to parallelize MCMC calculations so that much bigger models can be fit with full Bayesian inference than was previously possible. As I discuss, even larger models can be fit with approximate inference methods, though only for limited applications. This new parameterization of ideal points that combines missing-data inference, time-varying inference and inference over joint distributions provides scholars with a multipurpose tool for tackling difficult measurement challenges in both traditional and nontraditional datasets.
 
 # Latent Variables as Statistical Deduction
 
@@ -106,7 +107,7 @@ All the models in this paper can be fit with the R package `idealstan`, which em
 
 > -- Sherlock Holmes
 
-The traditional presentation of applied statistics in political science, borrowing heavily from econometrics, presents models as estimating un-biased quantities given a recipe list of datasets. If an outcome is a discrete variable that can take on any number of values, then the standard advice is to use a Poisson distribution. Of course, the datasets that political scientists produce rarely fit these clean molds, which leads to numerous statistical fixes to correct for poorly-fitting models, such as zero-inflated Poisson models in the case of counts and other more generic fixes like clustered standard errors. What all of these approaches have in common is a focus on adjusting for measurement issues in the dependent variable, while the data are assumed to represent known facts.
+The traditional presentation of applied statistics in political science presents models as estimating unbiased quantities given a recipe list of datasets. Of course, the datasets that political scientists produce rarely fit these clean molds, which leads to numerous statistical fixes to correct for poorly-fitting models, such as zero-inflated Poisson models in the case of counts and other more generic fixes like clustered standard errors. What all of these approaches have in common is a focus on adjusting for measurement issues in the dependent variable, while the data are assumed to represent known facts.
 
 Measurement models flip this perspective on its head. Rather than assuming that only the outcome needs a statistical distribution, a measurement model implements a statistical distribution *for the data*. Making this mental switch enables us to think of the data as only one set of observed indicators generated by a latent, unseen construct. In other words, the data are measured *with error*, where the exact errors are defined by a particular statistical distribution.
 
@@ -136,7 +137,7 @@ The sign of the discrimination parameter $\gamma_j$ indicates the "polarity" of 
 
 The ability to allow for contrasting polarity at the item level does create some additional complications. The always-positive discrimination constraint in a standard IRT model ensures identification in terms of the rotation of the ideal points, so abandoning that assumption requires more work to identify the model. As has become well-known, constraints must be built in to the IRT ideal point estimation in order to identify a unique rotation of the ideal points [@gelman2005]. As I discuss, there is much less information about the identification of a unique rotation for time-varying ideal point models, which this paper will seek to provide additional guidance on.
 
-It is important to note that there is nothing about this model that necessarily implies that the latent scale is political ideology. That is a useful interpretation to assign ideal points based on data from the U.S. Congress [@rosenthal2007]. The ideal point model represents a social choice process where the construct by which people make choices is unobserved. As such, it *can* estimate ideology as a latent construct, but it does not need to. Interpreting what the latent variable represents is a necessary part of any application of the model. What can be said is that it always represents the aggregation of a social choice process with competing alternatives.
+It is important to note that there is nothing about this model that necessarily implies that the latent scale is political ideology. That is a useful interpretation to assign ideal points based on data from the U.S. Congress [@rosenthal2007]. The ideal point model represents a social choice process where the construct by which people make choices is unobserved. As such, it *can* estimate ideology as a latent construct, but it does not need to. Interpreting what the latent variable represents is a necessary part of any application of the model. What can be said is that it can flexibly represent the outcome of a variety of social processes with considerable flexibility.
 
 In this paper I employ a Bayesian interpretation of this model [@jackman2004] that I estimate using Hamiltonian Markov Chain Monte Carlo with Stan [@carpenter2017]. I am interested in posterior inference on a set of unobserved parameters $\{\alpha_i,\gamma_j,\beta_j\} \in \theta$ that is conditional on the observed data $Y_{ij}$, or $Pr(\theta|Y_{ij})$. To do so, I define independent priors on $\theta$, $Pr(\theta)$, which is multiplied by the likelihood $L(\cdot)$ that is defined by @eq-Bayes:
 
@@ -144,18 +145,24 @@ $$
 Pr(\theta|Y_{ij}) \propto Pr(\theta)L(Y_{ij}|\theta)
 $$ {#eq-Bayes}
 
-I use the proportional symbol $\propto$ to reflect the fact that the term in the denominator representing the probability of the data $Pr(Y_{ij})$ is normally omitted in computational Bayesian analysis as it is fixed with respect to the parameters [@gelman2013]. We can further specify the priors in terms of the distributions assigned to each parameter in $\theta$:
+I use the proportional symbol $\propto$ to reflect the fact that the term in the denominator representing the probability of the data $Pr(Y_{ij})$ is normally omitted in computational Bayesian analysis as it is fixed with respect to the parameters [@gelman2013].
+
+My presentation of the Bayesian ideal point model departs somewhat from conventional parameterizations in order to be more flexible and to incorporate recent advances in measurement modeling. I start by specifying the priors in terms of the distributions assigned to each parameter in $\theta$:
 
 \begin{align}
-\alpha_i &\sim N(0,1)\\
-\gamma_j &\sim N(0,5)\\
-\beta_j &\sim N(0,2)
+\alpha_i &\sim \text{Normal}(0,3)\\
+\gamma_j &\sim \text{GeneralizedBeta}(2,2)\\
+\beta_j &\sim \text{Normal}(0,3)
 \end{align}\label{eq-genprior}
 
-The ideal points are given a tight $N(0,1)$ prior to constrain the scale for identification purposes, while the discrimination and difficulty parameters have weakly informative priors on the logit scale. The effect $\phi$ of a matrix of covariates $X$ measured on the persons $i$ can also be added to this model for ideal points as shown in @gelman2005 and @jackman2004 by including them as hierarchical predictors:
+The ideal points $\alpha_i$ and the discrimination parameters $\beta_j$ are given a loose $N(0,3)$ prior that is weakly informative for most scales and is only needed to make the posterior proper. Identification of the posterior, which is an important issue as these types of measurement models can have multiple possible solutions with equal likelihood [@bafumiPracticalIssuesImplementing2005], happens via the Generalized Beta prior on the discrimination parameters $\gamma_j$.
+
+Constraining the discrimination parameters builds on work that shows that identification of the items (i.e., votes) in an ideal point model has superior theoretical properties as it allows for the ideal points to float freely, which are usually the main subject of interest in terms of measurement [@morucciMeasurementThatMatches2024]. Furthermore, in a manner similar to @pooleScalingRollCall2008, I implicitly scale the discrimination parameters by using the Generalized Beta distribution in which the distribution has support over the open interval $(-1,1)$. I assign values of +2 to each of the distribution's parameters (scale and shape) so that values of 0, or the midpoint of the distribution, are weakly preferred over the end points. Because this distribution is bounded, it will prevent the well-known scaling issues of ideal point models given that the latent estimates have no natural scale. With this prior, no further work is necessary to fix a scale and all other parameters can have weakly informative priors. In fact, if there is enough data, the discrimination parameters can have the uninformative Generalized Beta prior of +1, +1 so that all values are equally likely in the $(-1, 1)$ interval.
+
+The effect $\phi$ of a matrix of covariates $X$ measured on the persons $i$ can also be added to this model for ideal points as shown in @gelman2005 and @jackman2004 by including them as hierarchical predictors:
 
 $$
-\alpha_i \sim N(X\phi',1)
+\alpha_i \sim N(X\phi',3)
 $$ {#eq-hier}
 
 I also consider the possibility of including hierarchical covariates to predict the discrimination of the $J$ items, which has not been estimated previously in the literature though it is straightforward in a Bayesian framework:
@@ -478,7 +485,7 @@ ggsave("month_unemp.png",width=5,height=4)
 
 This hypothesis expresses the idea that in times of recession legislators feel more pressure to work across the aisle to produce bipartisan legislation, which we can measure as the spread of ideal points between both parties. We can test this hypothesis by including unemployment rates as an exogenous covariate in the ideal point model while interacting it with an indicator for each legislator's party ID. The effect of the covariate then affects voting behavior differentially depending on the legislator's ideal point, party membership and the relative level of discrimination (polarization) of the vote.
 
-In addition, we might think that any polarization may be assymetric in terms of different parties. In the 115th Congress, the Republicans held a majority with a Republican president in office. As a result, their response to unemployment shocks could vary from Democrats who were in the opposition. This leads us to a second hypothesis:
+In addition, we might think that any polarization may be asymmetric in terms of different parties. In the 115th Congress, the Republicans held a majority with a Republican president in office. As a result, their response to unemployment shocks could vary from Democrats who were in the opposition. This leads us to a second hypothesis:
 
 > H2: When monthly unemployment rates rise, the resulting polarization of legislative voting behavior is moderated by each legislator's party affiliation.
 
@@ -507,13 +514,13 @@ unemp1_fitm <- readRDS('data/1152_12_1_fit.rds')
 unemp2_fitm <- readRDS('data/unemp1152_12_2_fit.rds')
 unemp3_fitm <- readRDS('data/unemp1152_12_3_fit.rds')
 
-# unemp1_all_fit <- readRDS('data/unempall2_12_1_fit.rds')
-# unemp2_all_fit <- readRDS('data/unempall_12_2_fit.rds')
-# unemp3_all_fit <- readRDS('data/unempall_12_3_fit.rds')
+unemp_gp_fit <- readRDS('data/unemp115_1_12__gp_fit.rds')
+unemp_ar_fit <- readRDS("data/unemp115_1_12_1_ar_fit.rds")
+unemp_rw_fit <- readRDS("data/unemp115_1_12_1_rw_fit.rds")
 
-unemp_gp_fit <- readRDS('data/unemp115_2_12__gp_fit.rds')
-unemp_ar_fit <- readRDS("data/unemp115_2_12_1_ar_fit.rds")
-unemp_rw_fit <- readRDS("data/unemp115_2_12_1_rw_fit.rds")
+unemp_gp_fitm <- readRDS('data/unemp115_2_12__gp_fit.rds')
+unemp_ar_fitm <- readRDS("data/unemp115_2_12_1_ar_fit.rds")
+unemp_rw_fitm <- readRDS("data/unemp115_2_12_1_rw_fit.rds")
 
 rhats1 <- id_plot_rhats(unemp1_fit) + ggtitle("Spline 2nd Degree") + labs(caption="",x="") + xlim(c(0.95, 2))
 
@@ -538,6 +545,282 @@ saveRDS(rhatar, "data/rhatar.rds")
 rhatrw <- id_plot_rhats(unemp_rw_fit) + ggtitle("Random Walk") + labs(caption="",y="") + xlim(c(0.95, 2))
 
 saveRDS(rhatrw, "data/rhatrw.rds")
+
+un1 <- id_plot_legis_dyn(unemp1_fit,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("Spline of 2nd Degree") + labs(y="") +
+  scale_x_date(guide = guide_axis(n.dodge = 2))
+  
+  saveRDS(un1, "data/un1.rds")
+
+un2 <- id_plot_legis_dyn(unemp2_fit,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("Spline of 3rd Degree") + labs(y="") +
+  scale_x_date(guide = guide_axis(n.dodge = 2))
+
+  saveRDS(un2, "data/un2.rds")
+
+un3 <- id_plot_legis_dyn(unemp3_fit,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("Spline of 4th Degree") + labs(y="") +
+  scale_x_date(guide = guide_axis(n.dodge = 2))
+
+  saveRDS(un3, "data/un3.rds")
+
+gp <- id_plot_legis_dyn(unemp_gp_fit,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("Gaussian Process") + labs(y="") +
+  scale_x_date(guide = guide_axis(n.dodge = 2))
+
+  saveRDS(gp, "data/gp.rds")
+
+ar <- id_plot_legis_dyn(unemp_ar_fit,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("AR(1) Process") + labs(y="") +
+  scale_x_date(guide = guide_axis(n.dodge = 2))
+
+  saveRDS(ar, "data/ar.rds")
+
+rw <- id_plot_legis_dyn(unemp_rw_fit,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("Random Walk") +
+  scale_x_date(guide = guide_axis(n.dodge = 2)) + labs(y="")
+
+  saveRDS(rw, "data/rw.rds")
+  
+un1m <- id_plot_legis_dyn(unemp1_fitm,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("Spline of 2nd Degree") + labs(y="") +
+  scale_x_date(guide = guide_axis(n.dodge = 2))
+  
+  saveRDS(un1m, "data/un1m.rds")
+
+un2m <- id_plot_legis_dyn(unemp2_fitm,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("Spline of 3rd Degree") + labs(y="") +
+  scale_x_date(guide = guide_axis(n.dodge = 2))
+
+  saveRDS(un2m, "data/un2m.rds")
+
+un3m <- id_plot_legis_dyn(unemp3_fitm,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("Spline of 4th Degree") + labs(y="") +
+  scale_x_date(guide = guide_axis(n.dodge = 2))
+
+  saveRDS(un3m, "data/un3m.rds")
+
+gpm <- id_plot_legis_dyn(unemp_gp_fitm,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("Gaussian Process") + labs(y="") +
+  scale_x_date(guide = guide_axis(n.dodge = 2))
+
+  saveRDS(gpm, "data/gpm.rds")
+
+arm <- id_plot_legis_dyn(unemp_ar_fitm,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("AR(1) Process") + labs(y="") +
+  scale_x_date(guide = guide_axis(n.dodge = 2))
+
+  saveRDS(arm, "data/arm.rds")
+
+rwm <- id_plot_legis_dyn(unemp_rw_fitm,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("Random Walk") +
+  scale_x_date(guide = guide_axis(n.dodge = 2)) + labs(y="")
+
+  saveRDS(rwm, "data/rwm.rds")
+  
+un1_a <- id_plot_legis_dyn(unemp1_fit,include="AMASH, Justin",
+                         use_ci=T,plot_text = F) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("Spline of 2nd Degree") + labs(y="") +
+  scale_x_date(guide = guide_axis(n.dodge = 2))
+  
+  saveRDS(un1_a, "data/un1_a.rds")
+
+un2_a <- id_plot_legis_dyn(unemp2_fit,use_ci=T,include="AMASH, Justin",plot_text = F) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("Spline of 3rd Degree") + labs(y="") +
+  scale_x_date(guide = guide_axis(n.dodge = 2))
+ 
+  saveRDS(un2_a, "data/un2_a.rds")
+
+un3_a <- id_plot_legis_dyn(unemp3_fit,use_ci=T,include="AMASH, Justin",plot_text = F) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("Spline of 4th Degree") + labs(y="") +
+  scale_x_date(guide = guide_axis(n.dodge = 2))
+  
+  saveRDS(un3_a, "data/un3_a.rds")
+
+gp_a <- id_plot_legis_dyn(unemp_gp_fit,use_ci=T,include="AMASH, Justin",plot_text = F) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("Gaussian Process") + labs(y="") +
+  scale_x_date(guide = guide_axis(n.dodge = 2))
+
+  saveRDS(gp_a, "data/gp_a.rds")
+
+ar_a <- id_plot_legis_dyn(unemp_ar_fit,use_ci=T,include="AMASH, Justin",plot_text = F) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("AR(1) Process") + labs(y="") +
+  scale_x_date(guide = guide_axis(n.dodge = 2))
+
+  saveRDS(ar_a, "data/ar_a.rds")
+
+rw_a <- id_plot_legis_dyn(unemp_rw_fit,use_ci=T,include="AMASH, Justin",plot_text = F) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("Random Walk") +
+  scale_x_date(guide = guide_axis(n.dodge = 2)) + labs(y="") +
+  scale_y_reverse()
+
+  saveRDS(rw_a, "data/rw_a.rds")
+  
+  un1_am <- id_plot_legis_dyn(unemp1_fitm,include="AMASH, Justin",
+                         use_ci=T,plot_text = F) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("Spline of 2nd Degree") + labs(y="") +
+  scale_x_date(guide = guide_axis(n.dodge = 2))
+  
+  saveRDS(un1_am, "data/un1_am.rds")
+
+un2_am <- id_plot_legis_dyn(unemp2_fitm,use_ci=T,include="AMASH, Justin",plot_text = F) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("Spline of 3rd Degree") + labs(y="") +
+  scale_x_date(guide = guide_axis(n.dodge = 2))
+ 
+  saveRDS(un2_am, "data/un2_am.rds")
+
+un3_am <- id_plot_legis_dyn(unemp3_fitm,use_ci=T,include="AMASH, Justin",plot_text = F) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("Spline of 4th Degree") + labs(y="") +
+  scale_x_date(guide = guide_axis(n.dodge = 2))
+  
+  saveRDS(un3_am, "data/un3_am.rds")
+
+gp_am <- id_plot_legis_dyn(unemp_gp_fitm,use_ci=T,include="AMASH, Justin",plot_text = F) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("Gaussian Process") + labs(y="") +
+  scale_x_date(guide = guide_axis(n.dodge = 2))
+
+  saveRDS(gp_am, "data/gp_am.rds")
+
+ar_am <- id_plot_legis_dyn(unemp_ar_fitm,use_ci=T,include="AMASH, Justin",plot_text = F) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("AR(1) Process") + labs(y="") +
+  scale_x_date(guide = guide_axis(n.dodge = 2))
+
+  saveRDS(ar_am, "data/ar_am.rds")
+
+rw_am <- id_plot_legis_dyn(unemp_rw_fitm,use_ci=T,include="AMASH, Justin",plot_text = F) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("Random Walk") +
+  scale_x_date(guide = guide_axis(n.dodge = 2)) + labs(y="") +
+  scale_y_reverse()
+
+  saveRDS(rw_am, "data/rw_am.rds")
+  
+# Now do Tim Walz  
+  
+un1_tw <- id_plot_legis_dyn(unemp1_fit,include="WALZ, Tim",
+                         use_ci=T,plot_text = F) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("Spline of 2nd Degree") + labs(y="") +
+  scale_x_date(guide = guide_axis(n.dodge = 2))
+  
+  saveRDS(un1_tw, "data/un1_tw.rds")
+
+un2_tw <- id_plot_legis_dyn(unemp2_fit,use_ci=T,include="WALZ, Tim",plot_text = F) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("Spline of 3rd Degree") + labs(y="") +
+  scale_x_date(guide = guide_axis(n.dodge = 2))
+ 
+  saveRDS(un2_tw, "data/un2_tw.rds")
+
+un3_tw <- id_plot_legis_dyn(unemp3_fit,use_ci=T,include="WALZ, Tim",plot_text = F) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("Spline of 4th Degree") + labs(y="") +
+  scale_x_date(guide = guide_axis(n.dodge = 2))
+  
+  saveRDS(un3_tw, "data/un3_tw.rds")
+
+gp_tw <- id_plot_legis_dyn(unemp_gp_fit,use_ci=T,include="WALZ, Tim",plot_text = F) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("Gaussian Process") + labs(y="") +
+  scale_x_date(guide = guide_axis(n.dodge = 2))
+
+  saveRDS(gp_tw, "data/gp_tw.rds")
+
+ar_tw <- id_plot_legis_dyn(unemp_ar_fit,use_ci=T,include="WALZ, Tim",plot_text = F) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("AR(1) Process") + labs(y="") +
+  scale_x_date(guide = guide_axis(n.dodge = 2))
+
+  saveRDS(ar_tw, "data/ar_tw.rds")
+
+rw_tw <- id_plot_legis_dyn(unemp_rw_fit,use_ci=T,include="WALZ, Tim",plot_text = F) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("Random Walk") +
+  scale_x_date(guide = guide_axis(n.dodge = 2)) + labs(y="") +
+  scale_y_reverse()
+
+  saveRDS(rw_tw, "data/rw_tw.rds")
+  
+# Tim Walz with missing data
+  
+un1_twm <- id_plot_legis_dyn(unemp1_fitm,include="WALZ, Tim",
+                         use_ci=T,plot_text = F) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("Spline of 2nd Degree") + labs(y="") +
+  scale_x_date(guide = guide_axis(n.dodge = 2))
+  
+  saveRDS(un1_twm, "data/un1_twm.rds")
+
+un2_twm <- id_plot_legis_dyn(unemp2_fitm,use_ci=T,include="WALZ, Tim",plot_text = F) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("Spline of 3rd Degree") + labs(y="") +
+  scale_x_date(guide = guide_axis(n.dodge = 2))
+ 
+  saveRDS(un2_twm, "data/un2_twm.rds")
+
+un3_twm <- id_plot_legis_dyn(unemp3_fitm,use_ci=T,include="WALZ, Tim",plot_text = F) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("Spline of 4th Degree") + labs(y="") +
+  scale_x_date(guide = guide_axis(n.dodge = 2))
+  
+  saveRDS(un3_twm, "data/un3_twm.rds")
+
+gp_twm <- id_plot_legis_dyn(unemp_gp_fitm,use_ci=T,include="WALZ, Tim",plot_text = F) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("Gaussian Process") + labs(y="") +
+  scale_x_date(guide = guide_axis(n.dodge = 2))
+
+  saveRDS(gp_twm, "data/gp_twm.rds")
+
+ar_twm <- id_plot_legis_dyn(unemp_ar_fitm,use_ci=T,include="WALZ, Tim",plot_text = F) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("AR(1) Process") + labs(y="") +
+  scale_x_date(guide = guide_axis(n.dodge = 2))
+
+  saveRDS(ar_twm, "data/ar_twm.rds")
+
+rw_twm <- id_plot_legis_dyn(unemp_rw_fitm,use_ci=T,include="WALZ, Tim",plot_text = F) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("Random Walk") +
+  scale_x_date(guide = guide_axis(n.dodge = 2)) + labs(y="") +
+  scale_y_reverse()
+
+  saveRDS(rw_twm, "data/rw_twm.rds")
+  
+# need to export covariates, anything else we might need
+  
+s1_cov <- unemp1_fit@stan_samples$draws("legis_x") %>% 
+  summarize_draws %>% 
+  mutate(Model="Spline 2nd Degree",Missingness="Unmodeled")
+s2_cov <- unemp2_fit@stan_samples$draws("legis_x") %>% 
+  summarize_draws %>% 
+  mutate(Model="Spline 3rd Degree",Missingness="Unmodeled")
+s3_cov <- unemp3_fit@stan_samples$draws("legis_x") %>% 
+  summarize_draws %>% 
+  mutate(Model="Spline 4th Degree",Missingness="Unmodeled")
+sgp_cov <- unemp_gp_fit@stan_samples$draws("legis_x") %>% 
+  summarize_draws %>% 
+  mutate(Model="Gaussian Process",Missingness="Unmodeled")
+sar_cov <- unemp_ar_fit@stan_samples$draws("legis_x") %>% 
+  summarize_draws %>% 
+  mutate(Model="AR(1)",Missingness="Unmodeled")
+srw_cov <- unemp_rw_fit@stan_samples$draws("legis_x") %>% 
+  summarize_draws %>% 
+  mutate(Model="Random Walk",Missingness="Unmodeled")
+
+s1_covm <- unemp1_fitm@stan_samples$draws("legis_x") %>% 
+  summarize_draws %>% 
+  mutate(Model="Spline 2nd Degree",Missingness="Modeled")
+s2_covm <- unemp2_fitm@stan_samples$draws("legis_x") %>% 
+  summarize_draws %>% 
+  mutate(Model="Spline 3rd Degree",Missingness="Modeled")
+s3_covm <- unemp3_fitm@stan_samples$draws("legis_x") %>% 
+  summarize_draws %>% 
+  mutate(Model="Spline 4th Degree",Missingness="Modeled")
+sgp_covm <- unemp_gp_fitm@stan_samples$draws("legis_x") %>% 
+  summarize_draws %>% 
+  mutate(Model="Gaussian Process",Missingness="Modeled")
+sar_covm <- unemp_ar_fitm@stan_samples$draws("legis_x") %>% 
+  summarize_draws %>% 
+  mutate(Model="AR(1)",Missingness="Modeled")
+srw_covm <- unemp_rw_fitm@stan_samples$draws("legis_x") %>% 
+  summarize_draws %>% 
+  mutate(Model="Random Walk",Missingness="Unmodeled")
+
+cov_combined <- bind_rows(s1_cov, s2_cov, s3_cov,
+                          sgp_cov, sar_cov, srw_cov,
+                          s1_covm, s2_covm, s3_covm,
+                          sgp_covm, sar_covm, srw_covm)
+
+saveRDS(cov_combined, "data/cov_combined.rds")
+  
   
 } else {
   
@@ -548,6 +831,38 @@ saveRDS(rhatrw, "data/rhatrw.rds")
   rhatrw <- readRDS("data/rhatrw.rds")
   rhatgp <- readRDS("data/rhatgp.rds")
   
+  
+}
+
+
+
+```
+
+```{r loadmodelsbig}
+
+if(run_all) {
+  
+  unemp1_all_fit <- readRDS('data/unempall1_12_1_fit.rds')
+  unemp2_all_fit <- readRDS('data/unempall1_12_2_fit.rds')
+  unemp3_all_fit <- readRDS('data/unempall1_12_3_fit.rds')
+  
+  # do plots/rhats here
+  
+}
+
+
+
+```
+
+```{r loadmodelsbigm}
+
+if(run_all) {
+  
+  unemp1_all_fitm <- readRDS('data/unempall2_12_1_fit.rds')
+  unemp2_all_fitm <- readRDS('data/unempall2_12_2_fit.rds')
+  unemp3_all_fitm <- readRDS('data/unempall2_12_3_fit.rds')
+  
+  # do plots/rhats here
   
 }
 
@@ -588,50 +903,13 @@ I next examine the overall distributions of the ideal point scores over time for
 
 if(run_all) {
   
-  un1 <- id_plot_legis_dyn(unemp1_fit,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Spline of 2nd Degree") + labs(y="") +
-  scale_x_date(guide = guide_axis(n.dodge = 2))
-  
-  saveRDS(un1, "data/un1.rds")
-
-un2 <- id_plot_legis_dyn(unemp2_fit,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Spline of 3rd Degree") + labs(y="") +
-  scale_x_date(guide = guide_axis(n.dodge = 2))
-
-  saveRDS(un2, "data/un2.rds")
-
-un3 <- id_plot_legis_dyn(unemp3_fit,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Spline of 4th Degree") + labs(y="") +
-  scale_x_date(guide = guide_axis(n.dodge = 2))
-
-  saveRDS(un3, "data/un3.rds")
-
-gp <- id_plot_legis_dyn(unemp_gp_fit,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Gaussian Process") + labs(y="") +
-  scale_x_date(guide = guide_axis(n.dodge = 2))
-
-  saveRDS(gp, "data/gp.rds")
-
-ar <- id_plot_legis_dyn(unemp_ar_fit,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("AR(1) Process") + labs(y="") +
-  scale_x_date(guide = guide_axis(n.dodge = 2))
-
-  saveRDS(ar, "data/ar.rds")
-
-rw <- id_plot_legis_dyn(unemp_rw_fit,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Random Walk") +
-  scale_x_date(guide = guide_axis(n.dodge = 2)) + labs(y="")
-
-  saveRDS(rw, "data/rw.rds")
-  
-} else {
-  
   un1 <- readRDS("data/un1.rds")
   un2 <- readRDS("data/un2.rds")
   un3 <- readRDS("data/un3.rds")
   rw <- readRDS("data/rw.rds")
   ar <- readRDS("data/ar.rds")
   gp <- readRDS("data/gp.rds")
+  
 }
 
 
@@ -659,46 +937,6 @@ un1 + un2 + un3 + ar + gp + rw + plot_layout(nrow=2,
 
 if(run_all) {
   
-  un1_a <- id_plot_legis_dyn(unemp1_fit,include="AMASH, Justin",
-                         use_ci=T,plot_text = F) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Spline of 2nd Degree") + labs(y="") +
-  scale_x_date(guide = guide_axis(n.dodge = 2))
-  
-  saveRDS(un1_a, "data/un1_a.rds")
-
-un2_a <- id_plot_legis_dyn(unemp2_fit,use_ci=T,include="AMASH, Justin",plot_text = F) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Spline of 3rd Degree") + labs(y="") +
-  scale_x_date(guide = guide_axis(n.dodge = 2))
- 
-  saveRDS(un2_a, "data/un2_a.rds")
-
-un3_a <- id_plot_legis_dyn(unemp3_fit,use_ci=T,include="AMASH, Justin",plot_text = F) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Spline of 4th Degree") + labs(y="") +
-  scale_x_date(guide = guide_axis(n.dodge = 2))
-  
-  saveRDS(un3_a, "data/un3_a.rds")
-
-gp_a <- id_plot_legis_dyn(unemp_gp_fit,use_ci=T,include="AMASH, Justin",plot_text = F) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Gaussian Process") + labs(y="") +
-  scale_x_date(guide = guide_axis(n.dodge = 2))
-
-  saveRDS(gp_a, "data/gp_a.rds")
-
-ar_a <- id_plot_legis_dyn(unemp_ar_fit,use_ci=T,include="AMASH, Justin",plot_text = F) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("AR(1) Process") + labs(y="") +
-  scale_x_date(guide = guide_axis(n.dodge = 2))
-
-  saveRDS(ar_a, "data/ar_a.rds")
-
-rw_a <- id_plot_legis_dyn(unemp_rw_fit,use_ci=T,include="AMASH, Justin",plot_text = F) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Random Walk") +
-  scale_x_date(guide = guide_axis(n.dodge = 2)) + labs(y="") +
-  scale_y_reverse()
-
-  saveRDS(rw_a, "data/rw_a.rds")
-  
-} else {
-  
   un1_a <- readRDS("data/un1_a.rds")
   un2_a <- readRDS("data/un2_a.rds")
   un3_a <- readRDS("data/un3_a.rds")
@@ -718,46 +956,6 @@ rw_a <- id_plot_legis_dyn(unemp_rw_fit,use_ci=T,include="AMASH, Justin",plot_tex
 
 if(run_all) {
   
-  un1_tw <- id_plot_legis_dyn(unemp1_fit,include="WALZ, Tim",
-                         use_ci=T,plot_text = F) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Spline of 2nd Degree") + labs(y="") +
-  scale_x_date(guide = guide_axis(n.dodge = 2))
-  
-  saveRDS(un1_tw, "data/un1_tw.rds")
-
-un2_tw <- id_plot_legis_dyn(unemp2_fit,use_ci=T,include="WALZ, Tim",plot_text = F) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Spline of 3rd Degree") + labs(y="") +
-  scale_x_date(guide = guide_axis(n.dodge = 2))
- 
-  saveRDS(un2_tw, "data/un2_tw.rds")
-
-un3_tw <- id_plot_legis_dyn(unemp3_fit,use_ci=T,include="WALZ, Tim",plot_text = F) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Spline of 4th Degree") + labs(y="") +
-  scale_x_date(guide = guide_axis(n.dodge = 2))
-  
-  saveRDS(un3_tw, "data/un3_tw.rds")
-
-gp_tw <- id_plot_legis_dyn(unemp_gp_fit,use_ci=T,include="WALZ, Tim",plot_text = F) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Gaussian Process") + labs(y="") +
-  scale_x_date(guide = guide_axis(n.dodge = 2))
-
-  saveRDS(gp_tw, "data/gp_tw.rds")
-
-ar_tw <- id_plot_legis_dyn(unemp_ar_fit,use_ci=T,include="WALZ, Tim",plot_text = F) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("AR(1) Process") + labs(y="") +
-  scale_x_date(guide = guide_axis(n.dodge = 2))
-
-  saveRDS(ar_tw, "data/ar_tw.rds")
-
-rw_tw <- id_plot_legis_dyn(unemp_rw_fit,use_ci=T,include="WALZ, Tim",plot_text = F) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Random Walk") +
-  scale_x_date(guide = guide_axis(n.dodge = 2)) + labs(y="") +
-  scale_y_reverse()
-
-  saveRDS(rw_tw, "data/rw_tw.rds")
-  
-} else {
-  
   un1_tw <- readRDS("data/un1_tw.rds")
   un2_tw <- readRDS("data/un2_tw.rds")
   un3_tw <- readRDS("data/un3_tw.rds")
@@ -771,7 +969,6 @@ rw_tw <- id_plot_legis_dyn(unemp_rw_fit,use_ci=T,include="WALZ, Tim",plot_text =
 
 
 ```
-
 
 ```{r distsamash}
 #| label: fig-amashdist
@@ -792,48 +989,6 @@ un1_a + un2_a + un3_a + ar_a + gp_a + rw_a + plot_layout(nrow=2,
 #| include: false
 
 if(run_all) {
-  
-  un1_a1 <- id_plot_legis_dyn(unemp1_fit,include="AMASH, Justin",
-                         use_ci=T,plot_text = F) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Spline of 2nd Degree") + labs(y="") +
-  scale_x_date(guide = guide_axis(n.dodge = 2)) + 
-    scale_y_reverse()
-  
-  saveRDS(un1_a1, "data/un1_a1.rds")
-
-un2_a1 <- id_plot_legis_dyn(unemp2_fit,use_ci=T,include="AMASH, Justin",plot_text = F) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Spline of 3rd Degree") + labs(y="") +
-  scale_x_date(guide = guide_axis(n.dodge = 2)) +
-  scale_y_reverse()
- 
-  saveRDS(un2_a1, "data/un1_a1.rds")
-
-un3_a1 <- id_plot_legis_dyn(unemp3_fit,use_ci=T,include="AMASH, Justin",plot_text = F) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Spline of 4th Degree") + labs(y="") +
-  scale_x_date(guide = guide_axis(n.dodge = 2))
-  
-  saveRDS(un3_a1, "data/un3_a1.rds")
-
-gp_a1 <- id_plot_legis_dyn(unemp_gp_fit,use_ci=T,include="AMASH, Justin",plot_text = F) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Gaussian Process") + labs(y="") +
-  scale_x_date(guide = guide_axis(n.dodge = 2))
-
-  saveRDS(gp_a1, "data/gp_a1.rds")
-
-ar_a1 <- id_plot_legis_dyn(unemp_ar_fit,use_ci=T,include="AMASH, Justin",plot_text = F) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("AR(1) Process") + labs(y="") +
-  scale_x_date(guide = guide_axis(n.dodge = 2))
-
-  saveRDS(ar_a1, "data/ar_a1.rds")
-
-rw_a1 <- id_plot_legis_dyn(unemp_rw_fit,use_ci=T,include="AMASH, Justin",plot_text = F) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Random Walk") +
-  scale_x_date(guide = guide_axis(n.dodge = 2)) + labs(y="") +
-  scale_y_reverse()
-
-  saveRDS(rw_a1, "data/rw_a1.rds")
-  
-} else {
   
   un1_a1 <- readRDS("data/un1_a1.rds")
   un2_a1 <- readRDS("data/un1_a1.rds")
@@ -908,7 +1063,6 @@ plot_predictions(c1,condition = "session_day_counter")
 
 ```
 
-
 We can see as well that the more flexible methods that estimate one parameter per time point--AR(1), random walk and Gaussian processes--do not reveal much additional variation of interest beyond the much simpler spline models. The Guassian process model does show more individual-level heterogeneity, but on the whole the party-level trends are if anything more stable. Of course, the model is not completely identified, so it could be that some of the heterogeneity is being masked for that reason.
 
 I next look at the coefficients $\phi$ that relate the legislator-level covariates to the ideal points scores. These values are shown in @tbl-coef. Because some models did not adequately converge across chains, I only use the chain that had the highest posterior log-probability. As can be seen, there is variation across the models in terms of the magnitude and even the sign of the coefficients. There is relatively less variation between splines of different degree, which in addition the descriptive plots in @fig-alldist, suggests that the specific form of the spline is relatively minor, at least when studying legislative ideal point processes. In a situation in which a latent variable changed more quickly, it could be more necessary to have a higher spline degree and more knots as well.
@@ -917,31 +1071,16 @@ I next look at the coefficients $\phi$ that relate the legislator-level covariat
 #| label: tbl-coef
 #| tbl-cap: Coefficients of Legislator Hierarchical Covariates ($\phi$)
 
-s1_cov <- unemp1_fit@stan_samples$draws("legis_x") %>% 
-  summarize_draws %>% 
-  mutate(Model="Spline 2nd Degree")
-s2_cov <- unemp2_fit@stan_samples$draws("legis_x") %>% 
-  summarize_draws %>% 
-  mutate(Model="Spline 3rd Degree")
-s3_cov <- unemp3_fit@stan_samples$draws("legis_x") %>% 
-  summarize_draws %>% 
-  mutate(Model="Spline 4th Degree")
-sgp_cov <- unemp_gp_fit@stan_samples$draws("legis_x") %>% 
-  summarize_draws %>% 
-  mutate(Model="Gaussian Process")
-sar_cov <- unemp_ar_fit@stan_samples$draws("legis_x") %>% 
-  summarize_draws %>% 
-  mutate(Model="AR(1)")
-srw_cov <- unemp_rw_fit@stan_samples$draws("legis_x") %>% 
-  summarize_draws %>% 
-  mutate(Model="Random Walk")
 
-bind_rows(s1_cov, s2_cov, s3_cov, sgp_cov, sar_cov, srw_cov) %>% 
+
+readRDS("data/cov_combined.rds") %>% 
+  bind_rows %>% 
   mutate(variable=recode(variable,
                          `legis_x[1]`="Unemployment",
                          `legis_x[2]`="GOP",
                          `legis_x[3]`="UnemploymentXGOP")) %>% 
   select(Model,Variable="variable",
+         Missingness,
          `Posterior Median`="median",
          `5% Quantile`="q5",
          `95% Quantile`="q95") %>% 

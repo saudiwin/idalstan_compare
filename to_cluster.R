@@ -42,6 +42,8 @@ modtype <- Sys.getenv("DATATYPE")
 
 is_missing <- as.numeric(Sys.getenv("MISSING"))
 
+save_loc <- Sys.getenv("SAVELOC")
+
 #is_missing <- 1
 
 spline_degree <- 4
@@ -59,7 +61,11 @@ max_treedepth <- as.numeric(as.numeric(Sys.getenv("TREEDEPTH")))
 
 # set restrict SD for pinned items
 
-restrict_sd <- .0001
+restrict_sd <- .01
+
+# set restrict N for pinned items
+
+restrict_N <- as.numeric(as.numeric(Sys.getenv("RESTRICTN")))
 
 
 ## ----create data ------------------------------------------------------------------------
@@ -70,16 +76,16 @@ restrict_sd <- .0001
 
 if(create_data) {
   # load county-level unemployment & other data
-  # countun <- read_delim('/lustre/scratch/rkubinec/la_county.txt',delim="\t")
+  # countun <- read_delim('save_loc/la_county.txt',delim="\t")
   #
   # countun <- mutate(countun,series_id=trimws(series_id)) %>%
   #   filter(period!="M13")
-  # saveRDS(countun,'/lustre/scratch/rkubinec/countun.rds')
+  # saveRDS(countun,'save_loc/countun.rds')
   
-  # countun <- readRDS('/lustre/scratch/rkubinec/countun.rds')
+  # countun <- readRDS('save_loc/countun.rds')
   
   # # load series indicators
-  # id_data <- read_tsv('/lustre/scratch/rkubinec/la_series.txt')
+  # id_data <- read_tsv('save_loc/la_series.txt')
   #
   # county_series <- filter(id_data,measure_code %in% c("04","06"),
   #                         area_type_code=="F") %>%
@@ -109,9 +115,9 @@ if(create_data) {
   #          -unemployed_rate) %>%
   #   distinct
   #
-  # saveRDS(bls_fips,'/lustre/scratch/rkubinec/bls_fips.rds')
+  # saveRDS(bls_fips,'save_loc/bls_fips.rds')
   
-  # bls_fips <- readRDS('/lustre/scratch/rkubinec/bls_fips.rds')
+  # bls_fips <- readRDS('save_loc/bls_fips.rds')
   #
   # # merge in FIPS codes and drop unnecessary data
   #
@@ -146,9 +152,9 @@ if(create_data) {
   #
   # county_series <- left_join(county_series,fips_state,by=c(fips_state='state_code'))
   
-  # saveRDS(county_series,'/lustre/scratch/rkubinec/county_series.rds')
+  # saveRDS(county_series,'save_loc/county_series.rds')
   
-  # county_series <- readRDS('/lustre/scratch/rkubinec/county_series.rds')
+  # county_series <- readRDS('save_loc/county_series.rds')
   
   # Now we want to merge with congressional district
   
@@ -160,10 +166,10 @@ if(create_data) {
   # albers <- "+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=37.5 +lon_0=-96 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs"
   
   # we  need districts for each apportionment (4 going back to the 1980s)
-  # districts2018 <- st_read('/lustre/scratch/rkubinec/congress_shape/districtShapes/districts114.shp') %>% st_transform(albers)
-  # districts2008 <- st_read('/lustre/scratch/rkubinec/congress_shape/districtShapes/districts110.shp') %>% st_transform(albers)
-  # districts1998 <- st_read('/lustre/scratch/rkubinec/congress_shape/districtShapes/districts105.shp') %>% st_transform(albers)
-  # districts1988 <- st_read('/lustre/scratch/rkubinec/congress_shape/districtShapes/districts100.shp') %>% st_transform(albers)
+  # districts2018 <- st_read('save_loc/congress_shape/districtShapes/districts114.shp') %>% st_transform(albers)
+  # districts2008 <- st_read('save_loc/congress_shape/districtShapes/districts110.shp') %>% st_transform(albers)
+  # districts1998 <- st_read('save_loc/congress_shape/districtShapes/districts105.shp') %>% st_transform(albers)
+  # districts1988 <- st_read('save_loc/congress_shape/districtShapes/districts100.shp') %>% st_transform(albers)
   #
   # dist_list <- list(d2018=districts2018,
   #                   d2008=districts2008,
@@ -174,11 +180,11 @@ if(create_data) {
   # dist_list <- lapply(dist_list,function(d) {
   #   left_join(d,distinct(select(fips_all,state_name,state_code)),by=c(STATENAME='state_name'))
   # })
-  # saveRDS(dist_list,'/lustre/scratch/rkubinec/dist_list.rds')
+  # saveRDS(dist_list,'save_loc/dist_list.rds')
   
   # county_space <- tigris::counties() %>%
   #   st_as_sf
-  # saveRDS(county_space,'/lustre/scratch/rkubinec/county_space.rds')
+  # saveRDS(county_space,'save_loc/county_space.rds')
   
   
   # merge in our county data
@@ -223,12 +229,12 @@ if(create_data) {
   # # interpolate across districts
   #
   #
-  # county_space <- readRDS('/lustre/scratch/rkubinec/county_space.rds') %>%
+  # county_space <- readRDS('save_loc/county_space.rds') %>%
   #               st_transform(albers) %>%
   #             st_buffer(dist = 0) %>%
   #   select(STATEFP,COUNTYFP,GEOID,geometry)
   #
-  # dist_list <- readRDS('/lustre/scratch/rkubinec/dist_list.rds') %>%
+  # dist_list <- readRDS('save_loc/dist_list.rds') %>%
   #   lapply(st_buffer,dist=0) %>%
   #   lapply(select,DISTRICT,ID,geometry)
   #
@@ -241,10 +247,10 @@ if(create_data) {
   #              type = "extensive", weight = "total") %>%
   #     aw_weight(areaVar = "area", totalVar = "totalArea",
   #             areaWeight = "areaWeight") %>%
-  #     saveRDS(paste0('/lustre/scratch/rkubinec/',d,'_int.rds'))
+  #     saveRDS(paste0('save_loc/',d,'_int.rds'))
   # })
   #
-  # all_ints_names <- rev(list.files(path = "/lustre/scratch/rkubinec/",pattern="int.rds",full.names = T))
+  # all_ints_names <- rev(list.files(path = "save_loc/",pattern="int.rds",full.names = T))
   #
   # # we can now load up one intersection at a time and average the covariates
   #
@@ -334,7 +340,7 @@ if(create_data) {
   
   #merge district covariates
   
-  # dist_state <- readRDS('/lustre/scratch/rkubinec/dist_list.rds') %>%
+  # dist_state <- readRDS('save_loc/dist_list.rds') %>%
   #   lapply(function(d) st_drop_geometry(d)) %>%
   #   lapply(select,ID,
   #          DISTRICT,
@@ -359,7 +365,7 @@ if(create_data) {
   #
   # over_states %>%
   #   filter(DISTRICT!='98') %>%
-  #   saveRDS('/lustre/scratch/rkubinec/over_states.rds')
+  #   saveRDS('save_loc/over_states.rds')
 }
 
 
@@ -376,14 +382,14 @@ over_states <- readRDS('data/over_states.rds')
 # 
 # # need Congress rollcall info
 # 
-# rollinfo <- read_csv('/lustre/scratch/rkubinec/Hall_rollcalls.csv')
+# rollinfo <- read_csv('save_loc/Hall_rollcalls.csv')
 # 
 # unam_roll <- filter(rollinfo,
 #                     yea_count==0|nay_count==0)
 # 
 # # member votes
 # 
-# rollcalls <- read_csv('/lustre/scratch/rkubinec/Hall_votes.csv') %>% 
+# rollcalls <- read_csv('save_loc/Hall_votes.csv') %>% 
 #   filter(congress>100)
 # 
 # #remove unanmous votes
@@ -395,7 +401,7 @@ over_states <- readRDS('data/over_states.rds')
 # 
 # # need member info
 # 
-# meminfo <- read_csv('/lustre/scratch/rkubinec/Hall_members.csv')
+# meminfo <- read_csv('save_loc/Hall_members.csv')
 # 
 # # merge member info with rollcall data
 # 
@@ -462,7 +468,7 @@ over_states <- readRDS('data/over_states.rds')
 # rollcalls$date_month <- rollcalls$date
 # day(rollcalls$date_month) <- 1
 
-# saveRDS(rollcalls,'/lustre/scratch/rkubinec/rollcalls.rds')
+# saveRDS(rollcalls,'save_loc/rollcalls.rds')
 
 # remove unnecesssary objects
 
@@ -714,7 +720,9 @@ unemp1 <- unemp1  %>%
                               restrict_ind_high = restrict_ind_high[!is.na(restrict_ind_high)],
                               restrict_ind_low = restrict_ind_low[!is.na(restrict_ind_low)],
                               restrict_sd_high = restrict_sd,
-                              restrict_sd_low = restrict_sd,restrict_var = FALSE,
+                              restrict_sd_low = restrict_sd,restrict_N_high=restrict_N,
+                              restrict_N_low=restrict_N,
+                              restrict_var = FALSE,
                               person_sd = 3,discrim_miss_scale = 2,
                               discrim_miss_shape = 2,
                               time_var = 1,
@@ -732,7 +740,7 @@ unemp1 <- unemp1  %>%
                               #include=F,
                               id_refresh=100)
     
-    saveRDS(unemp1_fit,paste0("/lustre/scratch/rkubinec/",modtype,is_missing,"_",max_treedepth,"_","1_fit.rds"))
+    saveRDS(unemp1_fit,paste0("save_loc/",modtype,is_missing,"_",max_treedepth,"_","1_fit.rds"))
     
   }
   
@@ -749,7 +757,8 @@ unemp1 <- unemp1  %>%
                               const_type = "items",
                               restrict_ind_high = restrict_ind_high[!is.na(restrict_ind_high)],
                               restrict_ind_low = restrict_ind_low[!is.na(restrict_ind_low)],
-                              restrict_sd_high = restrict_sd,
+                              restrict_sd_high = restrict_sd,restrict_N_high=restrict_N,
+                              restrict_N_low=restrict_N,
                               restrict_sd_low = restrict_sd,restrict_var = FALSE,
                               person_sd = 3,fix_high = 2,fix_low = -2,
                               diff_reg_sd = 3,
@@ -768,7 +777,7 @@ unemp1 <- unemp1  %>%
                               #include=F,
                               id_refresh=100)
     
-    saveRDS(unemp2_fit,paste0("/lustre/scratch/rkubinec/unemp",modtype,is_missing,"_",max_treedepth,"_","2_fit.rds"))
+    saveRDS(unemp2_fit,paste0("save_loc/unemp",modtype,is_missing,"_",max_treedepth,"_","2_fit.rds"))
     
     
   }
@@ -787,7 +796,8 @@ unemp1 <- unemp1  %>%
                               const_type = "items",
                               restrict_ind_high = restrict_ind_high[!is.na(restrict_ind_high)],
                               restrict_ind_low = restrict_ind_low[!is.na(restrict_ind_low)],
-                              restrict_sd_low = restrict_sd,
+                              restrict_sd_low = restrict_sd,restrict_N_high=restrict_N,
+                              restrict_N_low=restrict_N,
                               restrict_sd_high = restrict_sd,restrict_var = FALSE,
                               person_sd = 3,fix_high = 2,fix_low = -2,
                               diff_reg_sd = 3,
@@ -806,7 +816,7 @@ unemp1 <- unemp1  %>%
                               #include=F,
                               id_refresh=100)
     
-    saveRDS( unemp3_fit,paste0("/lustre/scratch/rkubinec/unemp",modtype,is_missing,"_",max_treedepth,"_","3_fit.rds"))
+    saveRDS( unemp3_fit,paste0("save_loc/unemp",modtype,is_missing,"_",max_treedepth,"_","3_fit.rds"))
     
   }
   
@@ -845,7 +855,8 @@ if(fit_type=="GP") {
                               restrict_ind_high = restrict_ind_high[!is.na(restrict_ind_high)],
                               restrict_ind_low = restrict_ind_low[!is.na(restrict_ind_low)],
                               restrict_sd_low = restrict_sd,restrict_var = FALSE,
-                              restrict_sd_high = restrict_sd,
+                              restrict_sd_high = restrict_sd,restrict_N_high=restrict_N,
+                              restrict_N_low=restrict_N,
                               diff_reg_sd = 3,fix_high = 2,fix_low = -2,
                               diff_miss_sd = 3,
                               discrim_reg_scale = 2,discrim_reg_shape = 2,
@@ -858,7 +869,7 @@ if(fit_type=="GP") {
                               #         "A_int_free"),
                               id_refresh=100)
   
-  saveRDS(unemp_gp_fit, paste0("/lustre/scratch/rkubinec/unemp",modtype,"_",is_missing,"_",max_treedepth,"_","_gp_fit.rds"))
+  saveRDS(unemp_gp_fit, paste0("save_loc/unemp",modtype,"_",is_missing,"_",max_treedepth,"_","_gp_fit.rds"))
   
 }
 
@@ -879,7 +890,8 @@ if(fit_type=="ar1") {
                                const_type = "items",prior_only = prior_only,
                                restrict_ind_high = restrict_ind_high[!is.na(restrict_ind_high)],
                                restrict_ind_low = restrict_ind_low[!is.na(restrict_ind_low)],
-                               restrict_sd_low = restrict_sd,
+                               restrict_sd_low = restrict_sd,restrict_N_high=restrict_N,
+                               restrict_N_low=restrict_N,
                                restrict_sd_high = restrict_sd,
                                diff_reg_sd = 3,fix_high = 2,fix_low = -2,
                                diff_miss_sd = 3,
@@ -894,7 +906,7 @@ if(fit_type=="ar1") {
                                #include=F,
                                id_refresh=100)
   
-  saveRDS(unemp1_ar_fit, paste0("/lustre/scratch/rkubinec/unemp",modtype,"_",is_missing,"_",max_treedepth,"_","1_ar_fit.rds"))
+  saveRDS(unemp1_ar_fit, paste0("save_loc/unemp",modtype,"_",is_missing,"_",max_treedepth,"_","1_ar_fit.rds"))
   
   
 }
@@ -915,7 +927,8 @@ if(fit_type=="rw") {
                                const_type = "items",prior_only = prior_only,
                                restrict_ind_high = restrict_ind_high[!is.na(restrict_ind_high)],
                                restrict_ind_low = restrict_ind_low[!is.na(restrict_ind_low)],
-                               restrict_sd_low = restrict_sd,
+                               restrict_sd_low = restrict_sd,restrict_N_high=restrict_N,
+                               restrict_N_low=restrict_N,
                                restrict_sd_high = restrict_sd,
                                fixtype="prefix",restrict_var = FALSE,
                                diff_reg_sd = 3,fix_high = 2,fix_low = -2,
@@ -930,7 +943,7 @@ if(fit_type=="rw") {
                                #include=F,
                                id_refresh=100)
   
-  saveRDS(unemp1_rw_fit, paste0("/lustre/scratch/rkubinec/unemp",modtype,"_",is_missing,"_",max_treedepth,"_","1_rw_fit.rds"))
+  saveRDS(unemp1_rw_fit, paste0("save_loc/unemp",modtype,"_",is_missing,"_",max_treedepth,"_","1_rw_fit.rds"))
   
   
 }
@@ -987,7 +1000,8 @@ if(fit_type=="china") {
                             restrict_ind_high = restrict_ind_high[!is.na(restrict_ind_high)],
                             restrict_ind_low=restrict_ind_low[!is.na(restrict_ind_low)],
                             restrict_sd_high = restrict_sd,
-                            restrict_sd_low = restrict_sd,
+                            restrict_sd_low = restrict_sd,restrict_N_high=restrict_N,
+                            restrict_N_low=restrict_N,
                             fixtype="prefix",
                             adapt_delta=0.95,max_treedepth=max_treedepth,
                             # pars=c("steps_votes_grm",
@@ -997,7 +1011,7 @@ if(fit_type=="china") {
                             #include=F,
                             id_refresh=100)
   
-  saveRDS(china_fit1,paste0('/lustre/scratch/rkubinec/china_',modtype,"_",is_missing,"_",max_treedepth,"_",'_fit1.rds'))
+  saveRDS(china_fit1,paste0('save_loc/china_',modtype,"_",is_missing,"_",max_treedepth,"_",'_fit1.rds'))
   
   
 }
@@ -1005,7 +1019,7 @@ if(fit_type=="china") {
 
 ## ----ardistconst, fig.cap="Over-time Ideal Points for Constrained Legislators by Month, 1990-2018",eval=FALSE----
 ## 
-## #unemp1_fit <- readRDS("/lustre/scratch/rkubinec/unemp1_run1fit.rds")
+## #unemp1_fit <- readRDS("save_loc/unemp1_run1fit.rds")
 ## 
 ## # need to calculate ideal points manually b/c of hierarchical covariates
 ## library(posterior)
