@@ -43,7 +43,7 @@ modtype <- Sys.getenv("DATATYPE")
 is_missing <- as.numeric(Sys.getenv("MISSING"))
 
 save_loc <- Sys.getenv("SAVELOC")
-print(paste0("Save location is: ",paste0(save_loc,modtype,is_missing,"_",max_treedepth,"_","1_fit.rds")))
+
 #is_missing <- 1
 
 spline_degree <- 4
@@ -66,6 +66,8 @@ restrict_sd <- .01
 # set restrict N for pinned items
 
 restrict_N <- as.numeric(as.numeric(Sys.getenv("RESTRICTN")))
+
+print(paste0("Save location is: ",paste0(save_loc,modtype,is_missing,"_",max_treedepth,"_","1_fit.rds")))
 
 
 ## ----create data ------------------------------------------------------------------------
