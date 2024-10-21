@@ -43,7 +43,7 @@ modtype <- Sys.getenv("DATATYPE")
 is_missing <- as.numeric(Sys.getenv("MISSING"))
 
 save_loc <- Sys.getenv("SAVELOC")
-print(paste0("Save location is: ",paste0("save_loc/",modtype,is_missing,"_",max_treedepth,"_","1_fit.rds")))
+print(paste0("Save location is: ",paste0(save_loc,modtype,is_missing,"_",max_treedepth,"_","1_fit.rds")))
 #is_missing <- 1
 
 spline_degree <- 4
@@ -250,7 +250,7 @@ if(create_data) {
   #     saveRDS(paste0('save_loc/',d,'_int.rds'))
   # })
   #
-  # all_ints_names <- rev(list.files(path = "save_loc/",pattern="int.rds",full.names = T))
+  # all_ints_names <- rev(list.files(path = save_loc,pattern="int.rds",full.names = T))
   #
   # # we can now load up one intersection at a time and average the covariates
   #
@@ -740,7 +740,7 @@ unemp1 <- unemp1  %>%
                               #include=F,
                               id_refresh=100)
     
-    saveRDS(unemp1_fit,paste0("save_loc/",modtype,is_missing,"_",max_treedepth,"_","1_fit.rds"))
+    saveRDS(unemp1_fit,paste0(save_loc,modtype,is_missing,"_",max_treedepth,"_","1_fit.rds"))
     
   }
   
@@ -777,7 +777,7 @@ unemp1 <- unemp1  %>%
                               #include=F,
                               id_refresh=100)
     
-    saveRDS(unemp2_fit,paste0("save_loc/unemp",modtype,is_missing,"_",max_treedepth,"_","2_fit.rds"))
+    saveRDS(unemp2_fit,paste0(save_loc,"unemp",modtype,is_missing,"_",max_treedepth,"_","2_fit.rds"))
     
     
   }
@@ -816,7 +816,7 @@ unemp1 <- unemp1  %>%
                               #include=F,
                               id_refresh=100)
     
-    saveRDS( unemp3_fit,paste0("save_loc/unemp",modtype,is_missing,"_",max_treedepth,"_","3_fit.rds"))
+    saveRDS( unemp3_fit,paste0(save_loc,"unemp",modtype,is_missing,"_",max_treedepth,"_","3_fit.rds"))
     
   }
   
@@ -869,7 +869,7 @@ if(fit_type=="GP") {
                               #         "A_int_free"),
                               id_refresh=100)
   
-  saveRDS(unemp_gp_fit, paste0("save_loc/unemp",modtype,"_",is_missing,"_",max_treedepth,"_","_gp_fit.rds"))
+  saveRDS(unemp_gp_fit, paste0(save_loc,"unemp",modtype,"_",is_missing,"_",max_treedepth,"_","_gp_fit.rds"))
   
 }
 
@@ -906,7 +906,7 @@ if(fit_type=="ar1") {
                                #include=F,
                                id_refresh=100)
   
-  saveRDS(unemp1_ar_fit, paste0("save_loc/unemp",modtype,"_",is_missing,"_",max_treedepth,"_","1_ar_fit.rds"))
+  saveRDS(unemp1_ar_fit, paste0(save_loc,"unemp",modtype,"_",is_missing,"_",max_treedepth,"_","1_ar_fit.rds"))
   
   
 }
@@ -943,7 +943,7 @@ if(fit_type=="rw") {
                                #include=F,
                                id_refresh=100)
   
-  saveRDS(unemp1_rw_fit, paste0("save_loc/unemp",modtype,"_",is_missing,"_",max_treedepth,"_","1_rw_fit.rds"))
+  saveRDS(unemp1_rw_fit, paste0(save_loc,"unemp",modtype,"_",is_missing,"_",max_treedepth,"_","1_rw_fit.rds"))
   
   
 }
