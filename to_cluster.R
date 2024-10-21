@@ -679,7 +679,11 @@ if(modtype=="115") {
   
   unemp1 <- filter(unemp1, congress==115)
   
+  num_pathfinder_paths <- 4
+  
 } else {
+  
+  num_pathfinder_paths <- 8
   
   if(fit_type=="china") {
     
@@ -739,11 +743,7 @@ unemp1 <- unemp1  %>%
                               max_treedepth=max_treedepth,
                               fixtype="prefix",
                               adapt_delta=0.95,
-                              # pars=c("steps_votes_grm",
-                              #        "steps_votes",
-                              #        "B_int_free",
-                              #        "A_int_free"),
-                              #include=F,
+                              num_pathfinder_paths=num_pathfinder_paths,
                               id_refresh=100)
     
     saveRDS(unemp1_fit,paste0(save_loc,modtype,is_missing,"_",max_treedepth,"_","1_fit.rds"))
@@ -776,11 +776,7 @@ unemp1 <- unemp1  %>%
                               max_treedepth=max_treedepth,
                               fixtype="prefix",
                               adapt_delta=0.95,
-                              # pars=c("steps_votes_grm",
-                              #        "steps_votes",
-                              #        "B_int_free",
-                              #        "A_int_free"),
-                              #include=F,
+                              num_pathfinder_paths=num_pathfinder_paths,
                               id_refresh=100)
     
     saveRDS(unemp2_fit,paste0(save_loc,"unemp",modtype,is_missing,"_",max_treedepth,"_","2_fit.rds"))
@@ -815,11 +811,7 @@ unemp1 <- unemp1  %>%
                               max_treedepth=max_treedepth,
                               fixtype="prefix",
                               adapt_delta=0.95,
-                              # pars=c("steps_votes_grm",
-                              #        "steps_votes",
-                              #        "B_int_free",
-                              #        "A_int_free"),
-                              #include=F,
+                              num_pathfinder_paths=num_pathfinder_paths,
                               id_refresh=100)
     
     saveRDS( unemp3_fit,paste0(save_loc,"unemp",modtype,is_missing,"_",max_treedepth,"_","3_fit.rds"))
@@ -868,11 +860,7 @@ if(fit_type=="GP") {
                               discrim_reg_scale = 2,discrim_reg_shape = 2,
                               
                               use_groups = F,
-                              #  output_samples=100,
-                              #  pars=c("steps_votes_grm",
-                              #         "steps_votes",
-                              #         "B_int_free",
-                              #         "A_int_free"),
+                              num_pathfinder_paths=num_pathfinder_paths,
                               id_refresh=100)
   
   saveRDS(unemp_gp_fit, paste0(save_loc,"unemp",modtype,"_",is_missing,"_",max_treedepth,"_","_gp_fit.rds"))
@@ -905,11 +893,7 @@ if(fit_type=="ar1") {
                                
                                fixtype="prefix",restrict_var = FALSE,
                                adapt_delta=0.95,max_treedepth=max_treedepth,
-                               # pars=c("steps_votes_grm",
-                               #        "steps_votes",
-                               #        "B_int_free",
-                               #        "A_int_free"),
-                               #include=F,
+                               num_pathfinder_paths=num_pathfinder_paths,
                                id_refresh=100)
   
   saveRDS(unemp1_ar_fit, paste0(save_loc,"unemp",modtype,"_",is_missing,"_",max_treedepth,"_","1_ar_fit.rds"))
@@ -942,11 +926,7 @@ if(fit_type=="rw") {
                                discrim_reg_scale = 2,discrim_reg_shape = 2,
                                
                                adapt_delta=0.95,max_treedepth=max_treedepth,
-                               # pars=c("steps_votes_grm",
-                               #        "steps_votes",
-                               #        "B_int_free",
-                               #        "A_int_free"),
-                               #include=F,
+                               num_pathfinder_paths=num_pathfinder_paths,
                                id_refresh=100)
   
   saveRDS(unemp1_rw_fit, paste0(save_loc,"unemp",modtype,"_",is_missing,"_",max_treedepth,"_","1_rw_fit.rds"))
@@ -1010,11 +990,7 @@ if(fit_type=="china") {
                             restrict_N_low=restrict_N,
                             fixtype="prefix",
                             adapt_delta=0.95,max_treedepth=max_treedepth,
-                            # pars=c("steps_votes_grm",
-                            #        "steps_votes",
-                            #        "B_int_free",
-                            #        "A_int_free"),
-                            #include=F,
+                            num_pathfinder_paths=num_pathfinder_paths,
                             id_refresh=100)
   
   saveRDS(china_fit1,paste0('save_loc/china_',modtype,"_",is_missing,"_",max_treedepth,"_",'_fit1.rds'))
