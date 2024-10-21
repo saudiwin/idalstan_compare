@@ -822,19 +822,7 @@ cov_combined <- bind_rows(s1_cov, s2_cov, s3_cov,
 saveRDS(cov_combined, "data/cov_combined.rds")
   
   
-} else {
-  
-  rhats1 <- readRDS("data/rhats1.rds")
-  rhats2 <- readRDS("data/rhats2.rds")
-  rhats3 <- readRDS("data/rhats3.rds")
-  rhatar <- readRDS("data/rhatar.rds")
-  rhatrw <- readRDS("data/rhatrw.rds")
-  rhatgp <- readRDS("data/rhatgp.rds")
-  
-  
 }
-
-
 
 ```
 
@@ -886,37 +874,6 @@ rhats1 + rhats2 + rhats3 + rhatgp + rhatar + rhatrw +
 
 I next examine the overall distributions of the ideal point scores over time for each model in @fig-alldist. To help with plotting these distributions, uncertainty intervals are removed, and the scale is limited to ideal point scores of -3 to +3. As can be seen, the different methods have differing interpretations of ideal point trajectories, although most of the parameterizations show periods where voting appears to be less polarized in the middle of 2017. As might be expected, while on average the two parties remain well-separated, in practice there are periods of more bipartisan cooperation. This type of monthly heterogeneity is masked when the ideal points are aggregated to the yearly level, and is a substantively interesting form of variation.
 
-```{r distscomp}
-#| include: false
-
-# d2 <- unemp2_fit@stan_samples$draws("lp__") %>% apply(2,mean)
-# d3 <- unemp3_fit@stan_samples$draws("lp__") %>% apply(2,mean)
-# dgp <- unemp_gp_fit@stan_samples$draws("lp__") %>% apply(2,mean)
-# dar <- unemp_ar_fit@stan_samples$draws("lp__") %>% apply(2,mean)
-# drw <- unemp_rw_fit@stan_samples$draws("lp__") %>% apply(2,mean)
-# 
-# m2 <- which(d2==max(d2))
-# m3 <- which(d3==max(d3))
-# mgp <- which(dgp==max(dgp))
-# mar <- which(dar==max(dar))
-# mrw <- which(drw==max(drw))
-
-if(run_all) {
-  
-  un1 <- readRDS("data/un1.rds")
-  un2 <- readRDS("data/un2.rds")
-  un3 <- readRDS("data/un3.rds")
-  rw <- readRDS("data/rw.rds")
-  ar <- readRDS("data/ar.rds")
-  gp <- readRDS("data/gp.rds")
-  
-}
-
-
-
-
-```
-
 ```{r dists}
 #| label: fig-alldist
 #| fig-cap: "Comparison of Time-varying Ideal Point Methods for the 115th Congress"
@@ -924,6 +881,13 @@ if(run_all) {
 #| warning: false
 #| fig-height: 6
 #| fig-width: 6
+
+  un1 <- readRDS("data/un1.rds")
+  un2 <- readRDS("data/un2.rds")
+  un3 <- readRDS("data/un3.rds")
+  rw <- readRDS("data/rw.rds")
+  ar <- readRDS("data/ar.rds")
+  gp <- readRDS("data/gp.rds")
 
 un1 + un2 + un3 + ar + gp + rw + plot_layout(nrow=2,
                                              guides="collect") + 
