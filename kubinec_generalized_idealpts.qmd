@@ -1,5 +1,5 @@
 ---
-title: 'Generalized Ideal Point Models for Time-Varying and Missing-Data Inference'
+title: 'Generalized Ideal Point Models for Robust Measurement with Dirty Data in the Social Sciences'
 author: 
   - name: "Robert Kubinec"
     affiliation: New York University Abu Dhabi
@@ -8,6 +8,9 @@ author:
 date: last-modified
 execute: 
   cache: true
+  echo: false
+  warning: false
+  error: false
 date-format: long
 format: pdf
 linestretch: 1.5
@@ -19,13 +22,6 @@ filters:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE,
-                      warning=FALSE,
-                      message = FALSE,
-                      fig.align = 'center')
-# for debugging
-
-options(tinytex.verbose = TRUE)
 
 require(dplyr)
 require(ggplot2)
@@ -45,7 +41,7 @@ library(marginaleffects)
 
 # set to true to create all analyses from fitted idealstan models
 # requires significant time and RAM (especially the latter)
-run_all <- T
+run_all <- F
 
 # see file to_cluster.R for the fitting of the actual idealstan models
 
@@ -92,6 +88,8 @@ num_days <- distinct(unemp1,bioname,date_month) %>%
 ```
 
 \newpage
+
+This paper takes the well-established ideal point model from political science and generalizes to address long-standing issues while also extending the domain of the model to cover new areas of measurement with diverse and noisy data. The goal of this new implementation is to make the ideal point model a general tool for measurement of hidden concepts across the social sciences whether the origin of the data is from social media, surveys, legislatures, bureaucratic agencies, or social networks. To accomplish this task, the paper implements the ideal point model using Stan, a probabilistic programming language for Bayesian inference, that allows for a much wider range of time-series processes, data distributions, and novel ways of incorporating missing data. In addition, the open source R package which implements the models exploits advances in big data Bayesian computation with Stan to permit the robust estimation of latent concepts from much larger datasets than was previously possible.
 
 While ideal point models were conceived as a way to measure ideology in the U.S. Congress, this powerful measurement tool has wide applicability as a general tool for analyzing social data with substantial measurement error. For example, political scientists have recently applied the canonical ideal point model to new datasets and empirical challenges, such as Twitter data [@barbera2015; @kubinec2018], the United Nations Security Council [@bailey2017], state capacity [@hanson2021], democracy [@coppedge2019; @pemstein2017], campaign finance data [@bonica2014] and legislative speech [@lauderdale2016]. Through these applications, it has become apparent that the ideal point model has utility for a considerable number of measurement problems in the social sciences so long as available data are imperfect proxies of the concept of interest. To encourage further usage of this model, and to help address difficult measurement problems across the social sciences, this paper takes advantage of recent advances in Bayesian computation to broaden the implementation of the standard ideal point model to address challenges related to non-ignorable missing data, robust inference for time-varying data, as well as new estimands to better understand the effect of external covariates on ideal points [@martin2002; @martin2011a; @barbera2015; @kropko2013; @carroll2009; @bafumi2005; @jackman2004; @imai2016a; @lewis2018; @goplerud2019; @caughey2018].
 
@@ -489,13 +487,7 @@ In addition, we might think that any polarization may be asymmetric in terms of 
 
 > H2: When monthly unemployment rates rise, the resulting polarization of legislative voting behavior is moderated by each legislator's party affiliation.
 
-```{=html}
-<!--# With the Chinese import shock data, we might surmise that polarization will increase among legislators in districts where Chinese import exposure per worker is very high. This kind of polarization could arise either by increasing divergence on trade-related legislation [@hall2015] or via increased foreign policy hostility to China [@kuk2017].
 
-> H2: When monthly unemployment rates rise in districts with a higher exposure to Chinese import competition, legislators in each party become more polarized.
-
-This hypothesis expresses a conditional relationship that runs in the opposite direction of the first hypothesis. It would seem that, as existing literature has shown, exposure to Chinese import shocks shifts legislators' ideal points on trade policy and increases polarization, that there should be a strongly interactive relationshp between district-level unemployment and Chinese import exposure. When both are high, we would have a strong prior that legislators will polarize away from each other. This hypothesis can be tested with a three-way interaction of party ID, unemployment rates and Chinese shock exposure at the district level. -->
-```
 To test these hypotheses, I fit each of the described time-series models separately to rollcall vote data from the 115th Congress. I do not include the 1st-stage missing-data selection equation. Recorded absences are fairly low for this session of Congress, and so this additional level of complexity is not as useful, especially when the aim is inference on covariates. To identify the model, I pin the discrimination parameters $\gamma_j$ for four party-line votes in which all Republicans voted for a measure as +1, and four Democrat party-line votes in which all Democrats voted against a measure as -1. Utilizing the same pinned parameters for all models allows me to compare their relative ability to obtain identification of a single rotation of the ideal points.
 
 For the spline specifications, I consider splines of degrees 2, 3 and 4 while using only one knot (i.e., one polynomial function for the whole time period). If I were modeling multiple Congressional sessions, it would be possible to use one knot per session to allow for period effects in the time series. With only one Congressional session, however, a single polynomial function is sufficient as it would not be expected for a member of Congress to switch their ideological position in a noticeable way more than once or twice per term.
@@ -836,6 +828,28 @@ if(run_all) {
   
   # do plots/rhats here
   
+  un1big <- id_plot_legis_dyn(unemp1_all_fit,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("Spline of 2nd Degree") + labs(y="") +
+  scale_x_date(guide = guide_axis(n.dodge = 2))
+  
+  saveRDS(un1big, "data/un1big.rds")
+
+un2big <- id_plot_legis_dyn(unemp2_all_fit,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("Spline of 3rd Degree") + labs(y="") +
+  scale_x_date(guide = guide_axis(n.dodge = 2))
+
+  saveRDS(un2big, "data/un2big.rds")
+
+un3big <- id_plot_legis_dyn(unemp3_all_fit,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("Spline of 4th Degree") + labs(y="") +
+  scale_x_date(guide = guide_axis(n.dodge = 2))
+
+  saveRDS(un3big, "data/un3big.rds")
+  
+  # need legis covariates
+  
+  
+  
 }
 
 
@@ -855,20 +869,6 @@ if(run_all) {
 }
 
 
-
-```
-
-```{r plotrhats}
-#| label: fig-rhat
-#| fig-cap: "Comparison of Convergence Diagnostics Across Specifications"
-#| message: false
-#| warning: false
-#| fig-height: 5
-#| fig-width: 6
-
-rhats1 + rhats2 + rhats3 + rhatgp + rhatar + rhatrw +
-  plot_layout(guides="collect",nrow=2) + 
-  plot_annotation(tag_levels="A",caption="Plots show split-Rhat values from three independent\nHamiltonian Markov Chain Monte Carlo chains with 500 post-warmup iterations per chain.") & theme(plot.title=element_text(size=10))
 
 ```
 
@@ -893,25 +893,6 @@ un1 + un2 + un3 + ar + gp + rw + plot_layout(nrow=2,
                                              guides="collect") + 
   plot_annotation(caption="Posterior average values shown for 115th Congress legislator ideal points.\nItem discrimination for Republican party-line votes was constrained to be positive.") & theme(legend.position = "top",
                                                                                                                                                                                                     plot.title=element_text(size=9))
-
-```
-
-```{r distscompamash}
-#| include: false
-
-if(run_all) {
-  
-  un1_a <- readRDS("data/un1_a.rds")
-  un2_a <- readRDS("data/un2_a.rds")
-  un3_a <- readRDS("data/un3_a.rds")
-  gp_a <- readRDS("data/gp_a.rds")
-  rw_a <- readRDS("data/rw_a.rds")
-  ar_a <- readRDS("data/ar_a.rds")
-  
-}
-
-
-
 
 ```
 
@@ -942,29 +923,17 @@ if(run_all) {
 #| fig-height: 6
 #| fig-width: 6
 
+  un1_a <- readRDS("data/un1_a.rds")
+  un2_a <- readRDS("data/un2_a.rds")
+  un3_a <- readRDS("data/un3_a.rds")
+  gp_a <- readRDS("data/gp_a.rds")
+  rw_a <- readRDS("data/rw_a.rds")
+  ar_a <- readRDS("data/ar_a.rds")
+
 un1_a + un2_a + un3_a + ar_a + gp_a + rw_a + plot_layout(nrow=2,
                                              guides="collect") + 
   plot_annotation(caption="Posterior average values shown for 115th Congress legislator ideal points.\nItem discrimination for Republican party-line votes was constrained to be positive.") & theme(legend.position = "top",
                                                                                                                                                                                                     plot.title=element_text(size=9))
-
-```
-
-```{r distscompamash1}
-#| include: false
-
-if(run_all) {
-  
-  un1_a1 <- readRDS("data/un1_a1.rds")
-  un2_a1 <- readRDS("data/un1_a1.rds")
-  un3_a1 <- readRDS("data/un1_a1.rds")
-  gp_a1 <- readRDS("data/gp_a1.rds")
-  rw_a1 <- readRDS("data/rw_a1.rds")
-  ar_a1 <- readRDS("data/ar_a1.rds")
-  
-}
-
-
-
 
 ```
 
@@ -976,12 +945,21 @@ if(run_all) {
 #| fig-height: 6
 #| fig-width: 6
 
-un1_a1 + un2_a1 + un3_a1 + ar_a1 + gp_a1 + rw_a1 + plot_layout(nrow=2,
+  un1_am <- readRDS("data/un1_am.rds")
+  un2_am <- readRDS("data/un1_am.rds")
+  un3_am <- readRDS("data/un1_am.rds")
+  gp_am <- readRDS("data/gp_am.rds")
+  rw_am <- readRDS("data/rw_am.rds")
+  ar_am <- readRDS("data/ar_am.rds")
+
+un1_am + un2_am + un3_am + ar_am + gp_am + rw_am + plot_layout(nrow=2,
                                              guides="collect") + 
   plot_annotation(caption="Posterior average values shown for 115th Congress legislator ideal points.\nItem discrimination for Republican party-line votes was constrained to be positive.") & theme(legend.position = "top",
                                                                                                                                                                                                     plot.title=element_text(size=9))
 
 ```
+
+
 
 ```{r absence}
 #| fig-cap: "Time-varying Absence Rates in the 115th Senate"
@@ -1131,127 +1109,6 @@ by_party %>%
 ```
 
 Overall, the results of these models do show that legislative behavior changes during times of higher local unemployment. Furthermore, we can measure these movements in ideal points down to the monthly-level, permitting very precise statements about how legislative behavior changes. In general, the effects of 1% change in district-level unemployment on legislators are modest, though we would expect modest effects as this 1% change represents one-month's worth of unemployment data. Aggregated over time, these effects could grow to be substantial.
-
-````{=html}
-<!-- Finally I turn to the results of the Chinese import exposure model. The ideal point marginal effects for this model are shown in Figure \@ref(fig:chinapl). Unfortunately, it is not possible to read off the interactive relationship as the main effect is a continuous by continuous by binary variable interaction. The only way to interpret this relationship is by calculating the effect of the interaction for different values of Chinese import exposure per worker and party ID. This plot for the mean posterior values is shown in Figure \@ref(fig:chinaint). There is a strongly non-linear relationship between Chinese import exposure and unemployment. At low rates of Chinese import exposure, unemployment appears to have a weak effect on legislators in either party. At higher levels of import exposure, however, there is a much stronger relationship. In this case, it would appear that the relationship is strongly de-polarizing. Democrats with in districts with high unemployment and high import exposure tend to vote more conservative, while Republicans in similar districts tend to vote more liberal than other members of their party. This suggests that Chinese import exposure is indeed a strong moderating influence on the relationship between unemployment and voting behavior. Unfortunately, it is not possible to do a straightforward nested model comparison between the two-way and three-way interaction models, though further probing of the relationship could yield further insights into why these findings seem to run in opposite directions.
-
-```{r chinaint,fig.cap="Effect of Unemployment Conditional on Chinese Import Exposure per Worker, 1990-2010",eval=FALSE}
-
-# need to extract the values of the covariates
-
-legis_x <- rstan::extract(china_fit1@stan_samples,"legis_x")[[1]]
-
-# let's separate out the different values of the covariates
-
-unemp_rate <- legis_x[,2]
-import <- legis_x[,3]
-rep_unemp <- legis_x[,4]
-unemp_import <- legis_x[,6]
-rep_import <- legis_x[,7]
-rep_import_unemp <- legis_x[,9]
-
-# now we need make a grid of all values in the data
-
-import_range <- seq(min(china_fit@score_data@score_matrix$x,na.rm=T),
-                   max(china_fit@score_data@score_matrix$x,na.rm=T),
-                   by=0.1)
-
-
-# iterate over data and calculate average values of response
-# conditional for discrimination of different types
-
-china_pars <- rstan::extract(china_fit@stan_samples)
-
-all_plot_vals_rep <- lapply(import_range, function(i) {
-  # returns a data frame of all posterior draws for this particular 
-  # data combination
-  # iterate over discrimination vectors
-  
-  this_est <- lapply(1:nrow(china_pars$L_free), function(d) {
-    all_discrim <- china_pars$sigma_reg_free[d,]
-    pos_discrim <- all_discrim[all_discrim>0]
-    neg_discrim <- all_discrim[all_discrim<0]
-    pos <- tibble(y_pred_mean=mean(plogis((unemp_rate[d] + rep_unemp[d] +
-                                      unemp_import[d]*i +
-           rep_import_unemp[d]*i)*pos_discrim)
-           - 0.5),
-                     import=i,
-                     type="Pr(Yes|Conservative)")
-    
-    neg <- tibble(y_pred_mean=mean(plogis((unemp_rate[d] + rep_unemp[d] +
-                                      unemp_import[d]*i +
-           rep_import_unemp[d]*i)*neg_discrim)
-           - 0.5),
-                     import=i,
-                     type="Pr(Yes|Liberal)")
-    
-    combined <- bind_rows(pos,neg)
-    combined$iter <- d
-    combined$party <- "R"
-    combined
-  }) %>% bind_rows
-  
-  this_est
-}) %>% bind_rows
-
-all_plot_vals_dem <- lapply(import_range, function(i) {
-    
-  this_est <- lapply(1:nrow(china_pars$L_free), function(d) {
-    all_discrim <- china_pars$sigma_reg_free[d,]
-    pos_discrim <- all_discrim[all_discrim>0]
-    neg_discrim <- all_discrim[all_discrim<0]
-    pos <- tibble(y_pred_mean=mean(plogis((unemp_rate[d] + 
-                                      unemp_import[d]*i)*pos_discrim)-0.5),
-                     import=i,
-                     type="Pr(Yes|Conservative)")
-    
-    neg <- tibble(y_pred_mean=mean(plogis((unemp_rate[d] + 
-                                      unemp_import[d]*i)*neg_discrim)-0.5),
-                     import=i,
-                     type="Pr(Yes|Liberal)")
-    
-    combined <- bind_rows(pos,neg)
-    combined$iter <- d
-    combined$party <- "D"
-    combined
-  }) %>% bind_rows
-  
-  this_est
-}) %>% bind_rows
-
-# combine dems and reps
-
-combined_all <- bind_rows(all_plot_vals_rep,all_plot_vals_dem)
-
-# plot the bugger
-
-combined_all %>%
-  group_by(party,import,type) %>% 
-  summarize(y_pred_mean_mean=mean(y_pred_mean),
-            y_pred_low=quantile(y_pred_mean,.05),
-            y_pred_high=quantile(y_pred_mean,.95)) %>% 
-  ungroup %>% 
-  ggplot(aes(y=y_pred_mean_mean,x=import)) +
-  geom_errorbar(aes(ymin=y_pred_low,
-                     ymax=y_pred_high,
-                     color=party)) +
-  theme(panel.grid = element_blank(),
-        panel.background = element_blank(),
-        strip.background = element_blank(),
-        strip.text = element_text(face="bold")) +
-  facet_wrap(~type,scales="free") +
-  xlab("Import Exposure per Worker") +
-  ylab("Marginal Effect of Unemployment") +
-  scale_colour_manual(values=c("D"="blue",
-                               "R"="red")) +
-  scale_y_continuous(labels=scales::percent)
-#   
-
-ggsave("china_int_plot.png")
-
-```
- -->
-````
 
 # Discussion
 
