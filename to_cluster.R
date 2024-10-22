@@ -44,6 +44,8 @@ is_missing <- as.numeric(Sys.getenv("MISSING"))
 
 save_loc <- Sys.getenv("SAVELOC")
 
+num_pathfinder_paths <- Sys.getenv("PATHFIND")
+
 #is_missing <- 1
 
 spline_degree <- 4
@@ -679,11 +681,9 @@ if(modtype=="115") {
   
   unemp1 <- filter(unemp1, congress==115)
   
-  num_pathfinder_paths <- 4
-  
 } else {
   
-  num_pathfinder_paths <- 8
+  num_pathfinder_paths <- 2*num_pathfinder_paths
   
   if(fit_type=="china") {
     
