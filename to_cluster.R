@@ -44,7 +44,7 @@ is_missing <- as.numeric(Sys.getenv("MISSING"))
 
 save_loc <- Sys.getenv("SAVELOC")
 
-num_pathfinder_paths <- Sys.getenv("PATHFIND")
+num_pathfinder_paths <- as.numeric(Sys.getenv("PATHFIND"))
 
 #is_missing <- 1
 
