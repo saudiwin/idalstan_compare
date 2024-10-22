@@ -85,3 +85,25 @@ asahi_est <- id_estimate(asahi_em_ideal,restrict_ind_high=names(restrict_ind_hig
                          ncores=parallel::detectCores())
 
 saveRDS(asahi_est,"/lustre/scratch/rkubinec/asahi_est.rds")
+
+asahi_em_ideal2 <- mutate(as_tibble(AsahiTodai$dat.all),
+                         person_id=1:n()) %>% 
+  # sample_n(500) %>% 
+  gather(key = "item_id",
+         value="outcome_disc",
+         -person_id) %>% 
+  mutate(outcome_disc=na_if(outcome_disc, 0),
+         ordered_id=3,
+         model_id=3)
+
+asahi_em_ideal2 <- id_make(asahi_em_ideal2)
+
+asahi_est2 <- id_estimate(asahi_em_ideal2,restrict_ind_high=names(restrict_ind_high),
+                         restrict_ind_low=names(restrict_ind_low),
+                         const_type = "items",
+                         restrict_N_high = 5000,
+                         restrict_N_low=5000,
+                         nchains = 3,
+                         ncores=parallel::detectCores())
+
+saveRDS(asahi_est2,"/lustre/scratch/rkubinec/asahi_est2.rds")
