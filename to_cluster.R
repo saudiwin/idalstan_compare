@@ -62,8 +62,9 @@ max_treedepth <- as.numeric(as.numeric(Sys.getenv("TREEDEPTH")))
 #max_treedepth <- 12
 
 # set restrict SD for pinned items
+# constant of fixed N
 
-restrict_sd <- .01
+restrict_sd <- .010101*restrict_N
 
 # set restrict N for pinned items
 
