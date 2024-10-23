@@ -1,0 +1,148 @@
+---
+title: "Supplementary Information for Generalized Ideal Point Models"
+author: "Robert Kubinec"
+format: pdf
+---
+
+# Model Convergence Diagnostics
+
+```{r plotrhats}
+#| label: fig-rhat
+#| fig-cap: "Comparison of Convergence Diagnostics Across Specifications"
+#| message: false
+#| warning: false
+#| fig-height: 5
+#| fig-width: 6
+
+rhats1 + rhats2 + rhats3 + rhatgp + rhatar + rhatrw +
+  plot_layout(guides="collect",nrow=2) + 
+  plot_annotation(tag_levels="A",caption="Plots show split-Rhat values from three independent\nHamiltonian Markov Chain Monte Carlo chains with 500 post-warmup iterations per chain.") & theme(plot.title=element_text(size=10))
+
+```
+
+# China Import Tariff Model
+
+With the Chinese import shock data, we might surmise that polarization will increase among legislators in districts where Chinese import exposure per worker is very high. This kind of polarization could arise either by increasing divergence on trade-related legislation [@hall2015] or via increased foreign policy hostility to China [@kuk2017].
+
+> H2: When monthly unemployment rates rise in districts with a higher exposure to Chinese import competition, legislators in each party become more polarized.
+
+This hypothesis expresses a conditional relationship that runs in the opposite direction of the first hypothesis. It would seem that, as existing literature has shown, exposure to Chinese import shocks shifts legislators' ideal points on trade policy and increases polarization, that there should be a strongly interactive relationshp between district-level unemployment and Chinese import exposure. When both are high, we would have a strong prior that legislators will polarize away from each other. This hypothesis can be tested with a three-way interaction of party ID, unemployment rates and Chinese shock exposure at the district level.
+
+Here I examine to the results of the Chinese import exposure model. The ideal point marginal effects for this model are shown in Figure \@ref(fig:chinapl). Unfortunately, it is not possible to read off the interactive relationship as the main effect is a continuous by continuous by binary variable interaction. The only way to interpret this relationship is by calculating the effect of the interaction for different values of Chinese import exposure per worker and party ID. This plot for the mean posterior values is shown in Figure \@ref(fig:chinaint). There is a strongly non-linear relationship between Chinese import exposure and unemployment. At low rates of Chinese import exposure, unemployment appears to have a weak effect on legislators in either party. At higher levels of import exposure, however, there is a much stronger relationship. In this case, it would appear that the relationship is strongly de-polarizing. Democrats with in districts with high unemployment and high import exposure tend to vote more conservative, while Republicans in similar districts tend to vote more liberal than other members of their party. This suggests that Chinese import exposure is indeed a strong moderating influence on the relationship between unemployment and voting behavior. Unfortunately, it is not possible to do a straightforward nested model comparison between the two-way and three-way interaction models, though further probing of the relationship could yield further insights into why these findings seem to run in opposite directions.
+
+
+```{r chinaint,fig.cap="Effect of Unemployment Conditional on Chinese Import Exposure per Worker, 1990-2010",eval=FALSE}
+
+# need to extract the values of the covariates
+
+legis_x <- rstan::extract(china_fit1@stan_samples,"legis_x")[[1]]
+
+# let's separate out the different values of the covariates
+
+unemp_rate <- legis_x[,2]
+import <- legis_x[,3]
+rep_unemp <- legis_x[,4]
+unemp_import <- legis_x[,6]
+rep_import <- legis_x[,7]
+rep_import_unemp <- legis_x[,9]
+
+# now we need make a grid of all values in the data
+
+import_range <- seq(min(china_fit@score_data@score_matrix$x,na.rm=T),
+                   max(china_fit@score_data@score_matrix$x,na.rm=T),
+                   by=0.1)
+
+
+# iterate over data and calculate average values of response
+# conditional for discrimination of different types
+
+china_pars <- rstan::extract(china_fit@stan_samples)
+
+all_plot_vals_rep <- lapply(import_range, function(i) {
+  # returns a data frame of all posterior draws for this particular 
+  # data combination
+  # iterate over discrimination vectors
+  
+  this_est <- lapply(1:nrow(china_pars$L_free), function(d) {
+    all_discrim <- china_pars$sigma_reg_free[d,]
+    pos_discrim <- all_discrim[all_discrim>0]
+    neg_discrim <- all_discrim[all_discrim<0]
+    pos <- tibble(y_pred_mean=mean(plogis((unemp_rate[d] + rep_unemp[d] +
+                                      unemp_import[d]*i +
+           rep_import_unemp[d]*i)*pos_discrim)
+           - 0.5),
+                     import=i,
+                     type="Pr(Yes|Conservative)")
+    
+    neg <- tibble(y_pred_mean=mean(plogis((unemp_rate[d] + rep_unemp[d] +
+                                      unemp_import[d]*i +
+           rep_import_unemp[d]*i)*neg_discrim)
+           - 0.5),
+                     import=i,
+                     type="Pr(Yes|Liberal)")
+    
+    combined <- bind_rows(pos,neg)
+    combined$iter <- d
+    combined$party <- "R"
+    combined
+  }) %>% bind_rows
+  
+  this_est
+}) %>% bind_rows
+
+all_plot_vals_dem <- lapply(import_range, function(i) {
+    
+  this_est <- lapply(1:nrow(china_pars$L_free), function(d) {
+    all_discrim <- china_pars$sigma_reg_free[d,]
+    pos_discrim <- all_discrim[all_discrim>0]
+    neg_discrim <- all_discrim[all_discrim<0]
+    pos <- tibble(y_pred_mean=mean(plogis((unemp_rate[d] + 
+                                      unemp_import[d]*i)*pos_discrim)-0.5),
+                     import=i,
+                     type="Pr(Yes|Conservative)")
+    
+    neg <- tibble(y_pred_mean=mean(plogis((unemp_rate[d] + 
+                                      unemp_import[d]*i)*neg_discrim)-0.5),
+                     import=i,
+                     type="Pr(Yes|Liberal)")
+    
+    combined <- bind_rows(pos,neg)
+    combined$iter <- d
+    combined$party <- "D"
+    combined
+  }) %>% bind_rows
+  
+  this_est
+}) %>% bind_rows
+
+# combine dems and reps
+
+combined_all <- bind_rows(all_plot_vals_rep,all_plot_vals_dem)
+
+# plot the bugger
+
+combined_all %>%
+  group_by(party,import,type) %>% 
+  summarize(y_pred_mean_mean=mean(y_pred_mean),
+            y_pred_low=quantile(y_pred_mean,.05),
+            y_pred_high=quantile(y_pred_mean,.95)) %>% 
+  ungroup %>% 
+  ggplot(aes(y=y_pred_mean_mean,x=import)) +
+  geom_errorbar(aes(ymin=y_pred_low,
+                     ymax=y_pred_high,
+                     color=party)) +
+  theme(panel.grid = element_blank(),
+        panel.background = element_blank(),
+        strip.background = element_blank(),
+        strip.text = element_text(face="bold")) +
+  facet_wrap(~type,scales="free") +
+  xlab("Import Exposure per Worker") +
+  ylab("Marginal Effect of Unemployment") +
+  scale_colour_manual(values=c("D"="blue",
+                               "R"="red")) +
+  scale_y_continuous(labels=scales::percent)
+#   
+
+ggsave("china_int_plot.png")
+
+```
