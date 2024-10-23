@@ -36,6 +36,10 @@ fit_type <- as.numeric(Sys.getenv("FITTYPE"))
 fit_type <- switch(fit_type,"spline1","spline2","spline3","china",
                   "GP","ar1","rw")
 
+# whether to use a data sample
+
+run_test <- as.numeric(Sys.getenv("TEST"))
+
 modtype <- Sys.getenv("DATATYPE")
 
 #modtype <- "115"
@@ -667,6 +671,16 @@ num_days <- distinct(unemp1,bioname,date_month) %>%
 unemp1 <- anti_join(unemp1, filter(legis_count, n_votes_nonunam<25),by="bioname") %>% 
   anti_join(filter(num_days,n<10),by="bioname")
 
+if(run_test) {
+  
+  test_set <- sample(unique(unemp1$item),500)
+  unemp1 <- filter(unemp1, item %in% c(test_set,
+                             collapse_restrict$restrict_ind_high,
+                             collapse_restrict$restrict_ind_low))
+  
+  
+}
+
 
 # set restrictions --------------------------------------------------------
 
@@ -707,7 +721,7 @@ if(modtype=="115") {
 
 # data file for all models that follow
 
-unemp1 <- unemp1  %>% 
+unemp1_id <- unemp1  %>% 
   id_make(outcome_disc="cast_code",
           item_id="item",
           person_id="bioname",
@@ -717,7 +731,7 @@ unemp1 <- unemp1  %>%
   
   if(fit_type=="spline1") {
     
-    unemp1_fit <- id_estimate(unemp1,model_type=is_missing,
+    unemp1_fit <- id_estimate(unemp1_id,model_type=is_missing,
                               vary_ideal_pts = 'splines',
                               niters=niters,
                               warmup=nwarmup,
@@ -751,7 +765,7 @@ unemp1 <- unemp1  %>%
   
   if(fit_type=="spline2") {
     
-    unemp2_fit <- id_estimate(unemp1,model_type=is_missing,
+    unemp2_fit <- id_estimate(unemp1_id,model_type=is_missing,
                               vary_ideal_pts = 'splines',
                               niters=niters,
                               warmup=nwarmup,
@@ -786,7 +800,7 @@ unemp1 <- unemp1  %>%
   if(fit_type=="spline3") {
     
     
-    unemp3_fit <- id_estimate(unemp1,model_type=is_missing,
+    unemp3_fit <- id_estimate(unemp1_id,model_type=is_missing,
                               vary_ideal_pts = 'splines',
                               niters=niters,
                               warmup=nwarmup,
@@ -843,7 +857,7 @@ if(fit_type=="GP") {
   #           remove_cov_int = T,
   #           person_cov = ~unemp_rate_yoy*party_code)
   
-  unemp_gp_fit <- id_estimate(unemp1,model_type=is_missing,vary_ideal_pts = 'GP',
+  unemp_gp_fit <- id_estimate(unemp1_id,model_type=is_missing,vary_ideal_pts = 'GP',
                               niters=niters,
                               warmup=nwarmup,prior_only=prior_only,
                               ncores=parallel::detectCores(),nchain=2,
@@ -872,7 +886,7 @@ if(fit_type=="GP") {
 
 if(fit_type=="ar1") {
   
-  unemp1_ar_fit <- id_estimate(unemp1,model_type=is_missing,
+  unemp1_ar_fit <- id_estimate(unemp1_id,model_type=is_missing,
                                vary_ideal_pts = 'AR1',
                                niters=niters,
                                warmup=nwarmup,
@@ -904,7 +918,7 @@ if(fit_type=="ar1") {
 
 if(fit_type=="rw") {
   
-  unemp1_rw_fit <- id_estimate(unemp1,model_type=is_missing,
+  unemp1_rw_fit <- id_estimate(unemp1_id,model_type=is_missing,
                                vary_ideal_pts = 'random_walk',
                                niters=niters,
                                # more warmup as having some convergence issues
