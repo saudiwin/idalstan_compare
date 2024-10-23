@@ -61,14 +61,14 @@ max_treedepth <- as.numeric(as.numeric(Sys.getenv("TREEDEPTH")))
 
 #max_treedepth <- 12
 
+# set restrict N for pinned items
+
+restrict_N <- as.numeric(as.numeric(Sys.getenv("RESTRICTN")))
+
 # set restrict SD for pinned items
 # constant of fixed N
 
 restrict_sd <- .010101*restrict_N
-
-# set restrict N for pinned items
-
-restrict_N <- as.numeric(as.numeric(Sys.getenv("RESTRICTN")))
 
 print(paste0("Save location is: ",paste0(save_loc,modtype,is_missing,"_",max_treedepth,"_","1_fit.rds")))
 
