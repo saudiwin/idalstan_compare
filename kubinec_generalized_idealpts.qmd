@@ -41,7 +41,7 @@ library(marginaleffects)
 
 # set to true to create all analyses from fitted idealstan models
 # requires significant time and RAM (especially the latter)
-run_all <- F
+run_all <- T
 
 # see file to_cluster.R for the fitting of the actual idealstan models
 
