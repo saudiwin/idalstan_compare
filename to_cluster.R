@@ -684,8 +684,6 @@ if(modtype=="115") {
   
 } else {
   
-  num_pathfinder_paths <- 2*num_pathfinder_paths
-  
   if(fit_type=="china") {
     
     restrict_ind_high <- collapse_restrict$restrict_ind_high[collapse_restrict$congress<112]
