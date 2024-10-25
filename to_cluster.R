@@ -54,9 +54,10 @@ num_pathfinder_paths <- as.numeric(Sys.getenv("PATHFIND"))
 
 spline_degree <- 4
 
-niters <- 300
-nwarmup <- 500
-nchains <- 3
+niters <- as.numeric(Sys.getenv("ITERS"))
+nwarmup <- as.numeric(Sys.getenv("WARMUP"))
+nchains <- as.numeric(Sys.getenv("CHAINS"))
+debug_mode <- as.numeric(Sys.getenv("DEBUG"))
 
 
 # set max treedepth (for spline models)
@@ -757,7 +758,8 @@ unemp1_id <- unemp1  %>%
                               fixtype="prefix",
                               adapt_delta=0.95,
                               num_pathfinder_paths=num_pathfinder_paths,
-                              id_refresh=100)
+                              id_refresh=100,
+                              debug_mode=debug_mode)
     
     saveRDS(unemp1_fit,paste0(save_loc,modtype,is_missing,"_",max_treedepth,"_","1_fit.rds"))
     
@@ -790,7 +792,8 @@ unemp1_id <- unemp1  %>%
                               fixtype="prefix",
                               adapt_delta=0.95,
                               num_pathfinder_paths=num_pathfinder_paths,
-                              id_refresh=100)
+                              id_refresh=100,
+                              debug_mode=debug_mode)
     
     saveRDS(unemp2_fit,paste0(save_loc,"unemp",modtype,is_missing,"_",max_treedepth,"_","2_fit.rds"))
     
@@ -825,7 +828,8 @@ unemp1_id <- unemp1  %>%
                               fixtype="prefix",
                               adapt_delta=0.95,
                               num_pathfinder_paths=num_pathfinder_paths,
-                              id_refresh=100)
+                              id_refresh=100,
+                              debug_mode=debug_mode)
     
     saveRDS( unemp3_fit,paste0(save_loc,"unemp",modtype,is_missing,"_",max_treedepth,"_","3_fit.rds"))
     
@@ -858,9 +862,9 @@ if(fit_type=="GP") {
   #           person_cov = ~unemp_rate_yoy*party_code)
   
   unemp_gp_fit <- id_estimate(unemp1_id,model_type=is_missing,vary_ideal_pts = 'GP',
-                              niters=niters,
+                              niters=niters,nchains=nchains,
                               warmup=nwarmup,prior_only=prior_only,
-                              ncores=parallel::detectCores(),nchain=2,
+                              ncores=parallel::detectCores(),nchain=nchains,
                               fixtype="prefix",
                               const_type = "items",
                               restrict_ind_high = restrict_ind_high[!is.na(restrict_ind_high)],
@@ -874,7 +878,8 @@ if(fit_type=="GP") {
                               
                               use_groups = F,
                               num_pathfinder_paths=num_pathfinder_paths,
-                              id_refresh=100)
+                              id_refresh=100,
+                              debug_mode=debug_mode)
   
   saveRDS(unemp_gp_fit, paste0(save_loc,"unemp",modtype,"_",is_missing,"_",max_treedepth,"_","_gp_fit.rds"))
   
@@ -907,7 +912,8 @@ if(fit_type=="ar1") {
                                fixtype="prefix",restrict_var = FALSE,
                                adapt_delta=0.95,max_treedepth=max_treedepth,
                                num_pathfinder_paths=num_pathfinder_paths,
-                               id_refresh=100)
+                               id_refresh=100,
+                               debug_mode=debug_mode)
   
   saveRDS(unemp1_ar_fit, paste0(save_loc,"unemp",modtype,"_",is_missing,"_",max_treedepth,"_","1_ar_fit.rds"))
   
@@ -940,7 +946,8 @@ if(fit_type=="rw") {
                                
                                adapt_delta=0.95,max_treedepth=max_treedepth,
                                num_pathfinder_paths=num_pathfinder_paths,
-                               id_refresh=100)
+                               id_refresh=100,
+                               debug_mode=debug_mode)
   
   saveRDS(unemp1_rw_fit, paste0(save_loc,"unemp",modtype,"_",is_missing,"_",max_treedepth,"_","1_rw_fit.rds"))
   
@@ -1004,7 +1011,8 @@ if(fit_type=="china") {
                             fixtype="prefix",
                             adapt_delta=0.95,max_treedepth=max_treedepth,
                             num_pathfinder_paths=num_pathfinder_paths,
-                            id_refresh=100)
+                            id_refresh=100,
+                            debug_mode=debug_mode)
   
   saveRDS(china_fit1,paste0('save_loc/china_',modtype,"_",is_missing,"_",max_treedepth,"_",'_fit1.rds'))
   
