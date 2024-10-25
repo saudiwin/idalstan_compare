@@ -83,7 +83,7 @@ asahi_est <- id_estimate(asahi_em_ideal,restrict_ind_high=names(restrict_ind_hig
                          restrict_N_low=5000,
                          restrict_sd_high = 5000*.010101,
                          restrict_sd_low=5000*.010101,
-                         nchains = 3,
+                         nchains = 1,niters = 1,warmup = 1,debug_mode = T,
                          ncores=parallel::detectCores(),
                          num_pathfinder_paths = 10)
 
