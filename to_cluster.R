@@ -864,7 +864,7 @@ if(fit_type=="GP") {
   unemp_gp_fit <- id_estimate(unemp1_id,model_type=is_missing,vary_ideal_pts = 'GP',
                               niters=niters,nchains=nchains,
                               warmup=nwarmup,prior_only=prior_only,
-                              ncores=parallel::detectCores(),nchain=nchains,
+                              ncores=parallel::detectCores(),
                               fixtype="prefix",
                               const_type = "items",
                               restrict_ind_high = restrict_ind_high[!is.na(restrict_ind_high)],
