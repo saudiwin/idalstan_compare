@@ -38,10 +38,11 @@ require(forcats)
 library(patchwork)
 library(posterior)
 library(marginaleffects)
+library(tinytable)
 
 # set to true to create all analyses from fitted idealstan models
 # requires significant time and RAM (especially the latter)
-run_all <- T
+run_all <- F
 
 # see file to_cluster.R for the fitting of the actual idealstan models
 
@@ -866,6 +867,24 @@ if(run_all) {
   
   # do plots/rhats here
   
+    un1bigm <- id_plot_legis_dyn(unemp1_all_fitm,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("Spline of 2nd Degree") + labs(y="") +
+  scale_x_date(guide = guide_axis(n.dodge = 2))
+  
+  saveRDS(un1bigm, "data/un1bigm.rds")
+
+un2bigm <- id_plot_legis_dyn(unemp2_all_fitm,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("Spline of 3rd Degree") + labs(y="") +
+  scale_x_date(guide = guide_axis(n.dodge = 2))
+
+  saveRDS(un2bigm, "data/un2bigm.rds")
+
+un3bigm <- id_plot_legis_dyn(unemp3_all_fitm,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
+                              D="blue",I="green"),name="") + ggtitle("Spline of 4th Degree") + labs(y="") +
+  scale_x_date(guide = guide_axis(n.dodge = 2))
+
+  saveRDS(un3bigm, "data/un3bigm.rds")
+  
 }
 
 
@@ -899,25 +918,21 @@ un1 + un2 + un3 + ar + gp + rw + plot_layout(nrow=2,
 ```{r distscompwalz}
 #| include: false
 
-if(run_all) {
-  
+
   un1_tw <- readRDS("data/un1_tw.rds")
   un2_tw <- readRDS("data/un2_tw.rds")
   un3_tw <- readRDS("data/un3_tw.rds")
   gp_tw <- readRDS("data/gp_tw.rds")
   rw_tw <- readRDS("data/rw_tw.rds")
   ar_tw <- readRDS("data/ar_tw.rds")
-  
-}
-
 
 
 
 ```
 
-```{r distsamash}
+```{r distsamash1}
 #| label: fig-amashdist
-#| fig-cap: "Comparison of Justin Amash Time-varying Ideal Points for the 115th Congress"
+#| fig-cap: "Comparison of Justin Amash Time-varying Ideal Points for the 115th Congress with Observed Votes"
 #| message: false
 #| warning: false
 #| fig-height: 6
@@ -937,9 +952,9 @@ un1_a + un2_a + un3_a + ar_a + gp_a + rw_a + plot_layout(nrow=2,
 
 ```
 
-```{r distsamash1}
+```{r distsamash2}
 #| label: fig-amashdist1
-#| fig-cap: "Comparison of Justin Amash Time-varying Ideal Points for the 115th Congress without Missing Votes"
+#| fig-cap: "Comparison of Justin Amash Time-varying Ideal Points for the 115th Congress with Missing Votes"
 #| message: false
 #| warning: false
 #| fig-height: 6
@@ -959,7 +974,49 @@ un1_am + un2_am + un3_am + ar_am + gp_am + rw_am + plot_layout(nrow=2,
 
 ```
 
+```{r distswalz1}
+#| label: fig-walzdist1
+#| fig-cap: "Comparison of Tim Walz Time-varying Ideal Points for the 115th Congress with Observed Votes"
+#| message: false
+#| warning: false
+#| fig-height: 6
+#| fig-width: 6
 
+  un1_tw <- readRDS("data/un1_tw.rds")
+  un2_tw <- readRDS("data/un2_tw.rds")
+  un3_tw <- readRDS("data/un3_tw.rds")
+  gp_tw <- readRDS("data/gp_tw.rds")
+  rw_tw <- readRDS("data/rw_tw.rds")
+  ar_tw <- readRDS("data/ar_tw.rds")
+
+un1_tw + un2_tw + un3_tw + ar_tw + gp_tw + rw_tw + plot_layout(nrow=2,
+                                             guides="collect") + 
+  plot_annotation(caption="Posterior average values shown for 115th Congress legislator ideal points.\nItem discrimination for Republican party-line votes was constrained to be positive.") & theme(legend.position = "top",
+                                                                                                                                                                                                    plot.title=element_text(size=9))
+
+```
+
+```{r distswalz2}
+#| label: fig-walzdist2
+#| fig-cap: "Comparison of Tim Walz Time-varying Ideal Points for the 115th Congress with Missing Votes"
+#| message: false
+#| warning: false
+#| fig-height: 6
+#| fig-width: 6
+
+  un1_twm <- readRDS("data/un1_twm.rds")
+  un2_twm <- readRDS("data/un2_twm.rds")
+  un3_twm <- readRDS("data/un3_twm.rds")
+  gp_twm <- readRDS("data/gp_twm.rds")
+  rw_twm <- readRDS("data/rw_twm.rds")
+  ar_twm <- readRDS("data/ar_twm.rds")
+
+un1_twm + un2_twm + un3_twm + ar_twm + gp_twm + rw_twm + plot_layout(nrow=2,
+                                             guides="collect") + 
+  plot_annotation(caption="Posterior average values shown for 115th Congress legislator ideal points.\nItem discrimination for Republican party-line votes was constrained to be positive.") & theme(legend.position = "top",
+                                                                                                                                                                                                    plot.title=element_text(size=9))
+
+```
 
 ```{r absence}
 #| fig-cap: "Time-varying Absence Rates in the 115th Senate"
@@ -978,8 +1035,13 @@ rollcalls %>%
   ggplot(aes(y=Absences,x=date_month)) +
   geom_line(aes(colour=party_code,linetype=party_code)) +
   stat_smooth(aes(linetype=party_code),method="lm") +
+  scale_y_continuous(labels=scales::percent) +
+  labs(y="% Absent per Vote",x="",
+       caption="Dotted lines indicate Congressional sessions.") +
+  guides(linetype=guide_legend(title="Party"),
+         colour=guide_legend(title="Party")) +
   geom_vline(aes(xintercept=session_day_counter),linetype=3) +
-  theme_minimal() + 
+  ggthemes::theme_clean() + 
   ylim(c(0,0.27))
 
 ```
@@ -1001,7 +1063,12 @@ c1 <- lm(Absences ~ session_day_counter +
            I(session_day_counter^3) +
              factor(congress),data=rollcalls_abs)
 
-plot_predictions(c1,condition = "session_day_counter")
+plot_predictions(c1,condition = "session_day_counter") +
+  ggthemes::theme_clean() + 
+  scale_y_continuous(labels=scales::percent) +
+  labs(y="% Absent by Vote",
+       x="Days in Session",
+       caption="Plot shows fitted line from OLS polynomial regression on absent rates by number of days into a Congressional session.")
 
 ```
 
@@ -1030,7 +1097,10 @@ readRDS("data/cov_combined.rds") %>%
   filter(Variable %in% c("Unemployment",
                          "GOP",
                          "UnemploymentXGOP")) %>% 
-  knitr::kable(digit=3,booktabs=T)
+  tt(digits=3,
+     notes="Plot shows hierarchical legislator-levle covariates for different ideal point models, including time functions and whether or not the model accounted for missingness.") %>% 
+  style_tt(i=1:36,
+           fontsize=.7)
 
 ```
 

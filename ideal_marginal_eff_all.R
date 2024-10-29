@@ -81,9 +81,9 @@ m <- Sys.getenv("MODTYPE")
 
 
 m_loc <- switch(m,
-                  spline1="/scratch/rmk7/unempall_12_1_fit.rds",
-                  spline2="/scratch/rmk7/unempall_12_2_fit.rds",
-                  spline3="/scratch/rmk7/unempall_12_3_fit.rds")
+                  spline1="/lustre/scratch/rkubinec/unempall1_12_1_fit.rds",
+                  spline2="/lustre/scratch/rkubinec/unempall1_12_2_fit.rds",
+                  spline3="/lustre/scratch/rkubinec/unempall1_12_3_fit.rds")
   
   
   test_mod <- readRDS(m_loc)
@@ -106,29 +106,33 @@ m_loc <- switch(m,
   
   # figure out this partition\
   
-  remainder <- length(levels(test_mod_data$item)) %% num_partition
+  # remainder <- length(levels(test_mod_data$item)) %% num_partition
+  # 
+  # indices <- c(rep(1:num_partition, each=floor(length(levels(test_mod_data$item))/num_partition)),
+  #              rep(num_partition, times=remainder))
   
-  indices <- c(rep(1:num_partition, each=floor(length(levels(test_mod_data$item))/num_partition)),
-               rep(num_partition, times=remainder))
+  print("Predicting one")
   
   test_mod_pred1 <- id_post_pred(test_mod,newdata=new_data1,
                                  use_cores=floor(parallel::detectCores()/2),
-                                 item_subset=levels(test_mod_data$item)[indices==partition],
+                                 item_subset=levels(test_mod_data$item),
                                  type="epred",
                                  draws=draws)
+  print("Predicting two")
+  
   test_mod_pred2 <- id_post_pred(test_mod,newdata=new_data2,
                                  use_cores=floor(parallel::detectCores()/2),
-                                 item_subset=levels(test_mod_data$item_id)[indices==partition],
+                                 item_subset=levels(test_mod_data$item_id),
                                  type="epred",
                                  draws=draws)
   
-  saveRDS(test_mod_pred1, paste0("/scratch/rmk7/unemp_all_pred1_",m,"_partition",partition,
-                                 ".rds"))
-  saveRDS(test_mod_pred2, paste0("/scratch/rmk7/unemp_all_pred2_",m,"_partition",partition,
-                                 ".rds"))
+  saveRDS(test_mod_pred1, "/lustre/scratch/rkubinec/unemp_all_pred1.rds")
+  saveRDS(test_mod_pred2, "/lustre/scratch/rkubinec/unemp_all_pred2.rds")
   
   # walk over both predictions to get item and overall effects
   # AMEs per item
+  
+  print("Looping over items")
   
   c1 <- purrr::map2(test_mod_pred1,
                     test_mod_pred2,
@@ -240,7 +244,7 @@ m_loc <- switch(m,
     ggtitle("Marginal Effect of District Monthly Unemployment on Rollcall Votes in 115th Congress",
             subtitle="Marginal Effect of Unemployment Mediated by Legislator Ideal Point and Bill Discrimination")
   
-  ggsave(paste0("/scratch/rmk7/rollcalls_all_",m,".jpg"),height=7,width=7)
+  ggsave(paste0("/lustre/scratch/rkubinec/rollcalls_all_",m,".jpg"),height=7,width=7)
   
   by_party %>% 
     ungroup %>% 
@@ -266,7 +270,7 @@ m_loc <- switch(m,
     ggtitle("Marginal Effect of District Monthly Unemployment on Rollcall Votes in 115th Congress",
             subtitle="Marginal Effect of Unemployment Mediated by Legislator Ideal Point and Bill Discrimination")
   
-  ggsave(paste0("/scratch/rmk7/rollcalls_overlay_all_",m,".jpg"),height=7,width=7)
+  ggsave(paste0("/lustre/scratch/rkubinec/rollcalls_overlay_all_",m,".jpg"),height=7,width=7)
 
 
 # test_mod <- id_estimate(unemp1_obj,model_type=2,
