@@ -644,8 +644,7 @@ ar_a <- id_plot_legis_dyn(unemp_ar_fit,use_ci=T,include="AMASH, Justin",plot_tex
 
 rw_a <- id_plot_legis_dyn(unemp_rw_fit,use_ci=T,include="AMASH, Justin",plot_text = F) + scale_color_manual(values=c(R="red",
                               D="blue",I="green"),name="") + ggtitle("Random Walk") +
-  scale_x_date(guide = guide_axis(n.dodge = 2)) + labs(y="") +
-  scale_y_reverse()
+  scale_x_date(guide = guide_axis(n.dodge = 2)) + labs(y="")
 
   saveRDS(rw_a, "data/rw_a.rds")
   
@@ -682,8 +681,7 @@ ar_am <- id_plot_legis_dyn(unemp_ar_fitm,use_ci=T,include="AMASH, Justin",plot_t
 
 rw_am <- id_plot_legis_dyn(unemp_rw_fitm,use_ci=T,include="AMASH, Justin",plot_text = F) + scale_color_manual(values=c(R="red",
                               D="blue",I="green"),name="") + ggtitle("Random Walk") +
-  scale_x_date(guide = guide_axis(n.dodge = 2)) + labs(y="") +
-  scale_y_reverse()
+  scale_x_date(guide = guide_axis(n.dodge = 2)) + labs(y="")
 
   saveRDS(rw_am, "data/rw_am.rds")
   
@@ -722,8 +720,7 @@ ar_tw <- id_plot_legis_dyn(unemp_ar_fit,use_ci=T,include="WALZ, Tim",plot_text =
 
 rw_tw <- id_plot_legis_dyn(unemp_rw_fit,use_ci=T,include="WALZ, Tim",plot_text = F) + scale_color_manual(values=c(R="red",
                               D="blue",I="green"),name="") + ggtitle("Random Walk") +
-  scale_x_date(guide = guide_axis(n.dodge = 2)) + labs(y="") +
-  scale_y_reverse()
+  scale_x_date(guide = guide_axis(n.dodge = 2)) + labs(y="")
 
   saveRDS(rw_tw, "data/rw_tw.rds")
   
@@ -762,8 +759,7 @@ ar_twm <- id_plot_legis_dyn(unemp_ar_fitm,use_ci=T,include="WALZ, Tim",plot_text
 
 rw_twm <- id_plot_legis_dyn(unemp_rw_fitm,use_ci=T,include="WALZ, Tim",plot_text = F) + scale_color_manual(values=c(R="red",
                               D="blue",I="green"),name="") + ggtitle("Random Walk") +
-  scale_x_date(guide = guide_axis(n.dodge = 2)) + labs(y="") +
-  scale_y_reverse()
+  scale_x_date(guide = guide_axis(n.dodge = 2)) + labs(y="")
 
   saveRDS(rw_twm, "data/rw_twm.rds")
   
@@ -895,7 +891,7 @@ I next examine the overall distributions of the ideal point scores over time for
 
 ```{r dists}
 #| label: fig-alldist
-#| fig-cap: "Comparison of Time-varying Ideal Point Methods for the 115th Congress"
+#| fig-cap: "Comparison of Time-varying Ideal Point Methods for the 115th Congress with Observed Votes"
 #| message: false
 #| warning: false
 #| fig-height: 6
@@ -909,6 +905,28 @@ I next examine the overall distributions of the ideal point scores over time for
   gp <- readRDS("data/gp.rds")
 
 un1 + un2 + un3 + ar + gp + rw + plot_layout(nrow=2,
+                                             guides="collect") + 
+  plot_annotation(caption="Posterior average values shown for 115th Congress legislator ideal points.\nItem discrimination for Republican party-line votes was constrained to be positive.") & theme(legend.position = "top",
+                                                                                                                                                                                                    plot.title=element_text(size=9))
+
+```
+
+```{r dists2}
+#| label: fig-alldist2
+#| fig-cap: "Comparison of Time-varying Ideal Point Methods for the 115th Congress with Missing Votes"
+#| message: false
+#| warning: false
+#| fig-height: 6
+#| fig-width: 6
+
+  un1m <- readRDS("data/un1m.rds")
+  un2m <- readRDS("data/un2m.rds")
+  un3m <- readRDS("data/un3m.rds")
+  rwm <- readRDS("data/rwm.rds")
+  arm <- readRDS("data/arm.rds")
+  gpm <- readRDS("data/gpm.rds")
+
+un1m + un2m + un3m + arm + gpm + rwm + plot_layout(nrow=2,
                                              guides="collect") + 
   plot_annotation(caption="Posterior average values shown for 115th Congress legislator ideal points.\nItem discrimination for Republican party-line votes was constrained to be positive.") & theme(legend.position = "top",
                                                                                                                                                                                                     plot.title=element_text(size=9))
