@@ -103,14 +103,14 @@ asahi_em_ideal2 <- id_make(asahi_em_ideal2)
 
 asahi_est2 <- id_estimate(asahi_em_ideal2,restrict_ind_high=names(restrict_ind_high),
                          restrict_ind_low=names(restrict_ind_low),
-                         const_type = "items",
+                         const_type = "items",niters = 1,warmup = 1,
                          restrict_N_high = 5000,
                          restrict_N_low=5000,
                          restrict_sd_high = 5000*.010101,
                          restrict_sd_low=5000*.010101,
-                         nchains = 3,
+                         nchains = 1,
                          ncores=parallel::detectCores(),
-                         num_pathfinder_paths = 10)
+                         num_pathfinder_paths = 10,debug_mode=TRUE)
 
 saveRDS(asahi_est2,"/lustre/scratch/rkubinec/asahi_est2.rds")
 
