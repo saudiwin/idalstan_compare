@@ -83,9 +83,9 @@ asahi_est <- id_estimate(asahi_em_ideal,restrict_ind_high=names(restrict_ind_hig
                          restrict_N_low=5000,
                          restrict_sd_high = 5000*.010101,
                          restrict_sd_low=5000*.010101,
-                         nchains = 1,niters = 1,warmup = 1,debug_mode = T,
+                         nchains = 3,niters = 300,warmup = 500,debug_mode = FALSE,
                          ncores=parallel::detectCores(),
-                         num_pathfinder_paths = 10)
+                         num_pathfinder_paths = 4)
 
 saveRDS(asahi_est,"/lustre/scratch/rkubinec/asahi_est.rds")
 
