@@ -645,9 +645,10 @@ collapse_restrict <- mutate(collapse_restrict,
                             restrict_ind_high=ifelse(restrict_ind_high %in% unique(restrict_check_high$item), NA,restrict_ind_high),
                             restrict_ind_low=ifelse(restrict_ind_low %in% unique(restrict_check_low$item), NA,restrict_ind_low))
 
-# add one more for democrats in the 115th
+# add two more for democrats in the 115th
 
 collapse_restrict$restrict_ind_low[nrow(collapse_restrict)-1] <- "115_1120"
+collapse_restrict$restrict_ind_low[nrow(collapse_restrict)] <- "115_252"
   
 
 legis_count <- group_by(unemp1, item) %>% 
