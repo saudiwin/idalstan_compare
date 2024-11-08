@@ -81,9 +81,9 @@ m <- Sys.getenv("MODTYPE")
 
 
 m_loc <- switch(m,
-                  spline1="/lustre/scratch/rkubinec/unempall1_12_1_fit.rds",
-                  spline2="/lustre/scratch/rkubinec/unempall1_12_2_fit.rds",
-                  spline3="/lustre/scratch/rkubinec/unempall1_12_3_fit.rds")
+                  spline1="/lustre/scratch/rkubinec/1151_12_1_fit.rds",
+                  spline2="/lustre/scratch/rkubinec/unemp1151_12_2_fit.rds",
+                  spline3="/lustre/scratch/rkubinec/unemp1151_12_3_fit.rds")
   
   
   test_mod <- readRDS(m_loc)

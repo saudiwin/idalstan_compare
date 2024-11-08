@@ -2,8 +2,8 @@
 title: 'Generalized Ideal Point Models for Robust Measurement with Dirty Data in the Social Sciences'
 author: 
   - name: "Robert Kubinec"
-    affiliation: New York University Abu Dhabi
-    email: rmk7@nyu.edu
+    affiliation: University of South Carolina
+    email: rkubinec@mailbox.sc.edu
     corresponding: true
 date: last-modified
 execute: 
@@ -12,9 +12,10 @@ execute:
   warning: false
   error: false
 date-format: long
-format: pdf
+format: 
+  wordcount-pdf: default
 linestretch: 1.5
-abstract: 'This  paper presents a Bayesian version of the ideal point model that employs advances in computation and probabilistic programming to permit inference given non-ignorable missing data, diverse distributions, time-series processes, and hierarchical covariates. Furthermore, to better understand how external covariates affect ideal points, I put forward a new item-level quantity of interest, ideal point marginal effects, that are defined as the percent change in supporting an item (bill) for a one-unit change in a person-specific covariate. With this package, I provide the first monthly ideal point estimates for legislators in the U.S. House from 1990 to 2018 that include district-level unemployment as an external covariate. I further demonstrate the utility of the package with a study of voting behavior in the 115th Congress of the United States that reveals how the choice different time series processes affects inference and under what conditions abstention from votes is likely due to strategic behavior. All of these models are available via the R package `idealstan` with Hamiltonian Markov Chain Monte Carlo in Stan.'
+abstract: 'This  paper drives a Bayesian version of the popular ideal point model that employs advances in computation and probabilistic programming to create a general purpose measurement tool for diverse data in the social sciences. The particular areas in which the model is generalized include diverse mixed distributions, multiple time series processes, parallelization for big datasets, as well as a novel adjustment for non-ignorable missing data. Furthermore, to better understand how external covariates affect ideal points, I put forward a new item-level quantity of interest, ideal point marginal effects, that are defined as the percent change in supporting an item (bill) for a one-unit change in a person-specific covariate. To illustrate the utility of these advances, I provide the first monthly ideal point estimates for all members of the U.S. House from 1990 to 2018 along with the effect of monthly changes in district-level unemployment expressed as ideal point marginal effects. This analysis reveals how strategic abstention can affect the way a naive model records the ideological position of legislators who are on the campaign trail. I also show how non-ignorable missing data in surveys can bias ideal point estimates and how the proposed model can correct for these issues. All of these models are available via the R package `idealstan` with Hamiltonian Markov Chain Monte Carlo in Stan.'
 bibliography: "BibTexDatabase.bib"
 fig-cap-location: top
 filters:
@@ -90,15 +91,19 @@ num_days <- distinct(unemp1,bioname,date_month) %>%
 
 \newpage
 
-This paper takes the well-established ideal point model from political science and generalizes to address long-standing issues while also extending the domain of the model to cover new areas of measurement with diverse and noisy data. The goal of this new implementation is to make the ideal point model a general tool for measurement of hidden concepts across the social sciences whether the origin of the data is from social media, surveys, legislatures, bureaucratic agencies, or social networks. To accomplish this task, the paper implements the ideal point model using Stan, a probabilistic programming language for Bayesian inference, that allows for a much wider range of time-series processes, data distributions, and novel ways of incorporating missing data. In addition, the open source R package which implements the models exploits advances in big data Bayesian computation with Stan to permit the robust estimation of latent concepts from much larger datasets than was previously possible.
+This paper takes the well-established ideal point model from political science and generalizes it to address long-standing issues while also extending the domain of the model to cover new areas of measurement with diverse and noisy data. The goal of this new implementation is to make the ideal point model a tool for measurement of latent concepts across the social sciences whether the origin of the data is from social media, surveys, legislatures, bureaucratic agencies, or social networks. To accomplish this task, the paper implements the ideal point model using Stan, a probabilistic programming language for Bayesian inference, that allows for a much wider range of time-series processes, data distributions, and novel ways of incorporating missing data. In addition, the R package idealstan, which implements the models, exploits advances in big data Bayesian computation with Stan to permit the robust estimation of latent concepts from much larger datasets than was previously possible with Bayesian inference.
 
-While ideal point models were conceived as a way to measure ideology in the U.S. Congress, this powerful measurement tool has wide applicability as a general tool for analyzing social data with substantial measurement error. For example, political scientists have recently applied the canonical ideal point model to new datasets and empirical challenges, such as Twitter data [@barbera2015; @kubinec2018], the United Nations Security Council [@bailey2017], state capacity [@hanson2021], democracy [@coppedge2019; @pemstein2017], campaign finance data [@bonica2014] and legislative speech [@lauderdale2016]. Through these applications, it has become apparent that the ideal point model has utility for a considerable number of measurement problems in the social sciences so long as available data are imperfect proxies of the concept of interest. To encourage further usage of this model, and to help address difficult measurement problems across the social sciences, this paper takes advantage of recent advances in Bayesian computation to broaden the implementation of the standard ideal point model to address challenges related to non-ignorable missing data, robust inference for time-varying data, as well as new estimands to better understand the effect of external covariates on ideal points [@martin2002; @martin2011a; @barbera2015; @kropko2013; @carroll2009; @bafumi2005; @jackman2004; @imai2016a; @lewis2018; @goplerud2019; @caughey2018].
+While ideal point models were conceived as a way to measure ideology in the U.S. Congress, this powerful measurement tool has wide applicability as a general tool for measuring latent traits from noisy data where there is at least some prior information about the nature of the latent trait. For example, political scientists have recently applied the canonical ideal point model to new datasets and empirical challenges, such as Twitter data [@barbera2015; @kubinec2018], the United Nations Security Council [@baileyEstimatingDynamicState2017], state capacity [@hansonLeviathansLatentDimensions2021], democracy [@coppedgeMethodologyVarietiesDemocracy2019; @pemsteinDemocraticCompromiseLatent2017], campaign finance and lobbying [@bonica2014; @kimMappingPoliticalCommunities2017], and legislative speech [@lauderdaleMeasuringPoliticalPositions2016; @kimEstimatingSpatialPreferences2018]. Through these applications, it has become apparent that the ideal point model has utility for a considerable number of measurement problems in the social sciences so long as available data are imperfect proxies of the concept of interest but the concept has a meaningful theoretical definition a priori (i.e., the measurement exercise is confirmatory rather than exploratory). To encourage further usage of this model, and to help address difficult measurement problems across the social sciences, this paper takes advantage of recent advances in Bayesian computation to broaden the implementation of the standard ideal point model to address challenges related to non-ignorable missing data [@rosasNoNewsNews2015], mixed outcome distributions [@imaiFastEstimationIdeal2016], robust inference for time-varying data [@reunig2019; @caugheyDynamicEstimationLatent2015], as well as new estimands to better understand the effect of external covariates on ideal points [@jackman2004; @bafumiPracticalIssuesImplementing2005].
 
-I show in this paper that combining advances in Bayesian computation with flexible time processes in the form of splines can solve a particularly difficult problem of scaling sparse data with measurement error, such as that available from finely grained time series in social media and other digital sources. While existing applications of dynamic ideal points are generally at a relatively high level of aggregation, such as the Congressional session [@carroll2009] or the judicial session [@martin2002], social media data like Twitter/X and Bluesky can be available in minute by minute increments [@kubinec2018; @eady2024], not to mention the wealth of revealed preference information available in TikTok, Youtube, and other sources. However, existing time-series methods for ideal points are difficult to employ with sparse data, and for that reason I present splines as a way of estimating restricted polynomials that can separate time trends from measurement noise. To apply the method, I estimate monthly time-varying ideal points for Congresspeople in the House in from 1990 to 2018, which are the first such granular measures available. I also compare multiple time-series processes, including random walks, AR(1), and Gaussian processes versus splines for the 115th Congress to show how modeling choices for time can lead to different conclusions about the nature of time-varying ideal point measures.
+As such, the contribution of this model and its implementation in idealstan is two-fold: 1) the approach integrates advances from diverse parameterizations of the ideal point model into a single framework, and 2) long-standing issues like non-ignorable missing data and big data computation for Bayesian modeling are addressed within this same framework. As such, this parameterization of the model enables applied researchers a Swiss Army knife approach to measurement problems: given a reasonable amount of prior information about the latent trait, virtually any dataset, including those of significant size, can be fit and return robust results. The focus on Bayesian inference ensures that the latent trait is captured with model-based uncertainty; i.e., no assumptions are made about the parametric form of the sampling distribution of the latent trait. This framework will move heavy duty measurement models from the domain of experts with significant background designing customized models to one where applied researchers can estimate latent traits and use them in a variety of analyses.
 
-Finally, I also show in this paper how Bayesian post-estimation [@gill2020] enables the calculation of a new quantity of interest from ideal point models: *ideal point marginal effects*. I define an ideal point marginal effect as the unit change in the set of items for a unit change in a covariate that is mediated by a given person's ideal point. This quantity, which is estimated separately for each item (i.e., each bill or vote) in the data, enables us to understand how an external covariate can influence a person's decision-making while taking into account the relative latent position of the items on which they are taking positions. I illustrate this method with an analysis of the association between monthly district-level unemployment rates and monthly Congressional ideal points for both the full sample and for the 115th Congress.
+This modeling approach does not only integrate existing advances into a single framework but also offers novel derivations for time series, outcome distributions, and missing data adjustment. For example, I show in this paper that combining advances in Bayesian computation with flexible time processes in the form of splines can solve a particularly difficult problem of scaling sparse data with measurement error, such as that available from finely grained time series in social media and other digital sources. While existing applications of dynamic ideal points are generally at a relatively high level of aggregation, such as the Congressional session [@carroll2009] or the judicial session [@martin2002], social media data like Twitter/X and Bluesky can be available in minute by minute increments [@kubinec2018; @barbera2015; @eadyNewsSharingSocial2024], not to mention the wealth of revealed preference information available in TikTok [@widholmRightWingWaveTikTok2024] and YouTube [@laiEstimatingIdeologyPolitical2024]. However, existing time-series methods for ideal points are difficult to employ with sparse data, and for that reason I present splines as a way of estimating restricted polynomials that can separate time trends from measurement noise. To apply the method, I estimate monthly time-varying ideal points for Congresspeople in the House in from 1990 to 2018, which are the first such granular measures available. I also compare multiple time-series processes, including random walks, AR(1), and Gaussian processes versus splines for the 115th Congress to help researchers understand what kind of time series processes are appropriate for specific latent concepts they are trying to estimate.
 
-All the models in this paper can be fit with the R package `idealstan`, which employs the probabilistic programming language Stan to allow for a wide variety of models to be fit within one joint framework. Furthermore, the application of Hamiltonian Monte Carlo and its associated diagnostics permits very robust inference of difficult posterior geometry, ensuring that measurement inferences are stable [@carpenter2017]. This implementation makes use of novel computational methods to parallelize MCMC calculations so that much bigger models can be fit with full Bayesian inference than was previously possible. As I discuss, even larger models can be fit with approximate inference methods, though only for limited applications. This new parameterization of ideal points that combines missing-data inference, time-varying inference and inference over joint distributions provides scholars with a multipurpose tool for tackling difficult measurement challenges in both traditional and nontraditional datasets.
+I also show in this paper how Bayesian post-estimation [@gill2020] enables the calculation of a new quantity of interest from ideal point models: *ideal point marginal effects*. I define an ideal point marginal effect as the unit change in the set of items for a unit change in a covariate that is mediated by a given person's ideal point. This quantity, which is estimated separately for each item (i.e., each bill or vote) in the data, enables us to understand how an external covariate can influence a person's decision-making while taking into account the relative latent position of the items on which they are taking positions. I illustrate this method with an analysis of the association between monthly district-level unemployment rates and monthly Congressional ideal points for both the full sample and for the 115th Congress.
+
+The other specific advance is to offer a general purpose method to accomodate non-ignorable missing data in latent variable estimation. I implement a two-stage adjustment that creates a "missingness" space in which actors first choose whether to answer an item, and then conditional on that choice, provide observed responses to the item. While relatively simple, this model can capture a diverse array of missing data patterns that might bias naive ideal point estimates. I show how this problem matters both in legislatures like the U.S. Congress when legislators have a reason to be strategically absent, but even more in ideal point estimation from survey data where missingness rates can be quite high and ignorability is a strong assumption.
+
+All the models in this paper can be fit with the R package `idealstan`, which employs the probabilistic programming language Stan to allow for a wide variety of models to be fit within one joint framework. The model can be identified through assigning informative priors to items as in @morucciMeasurementThatMatches2024 using a Generalized Beta distribution for these parameters, which enables researchers to employ identification of latent traits from theoretical knowledge about the latent trait. Furthermore, the application of Hamiltonian Markov Chain Monte Carlo (HMC) and its associated diagnostics permits very robust inference of difficult posterior geometry, ensuring that measurement inferences are stable [@carpenter2017]. Finally, the implementation makes use of novel computational methods to parallelize HMC gradient calculations so that much bigger models can be fit with full Bayesian inference than was previously possible. This new parameterization of ideal points that combines missing-data inference, time-varying inference and inference over joint distributions provides scholars with a multipurpose tool for tackling difficult measurement challenges in both traditional and nontraditional datasets.
 
 # Latent Variables as Statistical Deduction
 
@@ -106,9 +111,11 @@ All the models in this paper can be fit with the R package `idealstan`, which em
 
 > -- Sherlock Holmes
 
-The traditional presentation of applied statistics in political science presents models as estimating unbiased quantities given a recipe list of datasets. Of course, the datasets that political scientists produce rarely fit these clean molds, which leads to numerous statistical fixes to correct for poorly-fitting models, such as zero-inflated Poisson models in the case of counts and other more generic fixes like clustered standard errors. What all of these approaches have in common is a focus on adjusting for measurement issues in the dependent variable, while the data are assumed to represent known facts.
+The traditional presentation of applied statistics in political science presents models as estimating unbiased quantities given a recipe list of datasets. Of course, the datasets that social scientists produce rarely fit these clean molds, which leads to numerous statistical fixes to correct for poorly-fitting models, such as zero-inflated Poisson models in the case of counts and other more generic fixes like clustered standard errors. What all of these approaches have in common is a focus on adjusting for measurement issues in the dependent variable, while the data are assumed to represent known facts.
 
-Measurement models flip this perspective on its head. Rather than assuming that only the outcome needs a statistical distribution, a measurement model implements a statistical distribution *for the data*. Making this mental switch enables us to think of the data as only one set of observed indicators generated by a latent, unseen construct. In other words, the data are measured *with error*, where the exact errors are defined by a particular statistical distribution.
+Measurement models flip this perspective on its head. Rather than assuming that only the outcome needs a statistical distribution, a measurement model implements a statistical distribution *for the data*. Making this mental switch enables us to think of the data as only one set of observed indicators generated by a latent, unseen construct. Using a single indicator—as is often done in applied analyses—amounts to the very strong assumption that an indicator is a perfect stand-in for concept to be measured; i.e., that measurement error is zero.
+
+In the social sciences, measurement error is almost always non-trivial. For example, voting records, which are one of the most directly observable forms of political data, are nonetheless riddled with inaccurate records and duplicates [@ansolabehereQualityVoterRegistration2010]. Measurement error is more commonly recognized with higher-level concepts like democracy that have led to ongoing scholarly debates [@littleMeasuringDemocraticBacksliding2024; @millerHowLittleMengs2024; @knutsenConceptualMeasurementIssues2024]. However, virtually all social science variables have at least some measurement error because collecting data on humans, who have agency that allows them to hide or misreport information, is never a trivial matter. While many scholars recognize these structural limitations, and measurement models have a long history in statistics, it can be relatively difficult to apply measurement models to real-world datasets, especially when the tool needs to be able to incorporate relevant theoretical priors about the latent trait. Building a theoretically-valid measurement model can be a very useful contribution to our ability to analyze concepts, such as the influential work on legislative ideology in the United States [@poole1997; @jackman2004], but deriving an appropriate model can involve extensive technical work to incorporate theoretical priors. The model I present in this paper, which I shall refer to as idealstan as that is the name of the associated software package, aims to contribute a general purpose measurement model that applies to diverse datasets and problems while also permitting the incorporation of theory into measurement choices. By doing so, I hope to mainstream Bayesian measurement models that have often taken months or years to derive and permit them to be rapidly deployed to diverse phenomena.
 
 <!--# The simplest measurement model is the econometric errors-in-variables model where the data were generated by a Normal distribution with a pre-specified standard deviation [@durbin1954]. This model assumes that any noise in the data is evenly distributed across all the data points, and its only effect on the final statistical estimation is to increase the uncertainty of estimates. There are many more measurement models available, however, all of which can be combined with traditional statistical estimation techniques or employed as the primary model of interest.  -->
 
@@ -116,13 +123,13 @@ Measurement models flip this perspective on its head. Rather than assuming that 
 
 <!--# On the other end of the spectrum are methods that impose a very specific structure on the data distribution. Structural equation modeling is arguably the most demanding as researchers can stipulate a very precise process through which latent variables are related to each other, permitting complex unobserved feedback networks [@ullman2012]. There are other models involving latent variable analysis in time-series that impose a very specific functional form, such as the hidden Markov model [@rabiner1989] and the state-space model [@roesser1975], in which the data were generated by an unobserved time-varying construct. The number of latent variable models with a precise structure can be almost endless as it can even include two-stage models like the Heckman selection model [@heckman1985]. -->
 
-The ideal point model, and its close kin, the item-response theory framework, fit somewhere in the middle in the spectrum of measurement models as they attempt to balance both open-ended exploration, as in the well-known factor analysis and PCA models [@harman1960; @hotelling1933; @barbera2015], with the ability to incorporate some of the theoretical structure of confirmatory methods [@ullman2012]. Formally, an ideal point model for any person $i$ and any vote $j$ is defined as the difference in utilities between the person's ideal point $\alpha_i$ and the vote's Yes position, $\beta_{jY}$ and No position, $\beta_{jN}$, such that $i$ always votes for the bill if:
+To derive the model, I begin with the cannonical formulation of the ideal point model. This model fits somewhere in the middle in the spectrum of measurement models as they attempt to balance both open-ended exploration, as in the well-known factor analysis and PCA models [@harman1960; @hotelling1933; @barbera2015], with the ability to incorporate some of the theoretical structure of confirmatory methods by building in prior constraints and information about the relationship between indicators and the latent trait [@ullman2012]. Formally, an ideal point model for any person $i$ and any vote $j$ is defined as the difference in utilities between the person's ideal point $\alpha_i$ and the vote's Yes position, $\beta_{jY}$ and No position, $\beta_{jN}$, such that $i$ always votes for the bill if:
 
 $$
 \sqrt{(\alpha_i - \beta_{jY})^2} > \sqrt{(\alpha_i - \beta_{jN})^2} 
 $$
 
-That is, if $\alpha_i$ is closer in Euclidean space to the Yes position than the No position. While @enelow198 originally defined this model in deterministic terms, most statistical applications add in vote-specific error terms to make the decision stochastic. The two main statistical parameterizations of this model, the DW-NOMINATE family [@poole2008] and the Bayesian IRT family [@jackman2004], differ primarily in the distribution they assign to that error term [@carroll2009]. While an argument can be made for the preference of one over the other [@carroll2013], or even to use a fully non-parametric estimator [@tahk2018], I concentrate on the IRT formulation due to its ease of implementation in a Bayesian framework and its connection to the IRT literature.
+That is, if $\alpha_i$ is closer in Euclidean space to the Yes position than the No position. While @enelow198 originally defined this model in deterministic terms, most statistical applications add in vote-specific error terms to make the decision stochastic. The two main statistical parameterizations of this model, the DW-NOMINATE family [@poole2008] and the Bayesian IRT family [@jackman2004], differ primarily in the distribution they assign to that error term [@carroll2009]. While an argument can be made for the preference of one over the other [@carroll2013], or even to use a fully non-parametric estimator [@tahk2018], I concentrate on the IRT formulation due to its flexibility.
 
 @jackman2004 showed that a certain IRT model, the 2-Pl family, was equivalent to the ideal point model if the actual Yes and No positions of the bill were left unidentified. Instead, this parameterization can estimate the ideal points $\alpha_i$ and a midpoint where the person $i$ is indifferent to voting on the bill $j$. The IRT 2-Pl model in terms of ideal points $\alpha_i$, or what are called ability parameters in the IRT literature, discrimination parameters $\gamma_j$ and difficulty parameters $\beta_j$, is as follows for a binary observed vote $Y_{ij}$:
 
@@ -130,21 +137,21 @@ $$
 Pr(Y_{ij}=1) = \prod^{I}_{i=1} \prod^{J}_{j=1} logit^{-1}(\gamma_j \alpha_i - \beta_j)
 $$ {#eq-basic}
 
-The sign of the discrimination parameter $\gamma_j$ indicates the "polarity" of the bill/item, or whether voting yes indicates one is more liberal or conservative in the Congressional case. The absolute magnitude of the discrimination parameter indicates how well the bill/item discriminates between persons such that the latent dimension strongly predicts voting. The $\beta_j$ difficulty parameters, by contrast, have the relatively uninteresting interpretation in representing the propensity of a person to vote yes marginal or independent of the latent dimension, though their incorporation is important to allow for the residual propensity to vote Yes to vary by bill.
+The sign of the discrimination parameter $\gamma_j$ indicates the "polarity" of the bill/item, or whether voting yes indicates one is more liberal or conservative in the Congressional case. The absolute magnitude of the discrimination parameter indicates how well the bill (item) discriminates between persons such that the latent dimension strongly predicts voting. The $\beta_j$ difficulty parameters, by contrast, have the relatively uninteresting interpretation in representing the propensity of a person to vote yes marginal or independent of the latent dimension, though their incorporation is important to allow for the residual propensity to vote Yes to vary by bill.
 
 <!--# The crucial difference between this parameterization and the standard IRT model is that the discrimination parameters $\gamma_j$ are unconstrained. In an IRT 2-Pl model the discrimination parameters are normally constrained to be positive so that the ideal points/ability parameters $\alpha_i$ can have the interpretation of reflecting the ability of a students to answer correctly more difficult test questions. In other words, the observed indicators are always positively related to the latent trait. The ideal point model can be considered a generalization of the IRT 2-Pl model because it does not assume that this is the case and in fact can estimate the direction of items from the data. This difference, though it would seem minute, is important when analysts are uncertain of the directional relationship between the data and the latent trait, as often occurs in practice.  -->
 
-The ability to allow for contrasting polarity at the item level does create some additional complications. The always-positive discrimination constraint in a standard IRT model ensures identification in terms of the rotation of the ideal points, so abandoning that assumption requires more work to identify the model. As has become well-known, constraints must be built in to the IRT ideal point estimation in order to identify a unique rotation of the ideal points [@gelman2005]. As I discuss, there is much less information about the identification of a unique rotation for time-varying ideal point models, which this paper will seek to provide additional guidance on.
+The ability to allow for contrasting polarity at the item level does create some additional complications. The always-positive discrimination constraint in a standard IRT model ensures identification in terms of the rotation of the ideal points, so abandoning that assumption requires more work to identify the model. As has become well-known, constraints must be built in to the IRT ideal point estimation in order to identify a unique rotation of the ideal points [@gelman2005]. As I discuss, the best forms of identification make use of theoretical priors so that latent concepts match closely what the researcher knows about the concept they are trying to measure [@morucciMeasurementThatMatches2024].
 
-It is important to note that there is nothing about this model that necessarily implies that the latent scale is political ideology. That is a useful interpretation to assign ideal points based on data from the U.S. Congress [@rosenthal2007]. The ideal point model represents a social choice process where the construct by which people make choices is unobserved. As such, it *can* estimate ideology as a latent construct, but it does not need to. Interpreting what the latent variable represents is a necessary part of any application of the model. What can be said is that it can flexibly represent the outcome of a variety of social processes with considerable flexibility.
+It is important to note that there is nothing about this model that necessarily implies that the latent scale is political ideology. That is a useful interpretation to assign ideal points based on data from the U.S. Congress [@rosenthal2007]. The ideal point model represents a social choice process where the construct by which people make choices is unobserved. As such, it *can* estimate ideology as a latent construct, but it does not need to. Interpreting what the latent variable represents is a necessary part of any application of the model. What can be said is that it can flexibly represent the outcome of a variety of social processes so long as there is a unique rotation, or sign identification of the indicators or items.
 
-In this paper I employ a Bayesian interpretation of this model [@jackman2004] that I estimate using Hamiltonian Markov Chain Monte Carlo with Stan [@carpenter2017]. I am interested in posterior inference on a set of unobserved parameters $\{\alpha_i,\gamma_j,\beta_j\} \in \theta$ that is conditional on the observed data $Y_{ij}$, or $Pr(\theta|Y_{ij})$. To do so, I define independent priors on $\theta$, $Pr(\theta)$, which is multiplied by the likelihood $L(\cdot)$ that is defined by @eq-Bayes:
+In this paper I employ a Bayesian interpretation of this model [@jackman2004] that I estimate using Hamiltonian Markov Chain Monte Carlo with Stan [@carpenter2017]. I am interested in posterior inference on a set of unobserved parameters $\{\alpha_i,\gamma_j,\beta_j\} \in \theta$ that is conditional on the observed data $Y_{ij}$, or $Pr(\theta|Y_{ij})$. To do so, I define independent priors on $\theta$, $Pr(\theta)$, which is multiplied by the likelihood $L(\cdot)$ that is defined by @eq-Bayes:[^1]
+
+[^1]: I use the proportional symbol $\propto$ to reflect the fact that the term in the denominator representing the probability of the data $Pr(Y_{ij})$ is normally omitted in computational Bayesian analysis as it is fixed with respect to the parameters [@gelman2013].
 
 $$
 Pr(\theta|Y_{ij}) \propto Pr(\theta)L(Y_{ij}|\theta)
 $$ {#eq-Bayes}
-
-I use the proportional symbol $\propto$ to reflect the fact that the term in the denominator representing the probability of the data $Pr(Y_{ij})$ is normally omitted in computational Bayesian analysis as it is fixed with respect to the parameters [@gelman2013].
 
 My presentation of the Bayesian ideal point model departs somewhat from conventional parameterizations in order to be more flexible and to incorporate recent advances in measurement modeling. I start by specifying the priors in terms of the distributions assigned to each parameter in $\theta$:
 
@@ -154,9 +161,34 @@ My presentation of the Bayesian ideal point model departs somewhat from conventi
 \beta_j &\sim \text{Normal}(0,3)
 \end{align}\label{eq-genprior}
 
-The ideal points $\alpha_i$ and the discrimination parameters $\beta_j$ are given a loose $N(0,3)$ prior that is weakly informative for most scales and is only needed to make the posterior proper. Identification of the posterior, which is an important issue as these types of measurement models can have multiple possible solutions with equal likelihood [@bafumiPracticalIssuesImplementing2005], happens via the Generalized Beta prior on the discrimination parameters $\gamma_j$.
+The ideal points $\alpha_i$ and the discrimination parameters $\beta_j$ are given a loose $N(0,3)$ prior that is weakly informative for most scales and is only needed to make the posterior proper. Identification of the posterior, which is an important issue as these types of measurement models can have multiple possible solutions with equal likelihood [@bafumiPracticalIssuesImplementing2005], happens via the Generalized Beta prior on the discrimination parameters $\gamma_j$:
 
-Constraining the discrimination parameters builds on work that shows that identification of the items (i.e., votes) in an ideal point model has superior theoretical properties as it allows for the ideal points to float freely, which are usually the main subject of interest in terms of measurement [@morucciMeasurementThatMatches2024]. Furthermore, in a manner similar to @pooleScalingRollCall2008, I implicitly scale the discrimination parameters by using the Generalized Beta distribution in which the distribution has support over the open interval $(-1,1)$. I assign values of +2 to each of the distribution's parameters (scale and shape) so that values of 0, or the midpoint of the distribution, are weakly preferred over the end points. Because this distribution is bounded, it will prevent the well-known scaling issues of ideal point models given that the latent estimates have no natural scale. With this prior, no further work is necessary to fix a scale and all other parameters can have weakly informative priors. In fact, if there is enough data, the discrimination parameters can have the uninformative Generalized Beta prior of +1, +1 so that all values are equally likely in the $(-1, 1)$ interval.
+$$
+f(x; \alpha, \beta, a, b) = \frac{(x - a)^{\alpha - 1} (b - x)^{\beta - 1}}{(b - a)^{\alpha + \beta - 1} B(\alpha, \beta)}
+$$ {#eq-genbeta}
+
+where:
+
+```{=tex}
+\begin{itemize}
+    \item $\alpha > 0$ and $\beta > 0$ are the shape and scale parameters, analogous to the prior sample size,
+    \item $a = -0.998$ and $b = 0.999$ define the support of the distribution,
+    \item $B(\alpha, \beta) = \int_0^1 t^{\alpha - 1} (1 - t)^{\beta - 1} \, dt$ is the Beta function.
+\end{itemize}
+```
+The reason I use this distribution for the items is to resolve two problems at once. First, the restrictions on the scale solve the problem of identifying a scale for the latent variable because the item discrimination parameters must stay within this range. The generalized beta distribution further allows this range to be both positive and negative, which is required for the ideal point model. To identify the rotation of the ideal points, specific items can be given a very tight prior, such as:
+
+$$
+\gamma_{j=k} \sim \text{GeneralizedBeta}(10,1000)
+$$ for a parameter with the majority its support around the point -0.97 and
+
+$$
+\gamma_{j=k} \sim \text{GeneralizedBeta}(1000,10)
+$$
+
+for a parameter with the majority of its support around the point +0.97. The shape and scale parameters of the Generalized Beta have an intuitive interpretation as they represent the prior observed negative and positive observations for a given proportion. As a result, increasing both the scale and shape proportionally will preserve the sample expected value but reduce uncertainty around the expected value. With larger datasets, increasing both numbers is necessary as the strength of the prior is relative to the size of the data as in @eq-Bayes.
+
+Constraining the discrimination parameters builds on work that shows that identification of the items (i.e., votes) in an ideal point model has superior theoretical properties as it allows for the ideal points to float freely, which are usually the main subject of interest in terms of measurement [@morucciMeasurementThatMatches2024]. Furthermore, in a manner similar to @poole1997, I implicitly scale the discrimination parameters by using the Generalized Beta distribution in which the distribution has support over the open interval $(-0.999,.999)$. I assign values of +2 to each of the distribution's parameters (scale and shape) so that values of 0, or the midpoint of the distribution, are weakly preferred over the end points. Because this distribution is bounded, it will prevent the well-known scaling issues of ideal point models given that the latent estimates have no natural scale. With this prior, no further work is necessary to fix a scale and all other parameters can have weakly informative priors. In fact, if there is enough data, the discrimination parameters can have the uninformative Generalized Beta prior of +1, +1 so that all values are equally likely in the $(-.999, .999)$ interval.
 
 The effect $\phi$ of a matrix of covariates $X$ measured on the persons $i$ can also be added to this model for ideal points as shown in @gelman2005 and @jackman2004 by including them as hierarchical predictors:
 
@@ -176,9 +208,9 @@ Given this definition of the model, I next show how this framework can incorpora
 
 Missing data is a tricky problem to address in latent variable models because latent variables are themselves defined as missing data. For this reason, standard imputation techniques cannot be easily applied. Because ideal point models are representations of social aggregation processes, a straightforward approach of imputing data conditional on the model assumes that missingness is orthogonal to observed ideal points [@rubin2002]. In many situations, this assumption may not be realistic when there is reason to believe that social actors, such as legislators, are absent for reasons that are related to their own ideal points.
 
-The most rigorous treatment of the problem of missing data and ideal points can be found in @rosas2015, who put forward a model in which non-ignorable missingness occurs when legislators disagree with the position of their party. Their analysis shows that missingness in ideal point models often reflects strategic behavior and it is unwise to treat it as either missing-at-random (MAR) or missing-conditionally-at-random (MCAR). In this section I define a model for non-ignorable missingness that aims for widespread applicability while taking into account the strategic nature of ideal point actors.
+The most rigorous treatment of the problem of missing data and ideal points can be found in @rosas2015, who put forward a model in which non-ignorable missingness occurs when legislators disagree with the position of their party. Their analysis shows that missingness in ideal point models often reflects strategic behavior and it is unwise to treat it as either missing-at-random (MAR) or missing-conditionally-at-random (MCAR). In this section I define a model for non-ignorable missingness in ideal point estimates that aims for widespread applicability beyond legislative data.
 
-I extend my notation of the outcome $Y_{ij}$ by adding a subscript $r \in \{0,1\}$ for whether person $i$ chose to vote or answer item $j$ ($r=1$) or chose not to vote/answer ($r=0$). We can then add a separate selection model that first estimates $Pr(r=0)$ and deflates the likelihood $L(Y_{ijr}|\theta)$ accordingly:
+I extend my notation of the outcome $Y_{ij}$ by adding a subscript $r \in \{0,1\}$ for whether person $i$ chose to vote or answer item $j$ ($r=1$) or chose not to answer ($r=0$). We can then add a separate selection model that first estimates $Pr(r=0)$ and deflates the likelihood $L(Y_{ijr}|\theta)$ accordingly:
 
 $$
     L(Y_{ijr}|\alpha_i,\gamma_j,\beta_j,\nu_j,\omega_j) = 
@@ -191,25 +223,35 @@ $$ {#eq-inflate2}
 
 I let $\zeta(\cdot)$ stand for the inverse logit function in the equation above. As can be seen, the selection model for missing data $\zeta(\alpha_i'\nu_j - \omega_j)$ is very similar to @eq-basic except that I have substituted a new set of discrimination $\nu_j$ and difficulty $\omega_j$ parameters. The ideal points $\alpha_i$ enter into both the selection model and the main ideal point model $L(Y_{ijr}|\alpha_i,\gamma_j,\beta_j)$. As such, the selection model is able to inflate or deflate the ideal points by taking into account a first stage process. The inclusion of $\nu_j$ and $\omega_j$ in the first-stage selection model creates a new "missingness" space where person $i$ first chooses whether she will cast a vote, send a tweet or answer a survey question, as the case may be. Only if the item is close to person $i$ in this missingness space will person $i$ then also decide to participate and provide information $Y_{ij}$ that is informative of their ideal point. This model can be interpreted as a censoring model where persons may choose to self-censor their ideal points.
 
-The general form of the selection model--which is essentially a first-stage ideal point model--allows it to pick up a range of non-ignorable missingness patterns if missingness correlates with ideal points. The model does not make a priori assumptions about exactly why ideal points may determine missingness, and as such the model cannot provide such an interpretation a posteriori without taking time to interpret what the parameters of the selection model reveal about actors' intentions. The discrimination parameter $\nu_j$ is very helpful for this purpose because it will indicate which set of items show correlation between missingness and one of the poles of the latent variable. For example, if the latent variable is constrained positive for liberal Senators, then high positive discrimination would indicate that more liberal Senators tend to be absent on a particular bill. A naive model that assumed that absences were ignorable would miss this pattern and treat these Senators as more moderate based solely on their observed voting record.
+The general form of the selection model--which is essentially a first-stage ideal point model--allows it to pick up a range of non-ignorable missingness patterns if missingness correlates with ideal points. The model does not make a priori assumptions about exactly why ideal points may determine missingness, and as such the model cannot provide such an interpretation a posteriori without taking time to interpret what the parameters of the selection model reveal about actors' intentions. The missingness discrimination parameter $\nu_j$ is very helpful for this purpose because it will indicate which set of items show correlation between missingness and one of the poles of the latent variable. For example, if the latent variable is constrained positive for liberal Senators, then high positive discrimination would indicate that more liberal Senators tend to be absent on a particular bill. A naive model that assumed that absences were ignorable would miss this pattern and treat these Senators as more moderate based solely on their observed voting record.
 
 This model is also general enough to allow for the possibility that data is actually missing at random at the item level. If the discrimination parameter $\nu_j$ is zero then ideal points do not enter into the equation for missingness and $Pr(r=0)$ is equal to the item-specific intercept $\omega_j$. In the legislative context, this would be the same as estimating the probability of absence by the proportion of legislators who do not show up for particular bill. Including this parameter will also separate that item-specific random missingness from missingness patterns suspiciously associated with ideal points. For this reason, the selection model will perform at least as well as a standard imputation method where the missing ideal points are MCAR conditional on each item.
 
-While this missingness model is readily applicable to a legislative context where legislators may not want to show up on votes depending on what the vote would reveal about their ideal points, it is also useful for other non-ignorable missingness patterns. Twitter data is an excellent example. It is well-established that estimating a latent trait like political polarization will be vastly over-stated if the tendency of Twitter users to select who they choose to follow is not taken into account [@Barbera2015]. The two-stage selection model can be used to estimate the people's propensity to retweet ideological content net of their self-selection into whom they follow on Twitter [@kubinec2018].
+While this missingness model is readily applicable to a legislative context where legislators may not want to show up on votes depending on what the vote would reveal about their ideal points, it is also useful for other non-ignorable missingness patterns. Twitter data is an excellent example. It is well-established that estimating a latent trait like political polarization will be vastly over-stated if the tendency of Twitter users to select who they choose to follow is not taken into account [@Barbera2015]. The two-stage selection model can be used to estimate the people's propensity to retweet ideological content net of their self-selection into whom they follow on Twitter [@kubinec2018]. For survey data, the two-stage model will take into account that respondents with high or low values on the latent trait could be more or less likely to provide an answer on a given question, and then backwards infer their true ideal point given those varying missingness rates by question.
 
+This model does not generally require more identifying information than previously stipulated (i.e., at least some observed item discrimination $\gamma_j$ pinned to high or low values). However, it does raise model complexity, can require more computation and can in some cases require more pinned item discrimination parameters. However, the missingness parameters themselves can have similar weakly informative priors without causing any serious problems with identification:
+
+```{=tex}
+\begin{align}
+\nu_j &\sim \text{GeneralizedBeta}(2,2)\\
+\omega_j &\sim \text{Normal}(0,3)
+\end{align}\label{eq-missprior}
+```
 ## Time-varying Inference
 
-While ideal points are usually conceived of as relatively time-invariant constructs, time-varying ideal point models have been available to researchers for quite some time. The most well-known time-varying version is the DW-NOMINATE model [@rosenthal2007; @armstrong2014; @Caughey2016], which employs a linear time trend to allow for limited over-time variation at the legislator level over time. The other existing approach is the random walk model of @quinn2002 in which ideal points in time $t$ are equal to ideal points in $t-1$ plus a Normally-distributed random jump. This much more flexible model is quite helpful at determining the probable trend in ideal points over time because it imposes virtually no structure on the time-series trends, although as I discuss below, it adds a considerable greater demand in terms of finding a unique identified solution. There are extensions of the random walk, such as employing a Student T's distribution to allow for more stable patterns over time [@reuning2019], though these approaches have the same difficulties with identification.
+The model specified in @eq-Bayes is a static model: it estimates one ideal point per person for the entire sample. Increasingly, time-varying estimation is useful as the scale and complexity of datasets also increases. In this section, I show how idealstan can be extended to allow for a variety of time-varying processes of the person ideal points $\alpha_i$. Importantly, these models are all jointly estimated with the missing-data 2-stage model mentioned previously.
+
+The most well-known time-varying ideal point estimates come from the DW-NOMINATE model [@rosenthal2007; @armstrong2014; @Caughey2016], which employs a linear time trend to allow for limited over-time variation at the legislator level over time. The other widely-used approach is the random walk model of @quinn2002 in which ideal points in time $t$ are equal to ideal points in $t-1$ plus a Normally-distributed random jump. This much more flexible model is quite helpful at determining the probable trend in ideal points over time because it imposes virtually no structure on the time-series trends, although as I discuss below, it adds a considerable greater demand in terms of finding a unique identified solution. There are extensions of the random walk, such as employing a Student T's distribution to allow for more stable patterns over time [@reuning2019], though these approaches have the same difficulties with identification.
 
 <!--# Both of these approaches share in common an emphasis measuring over-time trends. By contrast, in this paper I also want to consider effects of hierarchical predictors on ideal points that vary over time. Including such predictors would enable scholars to test much more precise questions about how time-varying covariates influence ideal points, especially as political scientists obtain ever-larger and more fine-grained datasets. However, existing methods cannot easily handle such covariates. The DW-NOMINATE approach is designed to produce accurate and relatively non-parametric estimates of legislator's ideal points versus inference on those trends, while the random-walk approach cannot include additional covariates without radically changing the model. Any covariate with a constant effect in a random-walk will push the time series in a constant direction over time (i.e., static drift). It is too simple of a model to separate the effect of a covariate from the time series trend.  -->
 
-To produce a wider range of possibilities to time-varying inference, I introduce three alternative time series models: AR(1) processes, Gaussian processes and basis splines. I begin by defining the random walk by placing a subscript $t$ on the ideal points $\alpha_i$ and stipulating a relationship in the prior between time points:
+To produce a wider range of possibilities to time-varying inference, I introduce three alternative time series models: AR(1) processes, Gaussian processes, and basis splines. I begin by defining the random walk by placing a subscript $t$ on the ideal points $\alpha_i$ and stipulating a relationship in the prior between time points:
 
 $$
 \alpha_{it} \sim N(\delta_i+ \alpha_{it-1},\sigma_i)
 $$ {#eq-rwc}
 
-We give every person $i$ a separate over-time variance parameter $\sigma_i$ and intercept/offset $\delta_i$. It is possible to identify this model by placing a tight upper bound on the variance parameters and adding a polarity constraint in the intercepts $\delta_i$, though as I discuss later, this approach can still fail. For computational reasons, the implementation of this model in `idealstan` employs a non-centered parameterization [@betancourt2013] that reduces dependence between the variance $\sigma_i$ and the prior value of $\alpha_{it-1}$:
+We give every person $i$ a separate over-time variance parameter $\sigma_i$ and intercept/offset $\delta_i$. For computational reasons, the implementation of this model in `idealstan` employs a non-centered parameterization [@betancourt2013] that reduces dependence between the variance $\sigma_i$ and the prior value of $\alpha_{it-1}$:
 
 $$
 \begin{split}
@@ -229,7 +271,7 @@ $$
 \end{split}
 $$ {#eq-ar1}
 
-If $\psi_i$ lies in the $(-1,1)$ interval, then the series is stationary and will always return or decay to the long-term mean of the series $\delta_i$. By comparison, the random walk model can be thought of as an AR(1) model where $\psi_i$ is fixed at 1. This type of time series model implies that a given person or legislator has a stable over-time average ideal point and that movement away from that over-time average is some kind of exogenous shock that will eventually decay. For these reasons, it makes a substantively different statement about how ideal points might or might not change over time, emphasizing short-run factors over the long-term dynamics implicit in the random-walk formulation.
+If $\psi_i$ lies in the $(-1,1)$ interval, then the series is stationary and will always return or decay to the long-term mean of the series $\delta_i$. By comparison, the random walk model can be thought of as an AR(1) model where $\psi_i$ is fixed at 1. This type of time series model implies that a given person or legislator has a stable over-time average ideal point and that movement away from that over-time average is some kind of exogenous shock that will eventually decay.
 
 Both the AR(1) model and the random walk are models of discrete time, or a set number of time points. The next two time series processes that I consider are both continuous models of time; given any set of time points, they are capable of producing smooth interpolations between observed time points. The first such time process I consider is a Gaussian process ideal point model in which the ideal points $\alpha_{it}$ vary in terms of a Gaussian process with a squared-exponential kernel. A Gaussian process (GP) is chosen because it represents the most flexible framework possible for semi-parametric inference of either spatial or temporal autocorrelation [@rasmussen2006]. Given the limited application of this model in political science research, let alone ideal point models specifically, I briefly review the notation for a GP before combining it with the ideal point model.
 
@@ -255,9 +297,9 @@ $$
 \alpha_i \sim N(0,k_t(\alpha_{it},\alpha_{it'}))
 $$ {#eq-gpideal}
 
-This straightforward parameterization shows some of the power of Bayesian modeling. We can include virtually any time process by simply defining the time series over a set of parameters rather than a set of observed data. Of course, whether this model can be identified in a latent variable model with measurement error is a different question. Because of the GP's complexity, I turn next to consider a different option, basis splines.
+This straightforward parameterization shows some of the power of Bayesian modeling. We can include virtually any time process by simply defining the time series over a set of parameters rather than a set of observed data. Of course, whether this model can be identified in a latent variable model with measurement error is a different question. Because of the GP's complexity, I turn next to consider a different option, basis splines, that permit more control over the flexibility of the time-series process.
 
-Splines are a method of constructing semi-parametric time-series by combining polynomial functions of time [@perperoglou2019]. While there are many different kinds, I consider here basis splines due to their ability to fit into the latent variable framework. A basis spline separates a polynomial function of time into individual basis functions that the space of all possible polynomial functions for a given polynomial degree [@deboor1972; @gordon1974]. Because each of the individual functions are relatively simple, this construction allows for a wide variety of polynomial functions to be derived while also enabling efficient sampling.
+Splines are a method of constructing semi-parametric time-series by combining polynomial functions of time [@perperoglouReviewSplineFunction2019]. While there are many different kinds, I consider here basis splines due to their ability to fit into the latent variable framework. A basis spline separates a polynomial function of time into individual basis functions that the space of all possible polynomial functions for a given polynomial degree [@deboorCalculatingBsplines1972; @gordonBSPLINECURVESSURFACES1974]. Because each of the individual functions are relatively simple, this construction allows for a wide variety of polynomial functions to be derived while also enabling efficient sampling.
 
 One central feature of splines is that they are polynomial functions defined over a series of sequential partitions of a given time series known as knots. A spline of a given order is a polynomial function of a given degree (by convention, one less than the order) that is defined for each sequential partition given by the location of the knots. Each piecewise polynomial function must begin and end at the same point of each sequential partition, ensuring a smooth combined function.
 
@@ -294,11 +336,11 @@ A_i &= A_i'\tau
 
 The adjustment with $A_i'$ and $\tau$ is to permit non-centered sampling which is more efficient.
 
-The main advantage of using basis splines as I demonstrate in the empirical application is that it is possible to fine-tune the complexity of the time series function. Increasing the degree of the polynomial or the number of knots increases the number of coefficients per person by one. In cases of high sparsity, a low number of knots (or even no knots at all) and a low degree polynomial can be used to avoid multi-modal posteriors.
+The main advantage of using basis splines as I demonstrate in the empirical application is that it is possible to fine-tune the complexity of the time series function, which is valuable as it allows for theoretical priors to govern the amount of possible over-time variation in the latent trait. Increasing either the degree of the polynomial or the number of knots increases the number of coefficients per person by one. In cases of high sparsity, a low number of knots (or even no knots at all) and a low degree polynomial can be used to find a stable latent variable estimation even with very limited data per time point.
 
 As a result, these different time series models can be understood in terms of order of complexity. Except for splines, all of the time series models require at least one parameter per time point $t$. The random walk is the simplest of these models as it only requires one additional parameter, $\sigma_i$, per person $i$. The AR(1) model is more complex as it introduces an additional parameter to control the decay rate in the series, $\psi_i$. The GP is the most complex as it has three separate parameters per person, $\sigma^2_{if}$, $l_i^2$ and $\sigma^2_{iY}$, in addition to one estimate per time point $t$. For these reasons, the GP is the most demanding model to fit for a latent variable model as there needs to be a substantial amount of data per time point to estimate a flexible time trend while also separating our measurement noise.
 
-For these reasons, I argue that lower-dimensional time series methods like splines are most useful in situations where data are relatively sparse per time point. As the ideal point model is a measurement model, it can be difficult to separate measurement noise from the additional noise arising from flexibile time series processes.
+For these reasons, I argue that lower-dimensional time series methods like splines are most useful in situations where data are relatively sparse per time point. As the ideal point model is a measurement model, it can be difficult to separate measurement noise from the additional noise arising from flexible time series processes.
 
 Having defined these time series models, I know show that it is possible to combine these time-series processes with the model of missing data in @eq-inflate1 to permit inference on ideal points that vary over time and may have non-ignorable missingness:
 
@@ -313,59 +355,15 @@ $$ {#eq-inflate1}
 
 To change from a random-walk to a different time-series model for $\alpha_{it}$, we can simply change the prior for $\alpha_{it}$ that we include in $Pr(\theta)$ with one of the previously-defined time processes. I do not index the item parameters by $t$ because in many applications of the model, the item parameters only occur at one point in time, such as bills in a legislature. It is possible in some situations, such as students taking a test multiple times, for item parameters to vary over time as well. Inference on these parameters' time-series trends would then involve defining time-series priors over these parameters, whether jointly with $\alpha_{it}$ or separately, which is a possible area for future research.
 
-As I have mentioned, identification for models with time-varying $\alpha_{it}$ is a challenging endeavor without extensive discussion in the literature. @quinn2002 addressed this issue for random-walk models by restricting the variance $\sigma_i$ to values strictly between 0 and 0.1. This hard-coded constraint forces the time series to change little over time, though it also limits inference as the time series can only differ so much from each other. By contrast, I impose generally diffuse priors, or priors strong enough to impose some scaling identifiability, without forcing hard constraints on variance or other parameters. If the data are too sparse to permit identification of a latent variable via assigning the polarity of items, as I recommend in this paper, then a simpler time series model in terms of basis splines or a similar design should be considered.
+As I have mentioned, identification for models with time-varying $\alpha_{it}$ is a challenging endeavor without extensive discussion in the literature. @quinn2002 addressed this issue for random-walk models by restricting the variance $\sigma_i$ to values strictly between 0 and 0.1. This hard-coded constraint forces the time series to change little over time, though it also limits inference as the time series can only differ so much from each other. By contrast, I impose generally diffuse priors, or priors strong enough to impose some scaling identifiability, without forcing hard constraints on variance or other parameters. The Generalized Beta prior on the item discrimination parameters $\gamma_j$ is able to enforce a fixed scale for the latent trait while informative priors on pinned items is sufficient to identify a particular mode.
+
+However, if the data are very sparse in terms of having very few items per time point, then identification can be a serious challenge as pinning the discrimination parameter of a particular item may not constrain the time-series process sufficiently. This identification issue is particularly problematic when items are only observed in single time points as is the case with legislative data (rollcall votes are not repeated). In these cases, the spline function becomes particularly useful, as I show later, because it can rule out edge modes where latent traits shift and oscillate radically, such as a legislator moving from conservative to liberal across consecutive time points.
 
 ## Diverse Distributions
 
-Up to this point, I have followed convention in assuming that the observed data $Y_{ij}$ is a binary outcome (Bernoulli distribution). Virtually any distribution for $Y_{ij}$ is possible, especially with the flexibility of Bayesian modeling. In this section I incorporate existing distributions used for ideal points while also introducing the reader to distributions, especially ordinal models, that have been rarely employed for this purpose but could have considerable utility. Furthermore, I implement the @kropko2013 method to combine distributions into one joint posterior distribution, permitting models to use mixed datasets, such as both discrete and continuous variables. This method is especially useful for building time-varying indices incorporating measurement indicators that could be binary, ordinal, continuous or count variables, such as what is often available in survey data or panel datasets.
+Up to this point, I have followed convention in assuming that the observed data $Y_{ij}$ is a binary outcome (Bernoulli distribution). However, this is a limitation which unnecessarily restricts ideal point models to binary data. There are noted exceptions, such as the Poisson "Wordfish" model and @imaiFastEstimationIdeal2016, who implement EM-based estimation for ordinal outcomes. Within the Bayesian framework I have proposed, and combined with the extraordinary flexibility of Stan's HMC algorithm, virtually any distribution for $Y_{ij}$ is possible and it is even possible to let the distribution for $Y_{ij}$ to vary at the observation level. For an introduction to this type of joint modeling of latent variable outcomes in a Bayesian framework, see @kropko2013. These types of mixed outcomes are especially important for survey data in which questions could have binary, ordinal, proportions, counts or continuous response distributions.
 
-There are two possible ordinal models that can be implemented in the ideal point framework. The first is known as a rating-scale model in the IRT framework and is structurally similar to the ordered logit model. @imai2016a are the first to implement this model for ideal points using an EM algorithm.
-
-Following the notation I introduced, a rating-scale model for $k \in K$ outcomes can be modeled as follows for observed data:
-
-$$
-    L(Y_{ijtk}|\alpha_{it},\gamma_j,\beta_j) =  \prod_{i-1}^{I} \prod_{j=1}^{J} \prod_{t=1}^{T}
-    \begin{cases} 
-    1 -  \zeta(\gamma_j \alpha_i - \beta_j - c_1) & \text{if } K = 0 \\
-    \zeta(\gamma_j \alpha_i - \beta_j - c_{k-1}) - \zeta(\gamma_j \alpha_i - \beta_j - c_{k})       & \text{if } 0 < k < K, \text{ and} \\
-    \zeta(\gamma_j \alpha_i - \beta_j - c_{k-1}) - 0 & \text{if } k=K
-    \end{cases}
-$$
-
-where again $\zeta(\cdot)$ represents the logit function. In this version, each ordinal category $k$ less one is assigned a cutpoint $c_k$. In ideal point terms, these cutpoints divide the ideal point space across categories. A direct appliction is to use this model to include abstentions as a middle category between yea and nay votes. In this three outcome setting, two cutting planes exist in the ideal point space such that one end of the spectrum would vote No, the opposite end of the spectrum would vote Yes, and those in between the cutpoints would vote Abstain. As the polarity of items switches, Abstain will always remain in the center of the ideal point distribution, but the Yes and No positions can flip sides. This simple but efficient model helps to model situations where abstentions are in fact quite important, such as parliamentary systems [@brauninger2016].
-
-A different parameterization is known as the graded response model in IRT. This model allows the cutpoints $c_k$ to vary by bill. As a result, instead of including separate cutpoints, we can change the model by indexing each item-specific intercept for each category $k$:
-
-$$
-    L(Y_{ijtk}|\alpha_{it},\gamma_j,\beta_j) =  \prod_{i-1}^{I} \prod_{j=1}^{J} \prod_{t=1}^{T}
-    \begin{cases} 
-    1 -  \zeta(\gamma_j \alpha_i - \beta_{jk-1}) & \text{if } K = 0 \\
-    \zeta(\gamma_j \alpha_i - \beta_{jk-1}) - \zeta(\gamma_j \alpha_i - \beta_{jk-1})       & \text{if } 0 < k < K, \text{ and} \\
-    \zeta(\gamma_j \alpha_i - \beta_{jk-1}) - 0 & \text{if } k=K
-    \end{cases}
-$$
-
-Though not employed in political science to any great extent, this alternative formulation to ordered logit permits more flexible inference on the cutpoints. Allowing cutpoints to vary by item will enable much more accurate prediction of categories with fewer numbers of observations. It also increases information about the items/bills, though of course at a cost of including $K$ additional parameters per item. My intention in including it here is not to suggest that it is a superior model to the standard rating-scale approach, but rather as an alternative that may be useful in some situations. Either model can be profitably used to model rollcall data with middle outcomes like abstentions.
-
-I do not review the distributions for the Poisson count model as that has been widely applied in political science [@slapin2008]. However, I do specify two other distributions that have not been widely used in the ideal point literature: the Normal distribution for continuous and the log-normal distribution for positive-continuous outcomes. While @kropko2013 employed the Normal distribution in a traditional IRT framework, no one has yet used the log-Normal distribution.
-
-For a normal distribution, the ideal point model is used to predict the mean of $Y_{ijt}$ given residual standard deviation $\sigma_N$:
-
-$$
-  L(Y_{ijt}|\alpha_{it},\gamma_j,\beta_j) =  \prod_{i-1}^{I} \prod_{j=1}^{J} \prod_{t=1}^{T} \frac{1}{ \sqrt{2\pi \sigma_N^2 }} e^{-\frac{(Y_{ijt}-(\gamma_j\alpha_{it}-\beta_j)^2}{2\sigma_N^2}}
-$$
-
-The log-normal distribution is the same distribution except that the domain of the distribution is on $log(Y_{ijt})$:
-
-$$
-  L(Y_{ijt}|\alpha_{it},\gamma_j,\beta_j) =  \prod_{i-1}^{I} \prod_{j=1}^{J} \prod_{t=1}^{T} \frac{1}{ \sqrt{2\pi \sigma_N^2 }} e^{-\frac{(log(Y_{ijt})-(\gamma_j\alpha_{it}-\beta_j)^2}{2\sigma_N^2}}
-$$
-
-The log-normal parameterization is useful for continuous variables that are only defined on positive real numbers. For variables with substantial skew, such as income, this parameterization has a more useful interpretation than the more general Normal distribution. With both of these distributions, most continuous distributions can be modeled with reasonable accuracy.
-
-The utility of including all of these kinds of distributions, besides granting scholars more options with which data to use for ideal point estimation, is to permit modeling of different distributions in the same data. It is very common to have panel data sets and survey data with mixed data types, such as binary, ordinal, counts and continuous variables. Other than @kropko2013 who worked within a traditional IRT framework (i.e., fixed polarity of items), no one has attempted to implement this kind of joint modeling. It promises to offer scholars the ability to easily build time-varying indices such as those employed by V-DEM [@vdem2017] and the transparency index [@jrv2018]. In addition, these joint distributions incorporate missing-data inference and time-varying inference defined previously in this paper.
-
-It is straightforward to do so using the Bayesian framework defined in this paper. I simply index $Y_{ij}$ by $m$ for the $M$ models that each relate to a distinct outcome. These outcomes could be binary, ordinal, counts, continuous or positive-continuous per the notation presented:
+To use a different distribution, the likelihood function $L(\cdot)$ in @eq-inflate1 can be modified with any probability density or mass function that properly integrates or sums to 1 where $m$ is an index for all $M$ distributions used for the mixed outcome $Y_{ijtm}$:
 
 $$
   L(Y_{ijtm}|\alpha_{it},\gamma_j,\beta_j) =  \prod_{i-1}^{I} \prod_{j=1}^{J} \prod_{t=1}^{T} \prod_{m=1}^{M} L_m(\gamma_j\alpha_{it}-\beta_j)
@@ -373,58 +371,131 @@ $$
 
 where $L_m$ represents the likelihood function for the $m$th distribution. While I suppressed notation for missing data for the sake of brevity, all of these models can also be estimated marginal of missing data $r$ using the notation presented earlier in addition to incorporating time-series dynamics.
 
+The software package idealstan implements such likelihoods for the Normal distribution, the log-Normal distribution, the Poisson distribution, ordinal outcomes for both rating scale and graded response formulations, and the ordered Beta distribution for bounded continuous responses like percentages and proportions [@kubinecOrderedBetaRegression2022]. Furthermore, because of the modular nature of Stan's probabilistic program engine, these distributions can be mixed at the outcome level and are available for all of the time series processes and missing-data adjustments discussed previously. For reasons of brevity, I refer the reader to the first section of the supplementary information for the full derivation of these additional likelihoods.
+
+## Identification and Starting Values
+
+While identification is achievable in statistical terms by putting tight priors on item discrimination parameters (and indeed is an advisable practice to ensure the latent trait accords with theoretical priors [@morucciMeasurementThatMatches2024]), it is not necessarily sufficient to achieve identification in terms of estimation. Estimating time-varying latent variables in particular is very difficult to achieve. As mentioned previously, @quinn2002 used a very restrictive bound on over-time variance to identify their estimates of Supreme Court justices. In order to estimate DW-NOMINATE using optimization methods, Poole and Rosenthal had to undergo a laborious process of choosing starting values for legislator ideal points, estimating dynamic scores, and then reviewing the scores to see if they resembled their theoretical priors [@carrollMeasuringBiasUncertainty2009]. Similarly, @barbera2015 scores were onlyhpossible to derive by using starting values for HMC with Stan that accorded with theoretical expectations about ideal point distributions.
+
+While the identification conditions are sufficient for static models, high-dimensional time-varying latent variable models can even test HMC even though it is the most robust and stable MCMC algorithm available [@CarpenterGelmanHoffmanEtAl2017]. For high-dimensional models, such as latent variables with hundreds of time points, as I show later in this article, even HMC can end up in lower-probability modes that may have the opposite polarity of what the identification restrictions require. Specifying starting values that are closer to the posterior mode can help HMC converge and explore the posterior for very difficult problems. However, specifying starting values a priori can either be extremely tedious as the DW-NOMINATE procedure mentioned previously or it can result in latent variables that depend on arbitrarily chosen starting values that can mask convergence issues with HMC and result in fragile inferences.
+
+To address this problem, idealstan implements a novel method for identifying starting values for high-dimensional HMC using what is known as the Pathfinder algorithm [@zhangPathfinderParallelQuasiNewton2021]. The Pathfinder algorithm is a form of variational inference [@goplerudMultinomialFrameworkIdeal2019; @Grimmer2011] that approximates the joint posterior by minimizing the Kullback-Leibler divergence with a form of Newton optimization. While this approximation is unlikely to capture the full joint posterior distribution, it is remarkably robust considering its relative simplicity [@zhangPathfinderParallelQuasiNewton2021]. Importantly, Pathfinder integrates with the Stan framework so that Pathfinder can first be used to identify starting values for a model, which is particularly important for high-dimensional time-varying models. These starting values are optimal in the sense that they should be reasonably close to the posterior mode, and they also do not reflect researcher discretion, which makes them a more robust choice for measurement exercises as they are in principle replicable.
+
+This method of "mode-finding" works so well that in fact it can even be used in place of the identification restrictions on item parameters mentioned previously, but it should be noted that by doing so, the ideal point model is no longer a confirmatory method and instead should be used in an exploratory context in which the derived latent variable may or may not have any clear empirical meaning. For all the empirical examples shown later, Pathfinder was used first to ensure identification and to permit comparability across time series methods even when strict identification conditions could fail with simple random starting values.
+
 ## Big Data Inference
 
-The Achilles heel of Bayesian inference is generalizing to large data sets. Markov chains, which form the core of the estimation engine, cannot be parallelized as each iteration depends on the value of the previous iteration. However, recently the Stan team has implemented a way to parallelize the *posterior gradient* computation within a Markov chain, which are necessary and very expensive to calculate the iteration trajectories of Hamiltonian MCMC. Any model likelihood can be parallelized in terms of its gradient calculations so long as the parameters are conditionally independent. For a static ideal point model, this means that the likelihood can be parallelized across persons or items. For a dynamic model, parallelization can be performed across persons as ideal points depend on prior values.
+The Achilles heel of Bayesian inference is generalizing to large data sets. Markov chains, which form the core of the estimation engine, cannot be parallelized as each iteration depends on the value of the previous iteration. However, recently the Stan team has implemented a way to parallelize the *posterior gradient* computation within a Markov chain, which are necessary and very expensive to calculate the iteration trajectories of Hamiltonian MCMC. Any model likelihood can be parallelized in terms of its gradient calculations so long as the parameters are conditionally independent. For a static ideal point model, this means that the likelihood can be parallelized across persons or items. For a dynamic model, parallelization can be performed across persons as the ideal point at time $t=1$ depends on the value of the ideal point in $t=0$ and so on.
 
-This type of parallelization of the gradient calculations is implemented for all of the models previously described. This allows for the computation of Bayesian ideal points for datasets that were previously intractable due to the length of time required. However, it should be noted that this type of parallelization is relatively costly as not all computations of the Markov Chain are included, and significant information must be shared across parallel threads. Furthermore, this type of parallelization is only possible using in-memory parallel techniques, which restricts the application to single nodes on a computer cluster. Even with these restrictions, though, this type of computation greatly expands the possibilities for Bayesian inference on big datasets, reducing the time required for model convergence from months to days.
+This type of parallelization of the gradient calculations is implemented for all of the models previously described. This allows for the computation of Bayesian ideal points for datasets that were previously intractable due to the length of time required. However, it should be noted that this type of parallelization is relatively costly as not all computations of the Markov Chain are included, and significant information must be shared across parallel threads. Furthermore, this type of parallelization is only possible using in-memory parallel techniques, which restricts the application to single nodes on a computer cluster. Even with these restrictions, though, this type of computation greatly expands the possibilities for Bayesian inference on big datasets, reducing the time required for model convergence from months to days. In the supplementary information section 3 I show a simulation of both static and dynamic idealstan models and the associated speedups from using multiple cores on a conventional laptop.
 
 ## Ideal Point Marginal Effects
 
-Having specified the types of models being proposed, I next turn to a new post-estimation quantity that helps to both clarify what ideal points substantively mean and also to allow for a novel type of covariate relationship. As mentioned previously, the role of external covariates as hierarchical predictors of ideal points is included for both static and time-varying models using a standard linear model framework. For a given ideal point $\alpha_{it}$, the marginal effect of a covariate $x$ on an outcome $Y_{ijt}$ with a link function $g(\cdot)$ is equivalent to:
+Having specified the types of models being proposed, I next turn to a new post-estimation quantity that helps to both clarify what ideal points substantively mean and also to allow for a novel type of covariate relationship. As mentioned previously, the role of external covariates as hierarchical predictors of ideal points is included for both static and time-varying models using a standard linear model framework. For a given ideal point $\alpha_{it}$, the marginal effect of a covariate $x$ on an outcome $Y_{ijt}$ with a likelihood function $L_m(\cdot)$ is equivalent to:
 
 $$
-\frac{\partial Y_{ijt}}{\partial x} \left( g(\gamma_j(\alpha_{it} + \phi x) - \beta_j) \right) = \phi \gamma_j g'(\gamma_j(\alpha_{it} + \phi x) - \beta_j)
+\frac{\partial Y_{ijtm}}{\partial x} \left( L_m(\gamma_j(\alpha_{it} + \phi x) - \beta_j) \right) = \phi \gamma_j L_m'(\gamma_j(\alpha_{it} + \phi x) - \beta_j)
 $$ {#eq-deriv}
 
 which follows directly from the chain rule.
 
-What is important is that the quantity in @eq-deriv can be decomposed into three constituent parts: the derivative of the link function used to scale the IRT ideal point specification $g'(\cdot)$, the value of the discrimination parameter $\gamma_j$, and the value of the coefficient of the covariate, $\phi$. Multiplying these terms together will obtain the simultaneous change in $Y_{ijt}$ for a one-unit change in the covariate $x$.
+What is important is that the quantity in @eq-deriv can be decomposed into three constituent parts: the derivative of the likelihood for the given model $L_m'(\cdot)$, the value of the discrimination parameter $\gamma_j$, and the value of the coefficient of the covariate, $\phi$. Multiplying these terms together will obtain the simultaneous change in $Y_{ijtm}$ for a one-unit change in the covariate $x$.
+
+From the notation it is clear that this formula permits the marginalization of marginal effects across models $M$. However, doing so could result in marginal effect estimates that are difficult to interpret as it would involve averaging over the different scales of the mixed outcome $Y_{ijtm}$, such as a marginal effect that is 40% the change in a count variable and 60% change in the probability of an ordinal outcome. For practical purposes, then, I assume that ideal point marginal effects should be reported separately for each distribution $m \in M$ for a given mixed outcome.
 
 There are two methods to calculate these types of marginal effects. The first would be to analytically calculate these quantities for each specification. While this is possible to do, it is quite complicated as different linear model specifications, such as including a quadratic term for $x$, would necessitate a separate analytical derivative. A much more flexible method is to adopt numerical differentiation instead.
 
-As @arel-bundock2022 and @leeper2017a describe, numerical differentiation can calculate marginal effects through a simple formula. For a given covariate $x$ and link function $g(\cdot)$, we can calculate $g'(x)$ by calculating two points on the function $g(x)$ that are only a very small value $\epsilon$ apart:
+As @arel-bundockMarginaleffectsMarginalEffects2022 and @leeperPackageMargins2017 describe, numerical differentiation can calculate marginal effects through a simple formula. For a given covariate $x$ and likelihood function $L_m(\cdot)$, we can calculate $L_m'(x)$ by calculating two points on the function $L_m(x)$ that are only a very small value $\epsilon$ apart:
 
 $$
-g'(x) = lim_{\epsilon\rightarrow0}\frac{g(x + \epsilon) - g(x-\epsilon)}{2\epsilon}
+L_m'(x) = lim_{\epsilon\rightarrow0}\frac{L_m(x + \epsilon) - L_m(x-\epsilon)}{2\epsilon}
 $$ {#eq-numderiv} We can apply the formula in @eq-numderiv to our derivative specification in @eq-deriv to calculate ideal point marginal effects for a covariate $x$ separately for each item $j \in \{1, 2, ... J\}$:
 
 $$
-\frac{\partial_j Y_{itj=j}}{\partial_j x} \left( g(\gamma_j(\alpha_{it} + \phi x) - \beta_j) \right) = lim_{\epsilon\rightarrow0}\frac{g(\gamma_j(\alpha_{it} + \phi (x + \epsilon)) - \beta_j) - g(\gamma_j(\alpha_{it} + \phi (x-\epsilon)) - \beta_j)}{2\epsilon}
+\frac{\partial_j Y_{itj=jm}}{\partial_j x} \left( L_m(\gamma_j(\alpha_{it} + \phi x) - \beta_j) \right) = lim_{\epsilon\rightarrow0}\frac{L_m(\gamma_j(\alpha_{it} + \phi (x + \epsilon)) - \beta_j) - L_m(\gamma_j(\alpha_{it} + \phi (x-\epsilon)) - \beta_j)}{2\epsilon}
 $$ {#eq-idealderiv}
 
 Given these item-specific marginal effects, we can also calculate a sample-average ideal point marginal effect of $x$ by averaging over all items $j$:
 
 $$
-\frac{\partial Y_{itj}}{\partial x} \left( g(\gamma_j(\alpha_{it} + \phi x) - \beta_j) \right) = \frac{\sum_{j=1}^J \frac{\partial_j Y_{itj=j}}{\partial_j x}}{J}
+\frac{\partial Y_{itjm}}{\partial x} \left( L_m(\gamma_j(\alpha_{it} + \phi x) - \beta_j) \right) = \frac{\sum_{j=1}^J \frac{\partial_j Y_{itj=jm}}{\partial_j x}}{J}
 $$ {#eq-avgmarg}
 
-However, this sample-average quantity is less interesting as it averages over item discrimination, which is one of the most useful aspects of this quantity of interest. An ideal point marginal effect of a covariate $x$ defined for persons $i$ and item $j$ is the change in that item given its relative polarity and the relative ideal point of the person. As I demonstrate in the empirical section, this quantity intuitively captures the latent variable information encoded in the parameters in a way that cleanly measures a relevant covariate relationship.
+However, this sample-average quantity is less interesting as it averages over item discrimination (and any mixed models), which is one of the most useful aspects of this quantity of interest. An ideal point marginal effect of a covariate $x$ defined for persons $i$ and item $j$ is the change in that item given its relative polarity and the relative ideal point of the person. As I demonstrate in the empirical section, this quantity intuitively captures the latent variable information encoded in the parameters in a way that cleanly measures a relevant covariate relationship.
 
-The power of numerical differentiation is in allowing flexible linear model specifications. For example, to calculate these marginal effects when including a squared term for $x$, we simply extend the formula by including this term in the limit,
+The power of numerical differentiation is in allowing a variety of linear model specifications. For example, to calculate these marginal effects when including a squared term for $x$, we simply extend the formula by including this term in the limit,
 
 ```{=tex}
 \begin{equation}
-\frac{\partial_j Y_{itj=j}}{\partial_j x} \left( g(\gamma_j(\alpha_{it} + \phi_1 x + \phi_2 x^2) - \beta_j) \right) = lim_{\epsilon\rightarrow0}\frac{\begin{split} &g(\gamma_j(\alpha_{it} + \phi_1 (x + \epsilon) + \phi_2((x + \epsilon)^2)) - \beta_j)\\ - &g(\gamma_j(\alpha_{it} + \phi_1 (x-\epsilon) + \phi_2((x - \epsilon)^2)) - \beta_j)\end{split}}{2\epsilon}
+\frac{\partial_j Y_{itj=jm}}{\partial_j x} \left( L_m(\gamma_j(\alpha_{it} + \phi_1 x + \phi_2 x^2) - \beta_j) \right) = lim_{\epsilon\rightarrow0}\frac{\begin{split} &L_m(\gamma_j(\alpha_{it} + \phi_1 (x + \epsilon) + \phi_2((x + \epsilon)^2)) - \beta_j)\\ - &L_m(\gamma_j(\alpha_{it} + \phi_1 (x-\epsilon) + \phi_2((x - \epsilon)^2)) - \beta_j)\end{split}}{2\epsilon}
 \end{equation}
 ```
 and so on for any differentiable function of $x$.
 
 Finally, it is important to note that because all the parameters in @eq-idealderiv have posterior distributions, it is trivial to obtain uncertainty in these estimates by iterating @eq-idealderiv over the number of posterior draws. The main computational cost is calculating model predictions over $x + \epsilon$ and $x - \epsilon$, although this computation is embarrassingly parallel in the items $j$ and thus not a constraint given adequate computational resources.
 
-# Empirical Example: The 115th Congress
+# Empirical Examples
 
-To show how time-varying estimation can increase our ability to learn about ideal points, I fit a time-varying ideal point model with the most commonly used dataset in ideal point analysis: U.S. Congressional roll-call votes, specifically for House votes in the 115th Congress. The research question that I consider is that of the effect of economic disruption on political polarization in Congress. Recent research has proposed that changes in economic conditions, whether in terms of economic inequality and trade, may be affecting increasing polarization in the U.S. Congress. It has long been understood that there is an important interaction in terms of how voters perceive economic recession and their willingness to vote for parties in a polarized environment [@alesina1995].
+In this section I present original empirical findings with the idealstan model while also showing how the model can be best applied to empirical data. In addition, I show the conditions under which idealstan's innovations, especially the missing-data adjustment and varying time-series processes, can affect inferences that scholars make. Given that comparison to existing models is helpful for establishing model validity, I first discuss an example drawn from Japanese survey data in @imaiFastEstimationIdeal2016 and then a comprehensive dataset of rollcall votes from the U.S. House from 1990 to 2018.
+
+## Missing Data in Voter-Candidate Surveys
+
+Examining survey data as a empirical example shows how idealstan can be applied to diverse forms of social science data. This empirical example will also illustrate why the missing-data adjustment mechanism is even more important for survey data than legislative data because missingness rates on surveys can be quite high and there is often only a single measurement per respondent. As a result, non-ignorable missing data can dramatically affect the estimation of respondent-level latent traits like ideology or pro-democratic attitudes.
+
+To show this adjustment in practice, I re-analyzed estimates of survey respondent ideology in @imaiFastEstimationIdeal2016 based on a joint legislator-voter survey in Japan known as the UTokyo-Asahi Survey (for more information, see @hiranoPolicyPositionsMixed2011). The @imaiFastEstimationIdeal2016 method, known as emIRT, is able to scale diverse types of data very quickly using an expectation-maximization (EM) algorithm, but it is not able to incorporate missing data. They use this method to scale 19,443 responses with 98 survey questions in a very short amount of time (approximately two minutes). While idealstan can also estimate models of this size, it requires a much longer period of approximately eight hours on a node with multiple cores.[^2] For that reason, idealstan should not be seen as a replacement for emIRT given that only emIRT can accommodate the largest datasets, such as those with tens of millions of observations.[^3] However, for this analysis and others, while estimation takes longer than emIRT, in a measurement context models are often run once and then the output is further analyzed, which makes the estimation time a (more or less) fixed cost for a given study.
+
+[^2]: These speeds are based on a 2021 ARM-based server with access to 48 cores. The actual speed of the MCMC HMC algorithm depends on the number of cores available and the type of cores available. Generally speaking, the parallelization algorithm performs well with CPU cores with large and fast caches to speed up data transfer. Modern CPUs of the ARM variety in Apple machines perform particularly well with this algorithm and can reduce computation time considerably. While very large models require the use of high-performance machine with dozens of cores, even quite large models can be fit with a laptop that has a modern processor and multiple available cores.
+
+[^3]: It is possible for idealstan to also estimate such large datasets if more complicated forms of parallelization are used such as the message-passing interface (MPI) that can parallelize across nodes. However, while such models are tractable with idealstan, they would require significant technical work to implement on high-performance computing clusters, and as such I do not consider them further in this article.
+
+I first reproduce their analysis and compare it to two estimates from similar ordinal IRT models, one using the parameterization in this paper with missing data and the other with only observed data (no adjustment). @fig-asahi plots the emIRT estimates from @imaiFastEstimationIdeal2016 against an idealstan model with only observed data and an idealstan model that uses the missing data adjustment. The same data was used in both models along with pinned survey item discrimination parameters based on the emIRT fit. As can be seen, when using only observed data, idealstan estimates are almost identical to those of emIRT (correlation of 0.99). However, with missing data, the estimates diverge radically (correlation of 0.2).
+
+```{r}
+#| fig-cap: "Comparison of Imai et al. emIRT Estimates to Bayesian IRT with and Without Misssing Data"
+#| label: fig-asahi
+
+# load results based on external script utokyo_asahi_comparison.R
+# run that script first to reproduce these results
+
+combine_tibble <- readRDS("data/combine_tibble_emIRT.rds")
+
+combine_tibble %>% 
+  ggplot(aes(y=em_estimate,x=estimate)) +
+  geom_point(colour="black",alpha=0.5) +
+  labs(y="emIRT Ideal Points",x="idealstan Ideal Points",
+       caption=stringr::str_wrap("Plot shows survey respondent ideal point estimates from the idealstan package for an IRT ideal point model with only observed data from the Asahi Todai survey and an idealstan model that incorporates non-ignorable missing data. These ideal point estimates are plotted against emIRT estimates, which also only use observed data.")) +
+  ggthemes::theme_clean() +
+  facet_wrap(~model) +
+  stat_smooth(method="lm")
+
+```
+
+To understand why the divergence is so strong, in @fig-itemasahi I plot the item missingness discrimination parameters from the idealstan model with missing data adjustment against the percent of missing data for each survey item. As can be seen, the plot has a distinct funnel shape. When there is very little missing data for the survey question, the missingness discrimination parameter will likewise be low—i.e., when no data is missing, there is little possibility of there being substantial information about the latent trait in the data. On the other hand, when the missing proportion of survey responses is high, then the missingness discrimination can be high—but not necessarily so. Some questions, like "reform", "sdf", and "manifesto", were only answered by a few respondents but have low missingness discrimination. Low missingness discrimination means that this missing data is essentially ignorable—including it will not change the substance of the ideal point measures.
+
+```{r}
+#| label: fig-itemasahi
+#| fig-cap: Item Discrimination Parameters Versus Percent Missing Data in Survey Item
+
+miss_data <- readRDS("data/miss_data_emIRT.rds")
+
+miss_data %>% 
+  filter(!(param %in% c("Q4_22_12","Q5_22_12"))) %>% 
+  ggplot(aes(y=prop_miss,x=`Posterior Median`,label=param)) +
+  geom_text(check_overlap=TRUE,colour="black") +
+  ggthemes::theme_clean() +
+  scale_y_continuous(labels=scales::percent) +
+  labs(y="Proportion Missing in Survey Item",x="Item Missingness Discrimination",
+       caption=stringr::str_wrap("Plot shows proportion of missing data at the question/item level for the Asahi Todai survey on Japanese political issues versus the size of the discrimination parameter for missing data at the item level from the idealstan IRT ideal point model. Large values imply that missingness is non-ignorable (i.e., correlated with the latent trait being estimated)."))
+
+```
+
+It is beyond the scope of this paper to discuss fully the reasons why some questions appear to have such high missingness discrimination and what these findings substantively mean for Japanese politics. However, based on how the dataset was constructed—survey waves from 2003 to 2012 appended together—it would appear that the most likely explanation is that the ideological composition of the sample changed over time. While the voters in the survey are a random sample, the legislative candidates are not, given that selection into becoming a candidate is non-random. As a result, the divergence is best explained by certain questions indicating not only what a candidate thinks about a topic but also the particular year and cohort in which they are running. Otherwise, emIRT is making the quite strong assumption that a candidate (or voter) in the survey had an equal chance a priori at answering any question from all of the different survey waves, which is implausible, especially for candidates.
+
+For these reasons, the missing data adjustment presented in this paper, while relatively simple, can have serious ramifications for measurement when missing data rates are high and there is reason to believe that missingness is correlated with the latent trait. In the next section, I look at missingness in a much "harder" case of the U.S. Congress where absence rates by legislators are rarely higher than 10%, but as I show, incorporating missing data adjustment can reveal useful patterns of behavior even if it does not radically change existing estimates.
+
+## Time Processes, Missing Data and Covariates in The U.S. Congress
+
+To show how time-varying estimation can increase our ability to learn about ideal points, I fit a time-varying ideal point model with the most commonly used dataset in ideal point analysis: U.S. Congressional roll-call votes, specifically for House votes in the 115th Congress. To examine the estimation of ideal point marginal effects, I also answer a research question about the role of changes in district-level unemployment on political polarization in Congress. Recent research has proposed that changes in economic conditions, whether in terms of economic inequality and trade, may be affecting increasing polarization in the U.S. Congress. It has long been understood that there is an important interaction in terms of how voters perceive economic recession and their willingness to vote for parties in a polarized environment [@alesina1995].
 
 However, we also know that the salience of policy-making varies with economic conditions that correlate with external shocks [@baker2016]. Most of the studies of trade and other shocks on Congress employ outcomes at the year level, whether the unit of analysis are states or Congressional districts. To show the power of the time-series models I employ, I analyze month-level variation in unemployment by Congressional district and its effect on legislator ideal points in the House to see to what extent localized economic shocks either polarize or de-polarize voting behavior.
 
@@ -488,7 +559,6 @@ In addition, we might think that any polarization may be asymmetric in terms of 
 
 > H2: When monthly unemployment rates rise, the resulting polarization of legislative voting behavior is moderated by each legislator's party affiliation.
 
-
 To test these hypotheses, I fit each of the described time-series models separately to rollcall vote data from the 115th Congress. I do not include the 1st-stage missing-data selection equation. Recorded absences are fairly low for this session of Congress, and so this additional level of complexity is not as useful, especially when the aim is inference on covariates. To identify the model, I pin the discrimination parameters $\gamma_j$ for four party-line votes in which all Republicans voted for a measure as +1, and four Democrat party-line votes in which all Democrats voted against a measure as -1. Utilizing the same pinned parameters for all models allows me to compare their relative ability to obtain identification of a single rotation of the ideal points.
 
 For the spline specifications, I consider splines of degrees 2, 3 and 4 while using only one knot (i.e., one polynomial function for the whole time period). If I were modeling multiple Congressional sessions, it would be possible to use one knot per session to allow for period effects in the time series. With only one Congressional session, however, a single polynomial function is sufficient as it would not be expected for a member of Congress to switch their ideological position in a noticeable way more than once or twice per term.
@@ -540,147 +610,147 @@ rhatrw <- id_plot_rhats(unemp_rw_fit) + ggtitle("Random Walk") + labs(caption=""
 saveRDS(rhatrw, "data/rhatrw.rds")
 
 un1 <- id_plot_legis_dyn(unemp1_fit,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Spline of 2nd Degree") + labs(y="") +
+                              D="blue"),na.translate=F,name="") + ggtitle("Spline of 2nd Degree") + labs(y="") +
   scale_x_date(guide = guide_axis(n.dodge = 2))
   
   saveRDS(un1, "data/un1.rds")
 
 un2 <- id_plot_legis_dyn(unemp2_fit,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Spline of 3rd Degree") + labs(y="") +
+                              D="blue"),na.translate=F,name="") + ggtitle("Spline of 3rd Degree") + labs(y="") +
   scale_x_date(guide = guide_axis(n.dodge = 2))
 
   saveRDS(un2, "data/un2.rds")
 
 un3 <- id_plot_legis_dyn(unemp3_fit,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Spline of 4th Degree") + labs(y="") +
+                              D="blue"),na.translate=F,name="") + ggtitle("Spline of 4th Degree") + labs(y="") +
   scale_x_date(guide = guide_axis(n.dodge = 2))
 
   saveRDS(un3, "data/un3.rds")
 
 gp <- id_plot_legis_dyn(unemp_gp_fit,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Gaussian Process") + labs(y="") +
+                              D="blue"),na.translate=F,name="") + ggtitle("Gaussian Process") + labs(y="") +
   scale_x_date(guide = guide_axis(n.dodge = 2))
 
   saveRDS(gp, "data/gp.rds")
 
 ar <- id_plot_legis_dyn(unemp_ar_fit,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("AR(1) Process") + labs(y="") +
+                              D="blue"),na.translate=F,name="") + ggtitle("AR(1) Process") + labs(y="") +
   scale_x_date(guide = guide_axis(n.dodge = 2))
 
   saveRDS(ar, "data/ar.rds")
 
 rw <- id_plot_legis_dyn(unemp_rw_fit,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Random Walk") +
+                              D="blue"),na.translate=F,name="") + ggtitle("Random Walk") +
   scale_x_date(guide = guide_axis(n.dodge = 2)) + labs(y="")
 
   saveRDS(rw, "data/rw.rds")
   
 un1m <- id_plot_legis_dyn(unemp1_fitm,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Spline of 2nd Degree") + labs(y="") +
+                              D="blue"),na.translate=F,name="") + ggtitle("Spline of 2nd Degree") + labs(y="") +
   scale_x_date(guide = guide_axis(n.dodge = 2))
   
   saveRDS(un1m, "data/un1m.rds")
 
 un2m <- id_plot_legis_dyn(unemp2_fitm,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Spline of 3rd Degree") + labs(y="") +
+                              D="blue"),na.translate=F,name="") + ggtitle("Spline of 3rd Degree") + labs(y="") +
   scale_x_date(guide = guide_axis(n.dodge = 2))
 
   saveRDS(un2m, "data/un2m.rds")
 
 un3m <- id_plot_legis_dyn(unemp3_fitm,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Spline of 4th Degree") + labs(y="") +
+                              D="blue"),na.translate=F,name="") + ggtitle("Spline of 4th Degree") + labs(y="") +
   scale_x_date(guide = guide_axis(n.dodge = 2))
 
   saveRDS(un3m, "data/un3m.rds")
 
 gpm <- id_plot_legis_dyn(unemp_gp_fitm,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Gaussian Process") + labs(y="") +
+                              D="blue"),na.translate=F,name="") + ggtitle("Gaussian Process") + labs(y="") +
   scale_x_date(guide = guide_axis(n.dodge = 2))
 
   saveRDS(gpm, "data/gpm.rds")
 
 arm <- id_plot_legis_dyn(unemp_ar_fitm,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("AR(1) Process") + labs(y="") +
+                              D="blue"),na.translate=F,name="") + ggtitle("AR(1) Process") + labs(y="") +
   scale_x_date(guide = guide_axis(n.dodge = 2))
 
   saveRDS(arm, "data/arm.rds")
 
 rwm <- id_plot_legis_dyn(unemp_rw_fitm,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Random Walk") +
+                              D="blue"),na.translate=F,name="") + ggtitle("Random Walk") +
   scale_x_date(guide = guide_axis(n.dodge = 2)) + labs(y="")
 
   saveRDS(rwm, "data/rwm.rds")
   
 un1_a <- id_plot_legis_dyn(unemp1_fit,include="AMASH, Justin",
                          use_ci=T,plot_text = F) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Spline of 2nd Degree") + labs(y="") +
+                              D="blue"),na.translate=F,name="") + ggtitle("Spline of 2nd Degree") + labs(y="") +
   scale_x_date(guide = guide_axis(n.dodge = 2))
   
   saveRDS(un1_a, "data/un1_a.rds")
 
 un2_a <- id_plot_legis_dyn(unemp2_fit,use_ci=T,include="AMASH, Justin",plot_text = F) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Spline of 3rd Degree") + labs(y="") +
+                              D="blue"),na.translate=F,name="") + ggtitle("Spline of 3rd Degree") + labs(y="") +
   scale_x_date(guide = guide_axis(n.dodge = 2))
  
   saveRDS(un2_a, "data/un2_a.rds")
 
 un3_a <- id_plot_legis_dyn(unemp3_fit,use_ci=T,include="AMASH, Justin",plot_text = F) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Spline of 4th Degree") + labs(y="") +
+                              D="blue"),na.translate=F,name="") + ggtitle("Spline of 4th Degree") + labs(y="") +
   scale_x_date(guide = guide_axis(n.dodge = 2))
   
   saveRDS(un3_a, "data/un3_a.rds")
 
 gp_a <- id_plot_legis_dyn(unemp_gp_fit,use_ci=T,include="AMASH, Justin",plot_text = F) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Gaussian Process") + labs(y="") +
+                              D="blue"),na.translate=F,name="") + ggtitle("Gaussian Process") + labs(y="") +
   scale_x_date(guide = guide_axis(n.dodge = 2))
 
   saveRDS(gp_a, "data/gp_a.rds")
 
 ar_a <- id_plot_legis_dyn(unemp_ar_fit,use_ci=T,include="AMASH, Justin",plot_text = F) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("AR(1) Process") + labs(y="") +
+                              D="blue"),na.translate=F,name="") + ggtitle("AR(1) Process") + labs(y="") +
   scale_x_date(guide = guide_axis(n.dodge = 2))
 
   saveRDS(ar_a, "data/ar_a.rds")
 
 rw_a <- id_plot_legis_dyn(unemp_rw_fit,use_ci=T,include="AMASH, Justin",plot_text = F) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Random Walk") +
+                              D="blue"),na.translate=F,name="") + ggtitle("Random Walk") +
   scale_x_date(guide = guide_axis(n.dodge = 2)) + labs(y="")
 
   saveRDS(rw_a, "data/rw_a.rds")
   
   un1_am <- id_plot_legis_dyn(unemp1_fitm,include="AMASH, Justin",
                          use_ci=T,plot_text = F) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Spline of 2nd Degree") + labs(y="") +
+                              D="blue"),na.translate=F,name="") + ggtitle("Spline of 2nd Degree") + labs(y="") +
   scale_x_date(guide = guide_axis(n.dodge = 2))
   
   saveRDS(un1_am, "data/un1_am.rds")
 
 un2_am <- id_plot_legis_dyn(unemp2_fitm,use_ci=T,include="AMASH, Justin",plot_text = F) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Spline of 3rd Degree") + labs(y="") +
+                              D="blue"),na.translate=F,name="") + ggtitle("Spline of 3rd Degree") + labs(y="") +
   scale_x_date(guide = guide_axis(n.dodge = 2))
  
   saveRDS(un2_am, "data/un2_am.rds")
 
 un3_am <- id_plot_legis_dyn(unemp3_fitm,use_ci=T,include="AMASH, Justin",plot_text = F) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Spline of 4th Degree") + labs(y="") +
+                              D="blue"),na.translate=F,name="") + ggtitle("Spline of 4th Degree") + labs(y="") +
   scale_x_date(guide = guide_axis(n.dodge = 2))
   
   saveRDS(un3_am, "data/un3_am.rds")
 
 gp_am <- id_plot_legis_dyn(unemp_gp_fitm,use_ci=T,include="AMASH, Justin",plot_text = F) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Gaussian Process") + labs(y="") +
+                              D="blue"),na.translate=F,name="") + ggtitle("Gaussian Process") + labs(y="") +
   scale_x_date(guide = guide_axis(n.dodge = 2))
 
   saveRDS(gp_am, "data/gp_am.rds")
 
 ar_am <- id_plot_legis_dyn(unemp_ar_fitm,use_ci=T,include="AMASH, Justin",plot_text = F) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("AR(1) Process") + labs(y="") +
+                              D="blue"),na.translate=F,name="") + ggtitle("AR(1) Process") + labs(y="") +
   scale_x_date(guide = guide_axis(n.dodge = 2))
 
   saveRDS(ar_am, "data/ar_am.rds")
 
 rw_am <- id_plot_legis_dyn(unemp_rw_fitm,use_ci=T,include="AMASH, Justin",plot_text = F) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Random Walk") +
+                              D="blue"),na.translate=F,name="") + ggtitle("Random Walk") +
   scale_x_date(guide = guide_axis(n.dodge = 2)) + labs(y="")
 
   saveRDS(rw_am, "data/rw_am.rds")
@@ -689,37 +759,37 @@ rw_am <- id_plot_legis_dyn(unemp_rw_fitm,use_ci=T,include="AMASH, Justin",plot_t
   
 un1_tw <- id_plot_legis_dyn(unemp1_fit,include="WALZ, Tim",
                          use_ci=T,plot_text = F) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Spline of 2nd Degree") + labs(y="") +
+                              D="blue"),na.translate=F,name="") + ggtitle("Spline of 2nd Degree") + labs(y="") +
   scale_x_date(guide = guide_axis(n.dodge = 2))
   
   saveRDS(un1_tw, "data/un1_tw.rds")
 
 un2_tw <- id_plot_legis_dyn(unemp2_fit,use_ci=T,include="WALZ, Tim",plot_text = F) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Spline of 3rd Degree") + labs(y="") +
+                              D="blue"),na.translate=F,name="") + ggtitle("Spline of 3rd Degree") + labs(y="") +
   scale_x_date(guide = guide_axis(n.dodge = 2))
  
   saveRDS(un2_tw, "data/un2_tw.rds")
 
 un3_tw <- id_plot_legis_dyn(unemp3_fit,use_ci=T,include="WALZ, Tim",plot_text = F) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Spline of 4th Degree") + labs(y="") +
+                              D="blue"),na.translate=F,name="") + ggtitle("Spline of 4th Degree") + labs(y="") +
   scale_x_date(guide = guide_axis(n.dodge = 2))
   
   saveRDS(un3_tw, "data/un3_tw.rds")
 
 gp_tw <- id_plot_legis_dyn(unemp_gp_fit,use_ci=T,include="WALZ, Tim",plot_text = F) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Gaussian Process") + labs(y="") +
+                              D="blue"),na.translate=F,name="") + ggtitle("Gaussian Process") + labs(y="") +
   scale_x_date(guide = guide_axis(n.dodge = 2))
 
   saveRDS(gp_tw, "data/gp_tw.rds")
 
 ar_tw <- id_plot_legis_dyn(unemp_ar_fit,use_ci=T,include="WALZ, Tim",plot_text = F) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("AR(1) Process") + labs(y="") +
+                              D="blue"),na.translate=F,name="") + ggtitle("AR(1) Process") + labs(y="") +
   scale_x_date(guide = guide_axis(n.dodge = 2))
 
   saveRDS(ar_tw, "data/ar_tw.rds")
 
 rw_tw <- id_plot_legis_dyn(unemp_rw_fit,use_ci=T,include="WALZ, Tim",plot_text = F) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Random Walk") +
+                              D="blue"),na.translate=F,name="") + ggtitle("Random Walk") +
   scale_x_date(guide = guide_axis(n.dodge = 2)) + labs(y="")
 
   saveRDS(rw_tw, "data/rw_tw.rds")
@@ -728,37 +798,37 @@ rw_tw <- id_plot_legis_dyn(unemp_rw_fit,use_ci=T,include="WALZ, Tim",plot_text =
   
 un1_twm <- id_plot_legis_dyn(unemp1_fitm,include="WALZ, Tim",
                          use_ci=T,plot_text = F) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Spline of 2nd Degree") + labs(y="") +
+                              D="blue"),na.translate=F,name="") + ggtitle("Spline of 2nd Degree") + labs(y="") +
   scale_x_date(guide = guide_axis(n.dodge = 2))
   
   saveRDS(un1_twm, "data/un1_twm.rds")
 
 un2_twm <- id_plot_legis_dyn(unemp2_fitm,use_ci=T,include="WALZ, Tim",plot_text = F) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Spline of 3rd Degree") + labs(y="") +
+                              D="blue"),na.translate=F,name="") + ggtitle("Spline of 3rd Degree") + labs(y="") +
   scale_x_date(guide = guide_axis(n.dodge = 2))
  
   saveRDS(un2_twm, "data/un2_twm.rds")
 
 un3_twm <- id_plot_legis_dyn(unemp3_fitm,use_ci=T,include="WALZ, Tim",plot_text = F) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Spline of 4th Degree") + labs(y="") +
+                              D="blue"),na.translate=F,name="") + ggtitle("Spline of 4th Degree") + labs(y="") +
   scale_x_date(guide = guide_axis(n.dodge = 2))
   
   saveRDS(un3_twm, "data/un3_twm.rds")
 
 gp_twm <- id_plot_legis_dyn(unemp_gp_fitm,use_ci=T,include="WALZ, Tim",plot_text = F) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Gaussian Process") + labs(y="") +
+                              D="blue"),na.translate=F,name="") + ggtitle("Gaussian Process") + labs(y="") +
   scale_x_date(guide = guide_axis(n.dodge = 2))
 
   saveRDS(gp_twm, "data/gp_twm.rds")
 
 ar_twm <- id_plot_legis_dyn(unemp_ar_fitm,use_ci=T,include="WALZ, Tim",plot_text = F) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("AR(1) Process") + labs(y="") +
+                              D="blue"),na.translate=F,name="") + ggtitle("AR(1) Process") + labs(y="") +
   scale_x_date(guide = guide_axis(n.dodge = 2))
 
   saveRDS(ar_twm, "data/ar_twm.rds")
 
 rw_twm <- id_plot_legis_dyn(unemp_rw_fitm,use_ci=T,include="WALZ, Tim",plot_text = F) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Random Walk") +
+                              D="blue"),na.translate=F,name="") + ggtitle("Random Walk") +
   scale_x_date(guide = guide_axis(n.dodge = 2)) + labs(y="")
 
   saveRDS(rw_twm, "data/rw_twm.rds")
@@ -801,7 +871,7 @@ sar_covm <- unemp_ar_fitm@stan_samples$draws("legis_x") %>%
   mutate(Model="AR(1)",Missingness="Modeled")
 srw_covm <- unemp_rw_fitm@stan_samples$draws("legis_x") %>% 
   summarize_draws %>% 
-  mutate(Model="Random Walk",Missingness="Unmodeled")
+  mutate(Model="Random Walk",Missingness="Modeled")
 
 cov_combined <- bind_rows(s1_cov, s2_cov, s3_cov,
                           sgp_cov, sar_cov, srw_cov,
@@ -809,6 +879,8 @@ cov_combined <- bind_rows(s1_cov, s2_cov, s3_cov,
                           sgp_covm, sar_covm, srw_covm)
 
 saveRDS(cov_combined, "data/cov_combined.rds")
+
+rm(list=ls()[grepl(x=ls(),pattern = "unemp")])
   
   
 }
@@ -819,33 +891,33 @@ saveRDS(cov_combined, "data/cov_combined.rds")
 
 if(run_all) {
   
-  unemp1_all_fit <- readRDS('data/unempall1_12_1_fit.rds')
+  unemp1_all_fit <- readRDS('data/all1_12_1_fit.rds')
   unemp2_all_fit <- readRDS('data/unempall1_12_2_fit.rds')
   unemp3_all_fit <- readRDS('data/unempall1_12_3_fit.rds')
   
   # do plots/rhats here
   
   un1big <- id_plot_legis_dyn(unemp1_all_fit,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Spline of 2nd Degree") + labs(y="") +
+                              D="blue"),na.translate=F,name="") + ggtitle("Spline of 2nd Degree") + labs(y="") +
   scale_x_date(guide = guide_axis(n.dodge = 2))
   
   saveRDS(un1big, "data/un1big.rds")
 
 un2big <- id_plot_legis_dyn(unemp2_all_fit,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Spline of 3rd Degree") + labs(y="") +
+                              D="blue"),na.translate=F,name="") + ggtitle("Spline of 3rd Degree") + labs(y="") +
   scale_x_date(guide = guide_axis(n.dodge = 2))
 
   saveRDS(un2big, "data/un2big.rds")
 
 un3big <- id_plot_legis_dyn(unemp3_all_fit,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Spline of 4th Degree") + labs(y="") +
+                              D="blue"),na.translate=F,name="") + ggtitle("Spline of 4th Degree") + labs(y="") +
   scale_x_date(guide = guide_axis(n.dodge = 2))
 
   saveRDS(un3big, "data/un3big.rds")
   
   # need legis covariates
   
-  
+  rm(list=ls()[grepl(x=ls(),pattern = "unemp")])
   
 }
 
@@ -858,28 +930,34 @@ un3big <- id_plot_legis_dyn(unemp3_all_fit,use_ci=F,plot_text = F,person_line_al
 if(run_all) {
   
   unemp1_all_fitm <- readRDS('data/unempall2_12_1_fit.rds')
-  unemp2_all_fitm <- readRDS('data/unempall2_12_2_fit.rds')
-  unemp3_all_fitm <- readRDS('data/unempall2_12_3_fit.rds')
   
-  # do plots/rhats here
-  
-    un1bigm <- id_plot_legis_dyn(unemp1_all_fitm,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Spline of 2nd Degree") + labs(y="") +
+  un1bigm <- id_plot_legis_dyn(unemp1_all_fitm,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
+                              D="blue"),na.translate=F,name="") + ggtitle("Spline of 2nd Degree") + labs(y="") +
   scale_x_date(guide = guide_axis(n.dodge = 2))
   
   saveRDS(un1bigm, "data/un1bigm.rds")
-
-un2bigm <- id_plot_legis_dyn(unemp2_all_fitm,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Spline of 3rd Degree") + labs(y="") +
+  
+  rm(list=ls()[grepl(x=ls(),pattern = "unemp")])
+  
+  unemp2_all_fitm <- readRDS('data/unempall2_12_2_fit.rds')
+  
+  un2bigm <- id_plot_legis_dyn(unemp2_all_fitm,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
+                              D="blue"),na.translate=F,name="") + ggtitle("Spline of 3rd Degree") + labs(y="") +
   scale_x_date(guide = guide_axis(n.dodge = 2))
 
   saveRDS(un2bigm, "data/un2bigm.rds")
-
-un3bigm <- id_plot_legis_dyn(unemp3_all_fitm,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
-                              D="blue",I="green"),name="") + ggtitle("Spline of 4th Degree") + labs(y="") +
+  
+  rm(list=ls()[grepl(x=ls(),pattern = "unemp")])
+  
+  unemp3_all_fitm <- readRDS('data/unempall2_12_3_fit.rds')
+  
+  un3bigm <- id_plot_legis_dyn(unemp3_all_fitm,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
+                              D="blue"),na.translate=F,name="") + ggtitle("Spline of 4th Degree") + labs(y="") +
   scale_x_date(guide = guide_axis(n.dodge = 2))
 
   saveRDS(un3bigm, "data/un3bigm.rds")
+  
+  rm(list=ls()[grepl(x=ls(),pattern = "unemp")])
   
 }
 
@@ -933,6 +1011,26 @@ un1m + un2m + un3m + arm + gpm + rwm + plot_layout(nrow=2,
 
 ```
 
+```{r distsbig}
+#| label: fig-alldistbig
+#| fig-cap: "Comparison of Time-varying Ideal Point Methods for 1990-2018 U.S. Congresses with Observed Votes"
+#| message: false
+#| warning: false
+#| fig-height: 6
+#| fig-width: 6
+#| cache-lazy: false
+
+  un1big <- readRDS("data/un1big.rds")
+  un2big <- readRDS("data/un2big.rds")
+  un3big <- readRDS("data/un3big.rds")
+
+un1big + un2big + un3big + plot_layout(nrow=2,
+                                             guides="collect") + 
+  plot_annotation(caption="Posterior average values shown for 115th Congress legislator ideal points.\nItem discrimination for Republican party-line votes was constrained to be positive.") & theme(legend.position = "top",
+                                                                                                                                                                                                    plot.title=element_text(size=9))
+
+```
+
 ```{r distscompwalz}
 #| include: false
 
@@ -979,8 +1077,8 @@ un1_a + un2_a + un3_a + ar_a + gp_a + rw_a + plot_layout(nrow=2,
 #| fig-width: 6
 
   un1_am <- readRDS("data/un1_am.rds")
-  un2_am <- readRDS("data/un1_am.rds")
-  un3_am <- readRDS("data/un1_am.rds")
+  un2_am <- readRDS("data/un2_am.rds")
+  un3_am <- readRDS("data/un3_am.rds")
   gp_am <- readRDS("data/gp_am.rds")
   rw_am <- readRDS("data/rw_am.rds")
   ar_am <- readRDS("data/ar_am.rds")
@@ -1041,7 +1139,7 @@ un1_twm + un2_twm + un3_twm + ar_twm + gp_twm + rw_twm + plot_layout(nrow=2,
 
 # need vertical lines for beginning of sessions
 
-rollcalls %>% 
+p1 <- rollcalls %>% 
   arrange(congress, date) %>% 
   group_by(congress) %>%      
   mutate(session_day_counter = ifelse(row_number()==n(),date_month,NA_Date_)) %>% 
@@ -1052,15 +1150,24 @@ rollcalls %>%
             session_day_counter=session_day_counter[1]) %>% 
   ggplot(aes(y=Absences,x=date_month)) +
   geom_line(aes(colour=party_code,linetype=party_code)) +
-  stat_smooth(aes(linetype=party_code),method="lm") +
-  scale_y_continuous(labels=scales::percent) +
+  stat_smooth(aes(linetype=party_code,colour=party_code),method="lm") +
+  scale_y_continuous(labels=scales::percent,limits = c(0,0.27)) +
   labs(y="% Absent per Vote",x="",
        caption="Dotted lines indicate Congressional sessions.") +
-  guides(linetype=guide_legend(title="Party"),
-         colour=guide_legend(title="Party")) +
+  scale_color_manual(guide="legend",name="Party",
+                     values=c("D"="blue",
+                              "R"="red")) +
+  guides(linetype=guide_legend(title="Party")) +
   geom_vline(aes(xintercept=session_day_counter),linetype=3) +
-  ggthemes::theme_clean() + 
-  ylim(c(0,0.27))
+  ggthemes::theme_clean()
+
+p2 <- p1 +
+  ggtitle("Absence Rates by Party per Legislative Vote",
+          subtitle = "Data from U.S. House from 1990 to 2018")
+
+ggsave("absent_votes.jpg",plot = p2)
+
+p1
 
 ```
 
@@ -1081,12 +1188,18 @@ c1 <- lm(Absences ~ session_day_counter +
            I(session_day_counter^3) +
              factor(congress),data=rollcalls_abs)
 
-plot_predictions(c1,condition = "session_day_counter") +
+p1 <- plot_predictions(c1,condition = "session_day_counter") +
   ggthemes::theme_clean() + 
   scale_y_continuous(labels=scales::percent) +
   labs(y="% Absent by Vote",
        x="Days in Session",
-       caption="Plot shows fitted line from OLS polynomial regression on absent rates by number of days into a Congressional session.")
+       caption="Plot shows fitted line from OLS polynomial regression on absent rates\n by number of days into a Congressional session.")
+
+p2 <- p1 + ggtitle("Prediction from Regression of Absence Rates\non Number of Days in Session",subtitle = "Data from U.S. House from 1990 to 2018")
+
+ggsave("session_days.jpg",plot=p2)
+
+p1
 
 ```
 
@@ -1097,8 +1210,10 @@ I next look at the coefficients $\phi$ that relate the legislator-level covariat
 ```{r legisx}
 #| label: tbl-coef
 #| tbl-cap: Coefficients of Legislator Hierarchical Covariates ($\phi$)
+#| cache: true
 
-
+library(tinytable)
+library(dplyr)
 
 readRDS("data/cov_combined.rds") %>% 
   bind_rows %>% 
@@ -1106,19 +1221,28 @@ readRDS("data/cov_combined.rds") %>%
                          `legis_x[1]`="Unemployment",
                          `legis_x[2]`="GOP",
                          `legis_x[3]`="UnemploymentXGOP")) %>% 
+  filter(variable=="UnemploymentXGOP") %>% 
   select(Model,Variable="variable",
          Missingness,
          `Posterior Median`="median",
          `5% Quantile`="q5",
          `95% Quantile`="q95") %>% 
-  arrange(Variable,Model) %>% 
-  filter(Variable %in% c("Unemployment",
-                         "GOP",
-                         "UnemploymentXGOP")) %>% 
-  tt(digits=3,
-     notes="Plot shows hierarchical legislator-levle covariates for different ideal point models, including time functions and whether or not the model accounted for missingness.") %>% 
-  style_tt(i=1:36,
-           fontsize=.7)
+  ggplot(aes(y=`Posterior Median`,x=Model)) +
+  geom_pointrange(aes(ymin=`5% Quantile`, 
+                      ymax=`95% Quantile`,
+                      linetype=Missingness),
+                  position=position_dodge(0.5)) +
+  geom_hline(yintercept=0,linetype=3) +
+  ggthemes::theme_clean() +
+  coord_flip()
+  # arrange(Variable,Model) %>% 
+  # filter(Variable %in% c("Unemployment",
+  #                        "GOP",
+  #                        "UnemploymentXGOP")) %>% 
+  # tt(digits=3,
+  #    notes="Plot shows hierarchical legislator-levle covariates for different ideal point models, including time functions and whether or not the model accounted for missingness.") %>% 
+  # style_tt(i=1:36,
+  #          fontsize=.7)
 
 ```
 
@@ -1183,7 +1307,7 @@ by_party %>%
     #facet_wrap(~group_id) +
     ggthemes::theme_tufte() + 
     scale_fill_manual(values=c(Republicans="red",
-                              Democrats="blue",I="green"),name="") +
+                              Democrats="blue"),name="") +
     coord_flip() +
     labs(y="Marginal Change in Probability of Voting",
          x="Rollcalls") +
