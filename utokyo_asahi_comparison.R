@@ -55,8 +55,7 @@ asahi_em_ideal <- mutate(as_tibble(AsahiTodai$dat.all),
 # use external covariates from emIRT
 
 ext_cov <- AsahiTodai$obs.attri %>% 
-  mutate(person_id=1:n()) %>% 
-  select(person_id,wave)
+  mutate(person_id=1:n())
 
 asahi_em_ideal <- left_join(asahi_em_ideal,ext_cov,
                             by="person_id")
