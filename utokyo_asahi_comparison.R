@@ -104,9 +104,16 @@ asahi_em_ideal2 <- mutate(as_tibble(AsahiTodai$dat.all),
          ordered_id=3,
          model_id=3)
 
-asahi_em_ideal2 <- id_make(asahi_em_ideal2)
+asahi_em_ideal2 <- left_join(asahi_em_ideal2,ext_cov,
+                            by="person_id")
 
-asahi_est2 <- id_estimate(asahi_em_ideal2,restrict_ind_high=names(restrict_ind_high),
+asahi_em_ideal_small2 <- group_by(asahi_em_ideal2,
+                                 wave,voter,item_id) %>% 
+  filter(!all(is.na(outcome_disc)))
+
+asahi_em_ideal_small2 <- id_make(asahi_em_ideal_small2)
+
+asahi_est2 <- id_estimate(asahi_em_ideal_small2,restrict_ind_high=names(restrict_ind_high),
                          restrict_ind_low=names(restrict_ind_low),
                          const_type = "items",niters = 500,warmup = 300,
                          map_over_id = "items",
