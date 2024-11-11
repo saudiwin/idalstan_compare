@@ -85,7 +85,7 @@ asahi_em_ideal_small <- id_make(asahi_em_ideal_small,group_id="party")
 
 asahi_est <- id_estimate(asahi_em_ideal_small,restrict_ind_high=names(restrict_ind_high),
                          restrict_ind_low=names(restrict_ind_low),
-                         const_type = "items",
+                         const_type = "items",map_over_id = "items",
                          restrict_N_high = 5000,
                          restrict_N_low=5000,
                          restrict_sd_high = 5000*.010101,
@@ -110,6 +110,7 @@ asahi_em_ideal2 <- id_make(asahi_em_ideal2)
 asahi_est2 <- id_estimate(asahi_em_ideal2,restrict_ind_high=names(restrict_ind_high),
                          restrict_ind_low=names(restrict_ind_low),
                          const_type = "items",niters = 500,warmup = 300,
+                         map_over_id = "items",
                          restrict_N_high = 5000,
                          restrict_N_low=5000,
                          restrict_sd_high = 5000*.010101,
