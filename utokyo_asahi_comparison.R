@@ -50,6 +50,7 @@ asahi_em_ideal <- mutate(as_tibble(AsahiTodai$dat.all),
          model_id=4)
 
 # need to filter out NAs where the item is missing for the whole survey wave
+# sometimes Qs only available for voters or candidates but not vice versa
 # no need to consider these NAs in the same way
 # use external covariates from emIRT
 
@@ -61,8 +62,22 @@ asahi_em_ideal <- left_join(asahi_em_ideal,ext_cov,
                             by="person_id")
 
 asahi_em_ideal_small <- group_by(asahi_em_ideal,
-                           wave,item_id) %>% 
+                           wave,voter,item_id) %>% 
   filter(!all(is.na(outcome_disc)))
+
+# see which Qs have the highest missingness
+
+asahi_em_ideal_small %>% 
+  group_by(item_id) %>% 
+  summarize(count_nas=paste0(round(sum(is.na(outcome_disc))/n(),3)*100,"%")) %>% 
+  arrange(desc(count_nas))
+
+# see if it varies by wave
+
+asahi_em_ideal_small %>% 
+  group_by(wave,item_id) %>% 
+  summarize(count_nas=sum(is.na(outcome_disc))) %>% 
+  arrange(desc(count_nas))
 
 asahi_em_ideal_small <- id_make(asahi_em_ideal_small,group_id="party")
 
