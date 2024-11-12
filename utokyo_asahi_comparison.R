@@ -25,7 +25,7 @@ out.varinf <- ordIRT(.rc = AsahiTodai$dat.all, .starts = AsahiTodai$start.values
 # high values = foreign policy should be Asia-centric
 # low values = foreign policy should be US-centric
 
-restrict_ind_high <- which(out.varinf$means$beta[,1]==max(out.varinf$means$beta[,1]))
+restrict_ind_high <- "constitu"
 
 # High = conservative, aggressive Japanese policy 
 # Low = liberal, more peaceful foreign policy
@@ -33,7 +33,7 @@ restrict_ind_high <- which(out.varinf$means$beta[,1]==max(out.varinf$means$beta[
 # high values - leave constitution as-is
 # low values - revise constitution (allow for independent foreign policy)
 
-restrict_ind_low <- which(out.varinf$means$beta[,1]==min(out.varinf$means$beta[,1]))
+restrict_ind_low <- "foreign"
 
 # although apparently the original matrix does have missing data,
 # it just codes it as zero
@@ -216,10 +216,12 @@ item_ideal_abs_discrim <- summary(asahi_est,pars="items") %>%
   filter(grepl(x=`Item Type`,pattern="\\bInflated Discrimination"),
          !grepl(x=`Item Type`,pattern="Non-Inflated Discrimination"))
 
-miss_data <- tibble(sum_miss=apply(AsahiTodai$dat.all, 2, function(col) sum(col==0)),
-       param=names(apply(AsahiTodai$dat.all, 2, function(col) sum(col==0)))) %>% 
-  mutate(prop_miss=sum_miss/nrow(AsahiTodai$dat.all)) %>% 
-  left_join(select(item_ideal_abs_discrim,`Posterior Median`,param="Item Name"))
+
+
+miss_data <- asahi_em_ideal_small %>% 
+  group_by(item_id) %>% 
+  summarize(prop_miss=sum(is.na(outcome_disc))/n()) %>% 
+  left_join(select(item_ideal_abs_discrim,`Posterior Median`,item_id="Item Name"))
 
 saveRDS(miss_data, "data/miss_data_emIRT.rds")
 
