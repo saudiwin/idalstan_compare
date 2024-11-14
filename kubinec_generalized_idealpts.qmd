@@ -1252,7 +1252,7 @@ by_party <- readRDS("data/by_party.rds")
 c1 <-   by_party %>% 
     mutate(group_id=factor(group_id,levels=c("D","R"),
                            labels=c("Democrats", "Republicans"))) %>% 
-    filter(!(item_orig %in% c("115_1050","115_588"))) %>% 
+    #filter(!(item_orig %in% c("115_1050","115_588"))) %>% 
     ggplot(aes(y=mean_est,
                x=reorder(item_id,mean_est))) +
     geom_linerange(aes(ymin=low_est,
@@ -1327,8 +1327,26 @@ Overall, the results of these models do show that legislative behavior changes d
 
 un1big + un2big + un3big + plot_layout(nrow=2,
                                              guides="collect") + 
-  plot_annotation(caption="Posterior average values shown for 115th Congress legislator ideal points.\nItem discrimination for Republican party-line votes was constrained to be positive.") & theme(legend.position = "top",
-                                                                                                                                                                                                    plot.title=element_text(size=9))
+  plot_annotation(caption="Posterior average values shown for 115th Congress legislator ideal points.\nItem discrimination for Republican party-line votes was constrained to be positive.") & theme(legend.position = "top",plot.title=element_text(size=9))
+
+```
+
+```{r distsbigm}
+#| label: fig-alldistbigm
+#| fig-cap: "Comparison of Time-varying Ideal Point Methods for 1990-2018 U.S. Congresses with Observed Votes"
+#| message: false
+#| warning: false
+#| fig-height: 6
+#| fig-width: 6
+#| cache-lazy: false
+
+  un1bigm <- readRDS("data/un1bigm.rds")
+  un2bigm <- readRDS("data/un2bigm.rds")
+  un3bigm <- readRDS("data/un3bigm.rds")
+
+un1bigm + un2bigm + un3bigm + plot_layout(nrow=2,
+                                             guides="collect") + 
+  plot_annotation(caption="Posterior average values shown for 115th Congress legislator ideal points.\nItem discrimination for Republican party-line votes was constrained to be positive.") & theme(legend.position = "top",plot.title=element_text(size=9))
 
 ```
 

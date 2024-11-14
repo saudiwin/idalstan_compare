@@ -40,19 +40,6 @@ unemp1 <- rollcalls %>%
   filter(party_code %in% c("R","D")) %>% 
   mutate(party_code=factor(party_code))
 
-# drop legislators who vote on fewer than 25 unanimous bills
-
-check_bills <- group_by(unemp1,item,party_code,cast_code) %>% count %>% 
-  group_by(item,party_code) %>% 
-  summarize(prop=n[cast_code==1] / sum(n),
-            n_vote=sum(n)) %>% 
-  ungroup %>% 
-  mutate(prop=ifelse(prop==.5,
-                     sample(c(.49,.51),1),
-                     prop),
-         util_func=(1 / sqrt((.5 - prop)^2))*n_vote) %>% 
-  arrange(desc(util_func))
-
 legis_count <- group_by(unemp1, item) %>% 
   mutate(unan=all(cast_code[!is.na(cast_code)]==1) || all(cast_code[!is.na(cast_code)]==0)) %>% 
   group_by(bioname) %>% 
@@ -63,27 +50,23 @@ legis_count <- group_by(unemp1, item) %>%
 num_days <- distinct(unemp1,bioname,date_month) %>% 
   count(bioname)
 
-test_mod_data <- anti_join(unemp1, filter(legis_count, n_votes_nonunam<25),by="bioname") %>% 
-  anti_join(filter(num_days,n<10),by="bioname") %>% 
-  mutate(item=factor(item))
+# you had to have voted on at least 10 separate days
 
-unemp1_obj <- test_mod_data %>% 
-  id_make(outcome_disc="cast_code",
-          item_id="item",
-          person_id="bioname",
-          group_id="party_code",
-          time_id = "date_month",
-          person_cov = ~unemp_rate_yoy*party_code)
+unemp1 <- anti_join(unemp1, filter(legis_count, n_votes_nonunam<25),by="bioname") %>% 
+  anti_join(filter(num_days,n<10),by="bioname") %>% 
+  filter(congress==115)
 
 # load different fitted models 
 
 m <- Sys.getenv("MODTYPE")
 
 
-m_loc <- switch(m,
-                  spline1="/lustre/scratch/rkubinec/1151_12_1_fit.rds",
-                  spline2="/lustre/scratch/rkubinec/unemp1151_12_2_fit.rds",
-                  spline3="/lustre/scratch/rkubinec/unemp1151_12_3_fit.rds")
+# m_loc <- switch(m,
+#                   spline1="/lustre/scratch/rkubinec/1151_12_1_fit.rds",
+#                   spline2="/lustre/scratch/rkubinec/unemp1151_12_2_fit.rds",
+#                   spline3="/lustre/scratch/rkubinec/unemp1151_12_3_fit.rds")
+
+m_loc <- "data/1151_12_1_fit.rds"
   
   
   test_mod <- readRDS(m_loc)
@@ -92,10 +75,10 @@ m_loc <- switch(m,
   
   eps <- 1e-4
   
-  new_data1 <- mutate(test_mod_data,
+  new_data1 <- mutate(unemp1,
                       unemp_rate_yoy = unemp_rate_yoy - eps / 2)
   
-  new_data2 <- mutate(test_mod_data,
+  new_data2 <- mutate(unemp1,
                       unemp_rate_yoy = unemp_rate_yoy + eps / 2)
   
   l_full <- test_mod@stan_samples$draws("L_full")
@@ -115,27 +98,27 @@ m_loc <- switch(m,
   
   test_mod_pred1 <- id_post_pred(test_mod,newdata=new_data1,
                                  use_cores=floor(parallel::detectCores()/2),
-                                 item_subset=levels(test_mod_data$item),
+                                 item_subset=levels(new_data1$item),
                                  type="epred",
                                  draws=draws)
   print("Predicting two")
   
   test_mod_pred2 <- id_post_pred(test_mod,newdata=new_data2,
                                  use_cores=floor(parallel::detectCores()/2),
-                                 item_subset=levels(test_mod_data$item_id),
+                                 item_subset=levels(new_data1$item_id),
                                  type="epred",
                                  draws=draws)
   
-  saveRDS(test_mod_pred1, "/lustre/scratch/rkubinec/unemp_all_pred1.rds")
-  saveRDS(test_mod_pred2, "/lustre/scratch/rkubinec/unemp_all_pred2.rds")
+  saveRDS(test_mod_pred1, "data/unemp_all_pred1.rds")
+  saveRDS(test_mod_pred2, "data/unemp_all_pred2.rds")
   
   # walk over both predictions to get item and overall effects
   # AMEs per item
   
   print("Looping over items")
   
-  c1 <- purrr::map2(test_mod_pred1,
-                    test_mod_pred2,
+  c1 <- purrr::map2(test_mod_pred1[[1]],
+                    test_mod_pred2[[1]],
                     function(small,big) {
                       
                       # difference the effects
@@ -146,7 +129,7 @@ m_loc <- switch(m,
   
   c2 <- lapply(c1, function(mat) {
     
-    
+    mat <- t(mat)
     out_data <- attr(mat, "data")
     colnames(mat) <- out_data$person_id
     
@@ -200,6 +183,8 @@ m_loc <- switch(m,
   
   by_party <- left_join(by_party,
                         select(item_discrim, median, item_id))
+  
+  saveRDS(by_party,"data/by_party.rds")
   
   old_style_version <- left_join(old_style_version, 
                                  select(item_discrim, median, item_id))
