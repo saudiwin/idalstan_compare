@@ -1,5 +1,6 @@
 library(idealstan)
 library(ggplot2)
+library(patchwork)
 
 unemp1_all_fit <- readRDS('/work/rkubinec/all1_12_1_fit.rds')
 unemp2_all_fit <- readRDS('/work/rkubinec/unempall1_12_2_fit.rds')
