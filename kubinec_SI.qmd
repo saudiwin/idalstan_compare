@@ -2,9 +2,89 @@
 title: "Supplementary Information for Generalized Ideal Point Models"
 author: "Robert Kubinec"
 format: pdf
+execute: 
+  cache: true
+  echo: false
+  warning: false
+  error: false
 ---
 
+```{r setup}
+#| include: false
+
+# load libraries
+
+library(rkriging)
+library(ggplot2)
+library(tidyverse)
+library(idealstan)
+```
+
+# Additional Model Details
+
+In this section I provide a more complete derivation of additional distributions available in the idealstan package.
+
+## Ordinal Derivations: Rating Scale and Graded Response
+
+There are two possible ordinal models that can be implemented in the ideal point framework. The first is known as a rating-scale model in the IRT framework and is structurally similar to the ordered logit model. @imai2016a are the first to implement this model for ideal points using an EM algorithm.
+
+Following the notation I introduced, a rating-scale model for $k \in K$ outcomes can be modeled as follows for observed data:
+
+$$
+    L(Y_{ijtk}|\alpha_{it},\gamma_j,\beta_j) =  \prod_{i-1}^{I} \prod_{j=1}^{J} \prod_{t=1}^{T}
+    \begin{cases} 
+    1 -  \zeta(\gamma_j \alpha_i - \beta_j - c_1) & \text{if } K = 0 \\
+    \zeta(\gamma_j \alpha_i - \beta_j - c_{k-1}) - \zeta(\gamma_j \alpha_i - \beta_j - c_{k})       & \text{if } 0 < k < K, \text{ and} \\
+    \zeta(\gamma_j \alpha_i - \beta_j - c_{k-1}) - 0 & \text{if } k=K
+    \end{cases}
+$$
+
+where again $\zeta(\cdot)$ represents the logit function. In this version, each ordinal category $k$ less one is assigned a cutpoint $c_k$. In ideal point terms, these cutpoints divide the ideal point space across categories. A direct appliction is to use this model to include abstentions as a middle category between yea and nay votes. In this three outcome setting, two cutting planes exist in the ideal point space such that one end of the spectrum would vote No, the opposite end of the spectrum would vote Yes, and those in between the cutpoints would vote Abstain. As the polarity of items switches, Abstain will always remain in the center of the ideal point distribution, but the Yes and No positions can flip sides. This simple but efficient model helps to model situations where abstentions are in fact quite important, such as parliamentary systems [@brauninger2016].
+
+A different parameterization is known as the graded response model in IRT. This model allows the cutpoints $c_k$ to vary by bill. As a result, instead of including separate cutpoints, we can change the model by indexing each item-specific intercept for each category $k$:
+
+$$
+    L(Y_{ijtk}|\alpha_{it},\gamma_j,\beta_j) =  \prod_{i-1}^{I} \prod_{j=1}^{J} \prod_{t=1}^{T}
+    \begin{cases} 
+    1 -  \zeta(\gamma_j \alpha_i - \beta_{jk-1}) & \text{if } K = 0 \\
+    \zeta(\gamma_j \alpha_i - \beta_{jk-1}) - \zeta(\gamma_j \alpha_i - \beta_{jk-1})       & \text{if } 0 < k < K, \text{ and} \\
+    \zeta(\gamma_j \alpha_i - \beta_{jk-1}) - 0 & \text{if } k=K
+    \end{cases}
+$$
+
+Though not employed in political science to any great extent, this alternative formulation to ordered logit permits more flexible inference on the cutpoints. Allowing cutpoints to vary by item will enable much more accurate prediction of categories with fewer numbers of observations. It also increases information about the items/bills, though of course at a cost of including $K$ additional parameters per item. My intention in including it here is not to suggest that it is a superior model to the standard rating-scale approach, but rather as an alternative that may be useful in some situations. Either model can be profitably used to model rollcall data with middle outcomes like abstentions.
+
+## Poisson Distribution
+
+I do not review the distributions for the Poisson count model as that has been widely applied in political science [@slapin2008].
+
+## Normal and Log-Normal Distributions
+
+However, I do specify two other distributions that have not been widely used in the ideal point literature: the Normal distribution for continuous and the log-normal distribution for positive-continuous outcomes. While @kropko2013 employed the Normal distribution in a traditional IRT framework, no one has yet used the log-Normal distribution.
+
+For a normal distribution, the ideal point model is used to predict the mean of $Y_{ijt}$ given residual standard deviation $\sigma_N$:
+
+$$
+  L(Y_{ijt}|\alpha_{it},\gamma_j,\beta_j) =  \prod_{i-1}^{I} \prod_{j=1}^{J} \prod_{t=1}^{T} \frac{1}{ \sqrt{2\pi \sigma_N^2 }} e^{-\frac{(Y_{ijt}-(\gamma_j\alpha_{it}-\beta_j)^2}{2\sigma_N^2}}
+$$
+
+The log-normal distribution is the same distribution except that the domain of the distribution is on $log(Y_{ijt})$:
+
+$$
+  L(Y_{ijt}|\alpha_{it},\gamma_j,\beta_j) =  \prod_{i-1}^{I} \prod_{j=1}^{J} \prod_{t=1}^{T} \frac{1}{ \sqrt{2\pi \sigma_N^2 }} e^{-\frac{(log(Y_{ijt})-(\gamma_j\alpha_{it}-\beta_j)^2}{2\sigma_N^2}}
+$$
+
+The log-normal parameterization is useful for continuous variables that are only defined on positive real numbers. For variables with substantial skew, such as income, this parameterization has a more useful interpretation than the more general Normal distribution. With both of these distributions, most continuous distributions can be modeled with reasonable accuracy.
+
+## Ordered Beta Distribution
+
+The ordered beta distribution is a robust model for dependent variables that are in the contained $[0,1]$ interval. Examples of these distributions in social science data include percentages, proportions, and sliders (such as those used in divide-the-pie experiments). The ordered beta distribution is implemented instead of the simpler beta distribution in order to allow for responses at the bounds; i.e., observations of 0 (or 0%) and 1 (or 100%). Such observations are quite common in social science data and the ordered beta distribution only needs two additional parameters (ordered cutpoints) to model the full outcome. For more information on the ordered beta model, I refer you to
+
+## Latent Space Formulation
+
 # Model Convergence Diagnostics
+
+In Figure @fig-rhat I show the convergence diagnostics for all of the time-varying ideal point models of the 115th Congress. These convergence diagnostics employ the split-Rhat metric, which measures the ratio of variance of a Markov chain to itself over time and to other chains run independently. For this estimation, three chains were run with 500 post-warmup draws each, providing a difficult test for convergence. All of the models have almost all of their Rhat values below 1.1 with the exception of the Gaussian process model, which has a few parameters larger than 1.1. This more limited convergence indicates that the Gaussian process' much more demanding time-series function requires more draws than the other models to ensure a fully-explored posterior. However, even with 500 draws per chain, there is clear evidence of convergence for most parameters and inferences should be stable.
 
 ```{r plotrhats}
 #| label: fig-rhat
@@ -14,9 +94,40 @@ format: pdf
 #| fig-height: 5
 #| fig-width: 6
 
+rhats1 <- readRDS("data/rhats1.rds")
+rhats2 <- readRDS("data/rhats2.rds")
+rhats3 <- readRDS("data/rhats3.rds")
+rhatsgp <- readRDS("data/rhatgp.rds")
+rhatsar<- readRDS("data/rhatar.rds")
+rhatsrw <- readRDS("data/rhatrw.rds")
+
 rhats1 + rhats2 + rhats3 + rhatgp + rhatar + rhatrw +
   plot_layout(guides="collect",nrow=2) + 
   plot_annotation(tag_levels="A",caption="Plots show split-Rhat values from three independent\nHamiltonian Markov Chain Monte Carlo chains with 500 post-warmup iterations per chain.") & theme(plot.title=element_text(size=10))
+
+```
+
+# Parallelization Speed-up Simulation
+
+In this section I report on simulations that examined the speed improvements with the use of multiple cores for within-chain parallelization of HMC gradient calculations.
+
+```{r static}
+#| fig-cap: "Estimation Time for Idealstan Models by No. of Cores"
+
+over_static_sims <- readRDS("data/over_static_sims.rds")
+
+over_static_sims %>% 
+  mutate(data_size=num_bills * num_person,
+         ellapsed_time=(ellapsed_time/60)) %>% 
+  ggplot(aes(y=ellapsed_time,x=data_size)) +
+  stat_smooth(aes(colour=num_cores,group=num_cores),se = F) +
+  scale_color_viridis_c(name="No. Cores") +
+  scale_y_continuous(breaks=c(0,1,5,10,20)) +
+  ggthemes::theme_clean() +
+  geom_hline(yintercept=1,linetype=2) +
+  labs(y="Estimation Time (Minutes)",
+       x="Data Size (Persons X Items)",
+       caption="Stan HMC sampler run with 1 chain and\n500 warmup/500 sampling iterations for 2,000 simulation draws.")
 
 ```
 
@@ -29,7 +140,6 @@ With the Chinese import shock data, we might surmise that polarization will incr
 This hypothesis expresses a conditional relationship that runs in the opposite direction of the first hypothesis. It would seem that, as existing literature has shown, exposure to Chinese import shocks shifts legislators' ideal points on trade policy and increases polarization, that there should be a strongly interactive relationshp between district-level unemployment and Chinese import exposure. When both are high, we would have a strong prior that legislators will polarize away from each other. This hypothesis can be tested with a three-way interaction of party ID, unemployment rates and Chinese shock exposure at the district level.
 
 Here I examine to the results of the Chinese import exposure model. The ideal point marginal effects for this model are shown in Figure \@ref(fig:chinapl). Unfortunately, it is not possible to read off the interactive relationship as the main effect is a continuous by continuous by binary variable interaction. The only way to interpret this relationship is by calculating the effect of the interaction for different values of Chinese import exposure per worker and party ID. This plot for the mean posterior values is shown in Figure \@ref(fig:chinaint). There is a strongly non-linear relationship between Chinese import exposure and unemployment. At low rates of Chinese import exposure, unemployment appears to have a weak effect on legislators in either party. At higher levels of import exposure, however, there is a much stronger relationship. In this case, it would appear that the relationship is strongly de-polarizing. Democrats with in districts with high unemployment and high import exposure tend to vote more conservative, while Republicans in similar districts tend to vote more liberal than other members of their party. This suggests that Chinese import exposure is indeed a strong moderating influence on the relationship between unemployment and voting behavior. Unfortunately, it is not possible to do a straightforward nested model comparison between the two-way and three-way interaction models, though further probing of the relationship could yield further insights into why these findings seem to run in opposite directions.
-
 
 ```{r chinaint,fig.cap="Effect of Unemployment Conditional on Chinese Import Exposure per Worker, 1990-2010",eval=FALSE}
 
