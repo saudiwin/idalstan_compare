@@ -7,6 +7,8 @@ unemp1_all_fit <- readRDS('/work/rkubinec/all1_12_1_fit.rds')
 
 ideal_pts <- summary(unemp1_all_fit, aggregated=FALSE) %>% 
   filter(!is.na(Group)) %>% 
+  group_by(Group, Time_Point,Iteration) %>% 
+  summarize(Ideal_Points=mean(Ideal_Points)) %>% 
   group_by(Group, Time_Point) %>% 
   summarize(mean_est=mean(Ideal_Points),
             high_est=quantile(Ideal_Points, .95),
@@ -18,6 +20,8 @@ unemp2_all_fit <- readRDS('/work/rkubinec/unempall1_12_2_fit.rds')
 
 ideal_pts <- summary(unemp2_all_fit, aggregated=FALSE) %>% 
   filter(!is.na(Group)) %>% 
+  group_by(Group, Time_Point,Iteration) %>% 
+  summarize(Ideal_Points=mean(Ideal_Points)) %>% 
   group_by(Group, Time_Point) %>% 
   summarize(mean_est=mean(Ideal_Points),
             high_est=quantile(Ideal_Points, .95),
@@ -29,6 +33,8 @@ unemp3_all_fit <- readRDS('/work/rkubinec/unempall1_12_3_fit.rds')
 
 ideal_pts <- summary(unemp3_all_fit, aggregated=FALSE) %>% 
   filter(!is.na(Group)) %>% 
+  group_by(Group, Time_Point,Iteration) %>% 
+  summarize(Ideal_Points=mean(Ideal_Points)) %>% 
   group_by(Group, Time_Point) %>% 
   summarize(mean_est=mean(Ideal_Points),
             high_est=quantile(Ideal_Points, .95),
@@ -61,6 +67,8 @@ unemp1_all_fitm <- readRDS('/work/rkubinec/unempall2_12_1_fit.rds')
 
 ideal_pts <- summary(unemp1_all_fitm, aggregated=FALSE) %>% 
   filter(!is.na(Group)) %>% 
+  group_by(Group, Time_Point,Iteration) %>% 
+  summarize(Ideal_Points=mean(Ideal_Points)) %>% 
   group_by(Group, Time_Point) %>% 
   summarize(mean_est=mean(Ideal_Points),
             high_est=quantile(Ideal_Points, .95),
@@ -80,6 +88,8 @@ unemp2_all_fitm <- readRDS('/work/rkubinec/unempall2_12_2_fit.rds')
 
 ideal_pts <- summary(unemp2_all_fitm, aggregated=FALSE) %>% 
   filter(!is.na(Group)) %>% 
+  group_by(Group, Time_Point,Iteration) %>% 
+  summarize(Ideal_Points=mean(Ideal_Points)) %>% 
   group_by(Group, Time_Point) %>% 
   summarize(mean_est=mean(Ideal_Points),
             high_est=quantile(Ideal_Points, .95),
@@ -101,6 +111,8 @@ unemp2_all_fitm <- readRDS('/work/rkubinec/unempall2_12_2_fit.rds')
 
 ideal_pts <- summary(unemp3_all_fitm, aggregated=FALSE) %>% 
   filter(!is.na(Group)) %>% 
+  group_by(Group, Time_Point,Iteration) %>% 
+  summarize(Ideal_Points=mean(Ideal_Points)) %>% 
   group_by(Group, Time_Point) %>% 
   summarize(mean_est=mean(Ideal_Points),
             high_est=quantile(Ideal_Points, .95),
