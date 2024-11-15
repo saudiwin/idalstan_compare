@@ -38,7 +38,7 @@ library(tinytable)
 
 # set to true to create all analyses from fitted idealstan models
 # requires significant time and RAM (especially the latter)
-run_all <- T
+run_all <- F
 
 # see file to_cluster.R for the fitting of the actual idealstan models
 
@@ -882,84 +882,6 @@ rm(list=ls()[grepl(x=ls(),pattern = "unemp")])
 
 ```
 
-```{r loadmodelsbig}
-
-if(run_all) {
-  
-  unemp1_all_fit <- readRDS('data/all1_12_1_fit.rds')
-  unemp2_all_fit <- readRDS('data/unempall1_12_2_fit.rds')
-  unemp3_all_fit <- readRDS('data/unempall1_12_3_fit.rds')
-  
-  # do plots/rhats here
-  
-  un1big <- id_plot_legis_dyn(unemp1_all_fit,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
-                              D="blue"),na.translate=F,name="") + ggtitle("Spline of 2nd Degree") + labs(y="") +
-  scale_x_date(guide = guide_axis(n.dodge = 2))
-  
-  saveRDS(un1big, "data/un1big.rds")
-
-un2big <- id_plot_legis_dyn(unemp2_all_fit,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
-                              D="blue"),na.translate=F,name="") + ggtitle("Spline of 3rd Degree") + labs(y="") +
-  scale_x_date(guide = guide_axis(n.dodge = 2))
-
-  saveRDS(un2big, "data/un2big.rds")
-
-un3big <- id_plot_legis_dyn(unemp3_all_fit,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
-                              D="blue"),na.translate=F,name="") + ggtitle("Spline of 4th Degree") + labs(y="") +
-  scale_x_date(guide = guide_axis(n.dodge = 2))
-
-  saveRDS(un3big, "data/un3big.rds")
-  
-  # need legis covariates
-  
-  rm(list=ls()[grepl(x=ls(),pattern = "unemp")])
-  
-}
-
-
-
-```
-
-```{r loadmodelsbigm}
-
-if(run_all) {
-  
-  unemp1_all_fitm <- readRDS('data/unempall2_12_1_fit.rds')
-  
-  un1bigm <- id_plot_legis_dyn(unemp1_all_fitm,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
-                              D="blue"),na.translate=F,name="") + ggtitle("Spline of 2nd Degree") + labs(y="") +
-  scale_x_date(guide = guide_axis(n.dodge = 2))
-  
-  saveRDS(un1bigm, "data/un1bigm.rds")
-  
-  rm(list=ls()[grepl(x=ls(),pattern = "unemp")])
-  
-  unemp2_all_fitm <- readRDS('data/unempall2_12_2_fit.rds')
-  
-  un2bigm <- id_plot_legis_dyn(unemp2_all_fitm,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
-                              D="blue"),na.translate=F,name="") + ggtitle("Spline of 3rd Degree") + labs(y="") +
-  scale_x_date(guide = guide_axis(n.dodge = 2))
-
-  saveRDS(un2bigm, "data/un2bigm.rds")
-  
-  rm(list=ls()[grepl(x=ls(),pattern = "unemp")])
-  
-  unemp3_all_fitm <- readRDS('data/unempall2_12_3_fit.rds')
-  
-  un3bigm <- id_plot_legis_dyn(unemp3_all_fitm,use_ci=F,plot_text = F,person_line_alpha = 0.1) + scale_color_manual(values=c(R="red",
-                              D="blue"),na.translate=F,name="") + ggtitle("Spline of 4th Degree") + labs(y="") +
-  scale_x_date(guide = guide_axis(n.dodge = 2))
-
-  saveRDS(un3bigm, "data/un3bigm.rds")
-  
-  rm(list=ls()[grepl(x=ls(),pattern = "unemp")])
-  
-}
-
-
-
-```
-
 I next examine the overall distributions of the ideal point scores over time for each model in @fig-alldist when employing only observed votes (i.e., ignoring absences and abstentions). To help with plotting these distributions, uncertainty intervals are removed and instead I plot the average of posterior draws for each legislator ideal point $\alpha_i$ separately by party. As can be seen, the different methods have differing interpretations of ideal point trajectories, although all models in general show relative stability over the monthly periods of the 115th Congress. The main difference is that the more complex models, including the AR(1), random walk, and GP, show much higher levels of over-time variation for some legislators. Based on the short time period of the 115th Congress, and the fact that we are attempting to study legislator ideology, we should be skeptical of these rapid trajectories as reflecting either noise in the data or other aspects of legislative behavior (such as the scheduling of votes) that are polluting our estimate of the latent trait. The spline-based models, by contrast, show change over time for some legislators but change is relatively smooth, i.e., ideology does not change rapidly from to rollcall to rollcall as we would expect.
 
 ```{r dists}
@@ -1209,7 +1131,8 @@ readRDS("data/cov_combined.rds") %>%
                          `legis_x[1]`="Unemployment",
                          `legis_x[2]`="GOP",
                          `legis_x[3]`="UnemploymentXGOP")) %>% 
-  filter(variable=="UnemploymentXGOP") %>% 
+  filter(variable %in% c("Unemployment",
+                         "UnemploymentXGOP")) %>% 
   select(Model,Variable="variable",
          Missingness,
          `Posterior Median`="median",
@@ -1219,8 +1142,9 @@ readRDS("data/cov_combined.rds") %>%
   geom_pointrange(aes(ymin=`5% Quantile`, 
                       ymax=`95% Quantile`,
                       linetype=Missingness),
-                  position=position_dodge(0.5)) +
-  geom_hline(yintercept=0,linetype=3) +
+                  position=position_dodge(0.5),colour="black") +
+  facet_wrap(~Variable,nrow=2) +
+  geom_hline(yintercept=0,linetype=3,colour="black") +
   ggthemes::theme_clean() +
   coord_flip()
   # arrange(Variable,Model) %>% 
@@ -1312,43 +1236,8 @@ Overall, the results of these models do show that legislative behavior changes d
 
 ## Full Trajectories of U.S. House from 1990 to 2018
 
-```{r distsbig}
-#| label: fig-alldistbig
-#| fig-cap: "Comparison of Time-varying Ideal Point Methods for 1990-2018 U.S. Congresses with Observed Votes"
-#| message: false
-#| warning: false
-#| fig-height: 6
-#| fig-width: 6
-#| cache-lazy: false
+![An Elephant](full_dist.pdf){#fig-fulldist}
 
-  un1big <- readRDS("data/un1big.rds")
-  un2big <- readRDS("data/un2big.rds")
-  un3big <- readRDS("data/un3big.rds")
-
-un1big + un2big + un3big + plot_layout(nrow=2,
-                                             guides="collect") + 
-  plot_annotation(caption="Posterior average values shown for 115th Congress legislator ideal points.\nItem discrimination for Republican party-line votes was constrained to be positive.") & theme(legend.position = "top",plot.title=element_text(size=9))
-
-```
-
-```{r distsbigm}
-#| label: fig-alldistbigm
-#| fig-cap: "Comparison of Time-varying Ideal Point Methods for 1990-2018 U.S. Congresses with Observed Votes"
-#| message: false
-#| warning: false
-#| fig-height: 6
-#| fig-width: 6
-#| cache-lazy: false
-
-  un1bigm <- readRDS("data/un1bigm.rds")
-  un2bigm <- readRDS("data/un2bigm.rds")
-  un3bigm <- readRDS("data/un3bigm.rds")
-
-un1bigm + un2bigm + un3bigm + plot_layout(nrow=2,
-                                             guides="collect") + 
-  plot_annotation(caption="Posterior average values shown for 115th Congress legislator ideal points.\nItem discrimination for Republican party-line votes was constrained to be positive.") & theme(legend.position = "top",plot.title=element_text(size=9))
-
-```
 
 # Discussion
 

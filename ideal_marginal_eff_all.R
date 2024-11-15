@@ -6,10 +6,6 @@ library(marginaleffects)
 library(modelsummary)
 library(bayesplot)
 
-# figure out which model to run
-num_partition <- 15
-partition <- as.numeric(Sys.getenv("FITTYPE"))
-
 rollcalls <- readRDS('data/rollcalls.rds')
 
 # create unemployment series as year-on-year changes
@@ -57,14 +53,6 @@ unemp1 <- anti_join(unemp1, filter(legis_count, n_votes_nonunam<25),by="bioname"
   filter(congress==115)
 
 # load different fitted models 
-
-m <- Sys.getenv("MODTYPE")
-
-
-# m_loc <- switch(m,
-#                   spline1="/lustre/scratch/rkubinec/1151_12_1_fit.rds",
-#                   spline2="/lustre/scratch/rkubinec/unemp1151_12_2_fit.rds",
-#                   spline3="/lustre/scratch/rkubinec/unemp1151_12_3_fit.rds")
 
 m_loc <- "data/1151_12_1_fit.rds"
   
