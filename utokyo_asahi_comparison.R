@@ -7,6 +7,8 @@ library(tidyverse)
 library(readr)
 library(haven)
 
+run_model <- F
+
 rando_seed <- 20241020
 
 set.seed(rando_seed)
@@ -60,6 +62,18 @@ ext_cov <- AsahiTodai$obs.attri %>%
 asahi_em_ideal <- left_join(asahi_em_ideal,ext_cov,
                             by="person_id")
 
+# merge in estimates from emIRT
+
+em_item_discrim <- tibble(item_discrim=out.varinf$means$beta[,1],
+                          item_name=row.names(out.varinf$means$beta))
+
+asahi_em_ideal <- left_join(asahi_em_ideal, em_item_discrim,by=c("item_id"="item_name"))
+
+em_person_ideal <- tibble(person_ideal=out.varinf$means$x[,1]) %>% 
+                    mutate(person_id=1:n())
+
+asahi_em_ideal <- left_join(asahi_em_ideal, em_person_ideal)
+
 asahi_em_ideal_small <- group_by(asahi_em_ideal,
                            wave,voter,item_id) %>% 
   filter(!all(is.na(outcome_disc)))
@@ -71,6 +85,38 @@ asahi_em_ideal_small %>%
   summarize(count_nas=paste0(round(sum(is.na(outcome_disc))/n(),3)*100,"%")) %>% 
   arrange(desc(count_nas))
 
+# see if missingness correlated with emIRT discrimination
+
+group_by(asahi_em_ideal_small,item_id,item_discrim) %>% 
+  summarize(prop_na=sum(is.na(outcome_disc))/n()) %>% 
+  ggplot(aes(y=prop_na,x=item_discrim)) +
+  geom_point(colour="black") +
+  stat_smooth()
+
+# no relationship
+
+group_by(asahi_em_ideal_small,item_id,item_discrim) %>% 
+  summarize(prop_na=sum(is.na(outcome_disc))/n()) %>% 
+  ggplot(aes(y=prop_na,x=item_discrim)) +
+  geom_point(colour="black") +
+  stat_smooth()
+
+# person-level ideal points & missingness
+# calculate absolute value of discrimination
+
+group_by(asahi_em_ideal_small, person_id,person_ideal) %>% 
+  summarize(total_miss=mean(is.na(outcome_disc))) %>% 
+  ggplot(aes(y=person_ideal,x=total_miss)) +
+  geom_point(colour="black") +
+  stat_smooth()
+
+filter(asahi_em_ideal_small, person_ideal < -0.2) %>% 
+  group_by( person_id,person_ideal) %>% 
+  summarize(total_miss=sum(item_discrim[is.na(outcome_disc)]>0)) %>% 
+  ggplot(aes(y=person_ideal,x=total_miss)) +
+  geom_point(colour="black") +
+  stat_smooth()
+
 # see if it varies by wave
 
 asahi_em_ideal_small %>% 
@@ -78,24 +124,8 @@ asahi_em_ideal_small %>%
   summarize(count_nas=sum(is.na(outcome_disc))) %>% 
   arrange(desc(count_nas))
 
-asahi_em_ideal_small <- id_make(asahi_em_ideal_small,group_id="party")
-
-# give it a go with a small dataset
-
-asahi_est <- id_estimate(asahi_em_ideal_small,restrict_ind_high=restrict_ind_high,
-                         restrict_ind_low=restrict_ind_low,
-                         const_type = "items",map_over_id = "items",
-                         restrict_N_high = 5000,
-                         restrict_N_low=5000,
-                         restrict_sd_high = 5000*.010101,
-                         restrict_sd_low=5000*.010101,
-                         nchains = 3,niters = 300,warmup = 500,
-                         ncores=parallel::detectCores())
-
-saveRDS(asahi_est,"/lustre/scratch/rkubinec/asahi_est.rds")
-
 asahi_em_ideal2 <- mutate(as_tibble(AsahiTodai$dat.all),
-                         person_id=1:n()) %>% 
+                          person_id=1:n()) %>% 
   # sample_n(500) %>% 
   gather(key = "item_id",
          value="outcome_disc",
@@ -105,30 +135,61 @@ asahi_em_ideal2 <- mutate(as_tibble(AsahiTodai$dat.all),
          model_id=3)
 
 asahi_em_ideal2 <- left_join(asahi_em_ideal2,ext_cov,
-                            by="person_id")
+                             by="person_id")
 
 asahi_em_ideal_small2 <- group_by(asahi_em_ideal2,
-                                 wave,voter,item_id) %>% 
+                                  wave,voter,item_id) %>% 
   filter(!all(is.na(outcome_disc)))
 
-asahi_em_ideal_small2 <- id_make(asahi_em_ideal_small2)
 
-asahi_est2 <- id_estimate(asahi_em_ideal_small2,restrict_ind_high=restrict_ind_high,
-                         restrict_ind_low=restrict_ind_low,
-                         const_type = "items",niters = 500,warmup = 300,
-                         map_over_id = "items",
-                         restrict_N_high = 5000,
-                         restrict_N_low=5000,
-                         restrict_sd_high = 5000*.010101,
-                         restrict_sd_low=5000*.010101,
-                         nchains = 3,
-                         ncores=parallel::detectCores())
 
-saveRDS(asahi_est2,"/lustre/scratch/rkubinec/asahi_est2.rds")
+# give it a go 
+
+if(run_model) {
+  
+  asahi_em_ideal_small <- id_make(asahi_em_ideal_small,group_id="party")
+  
+  asahi_est <- id_estimate(asahi_em_ideal_small,restrict_ind_high=restrict_ind_high,
+                           restrict_ind_low=restrict_ind_low,
+                           const_type = "items",map_over_id = "items",
+                           restrict_N_high = 5000,
+                           restrict_N_low=5000,
+                           restrict_sd_high = 5000*.010101,
+                           restrict_sd_low=5000*.010101,
+                           nchains = 3,niters = 300,warmup = 500,
+                           ncores=parallel::detectCores())
+  
+  saveRDS(asahi_est,"/lustre/scratch/rkubinec/asahi_est.rds")
+  
+  asahi_em_ideal_small2 <- id_make(asahi_em_ideal_small2)
+  
+  asahi_est2 <- id_estimate(asahi_em_ideal_small2,restrict_ind_high=restrict_ind_high,
+                            restrict_ind_low=restrict_ind_low,
+                            const_type = "items",niters = 500,warmup = 300,
+                            map_over_id = "items",
+                            restrict_N_high = 5000,
+                            restrict_N_low=5000,
+                            restrict_sd_high = 5000*.010101,
+                            restrict_sd_low=5000*.010101,
+                            nchains = 3,
+                            ncores=parallel::detectCores())
+  
+  saveRDS(asahi_est2,"/lustre/scratch/rkubinec/asahi_est2.rds")
+  
+} else {
+  
+  asahi_est <- readRDS("data/asahi_est.rds")
+  
+  
+  asahi_est2 <- readRDS("data/asahi_est2.rds")
+  
+}
+
+
 
 # compare the two dists
 
-asahi_est <- readRDS("data/asahi_est.rds")
+
 
 nomiss_sum <- summary(asahi_est)
 
@@ -139,7 +200,6 @@ nomiss_sum <- arrange(nomiss_sum, Person)
 
 cor(as.numeric(scale(nomiss_sum$`Posterior Median`)), as.numeric(scale(out.varinf$means$x)))
 
-asahi_est2 <- readRDS("data/asahi_est2.rds")
 
 nomiss_sum2 <- summary(asahi_est2)
 
@@ -177,10 +237,6 @@ combine_tibble %>%
           subtitle="Data from the Asahi Todai Survey (emIRT package)")
 
 ggsave("emirt_vs_idealstan.jpg")
-
-ggplot(aes(y=nomiss_sum$`Posterior Median`,
-           x=nomiss_sum2$`Posterior Median`)) +
-  geom_point()
 
 # presence of missing data
 
@@ -226,7 +282,7 @@ miss_data <- asahi_em_ideal_small %>%
 saveRDS(miss_data, "data/miss_data_emIRT.rds")
 
 miss_data %>% 
-  ggplot(aes(x=prop_miss,y=`Posterior Median`,label=param)) +
+  ggplot(aes(x=prop_miss,y=`Posterior Median`,label=item_id)) +
   geom_text(check_overlap=TRUE) +
   ggthemes::theme_clean() +
   scale_x_continuous(labels=scales::percent) +

@@ -101,7 +101,7 @@ rhatsgp <- readRDS("data/rhatgp.rds")
 rhatsar<- readRDS("data/rhatar.rds")
 rhatsrw <- readRDS("data/rhatrw.rds")
 
-rhats1 + rhats2 + rhats3 + rhatgp + rhatar + rhatrw +
+rhats1 + rhats2 + rhats3 + rhatsgp + rhatsar + rhatsrw +
   plot_layout(guides="collect",nrow=2) + 
   plot_annotation(tag_levels="A",caption="Plots show split-Rhat values from three independent\nHamiltonian Markov Chain Monte Carlo chains with 500 post-warmup iterations per chain.") & theme(plot.title=element_text(size=10))
 
