@@ -5,7 +5,15 @@ library(tidyverse)
 
 unemp1_all_fit <- readRDS('/work/rkubinec/all1_12_1_fit.rds')
 
-ideal_pts <- summary(unemp1_all_fit, aggregated=FALSE) %>% 
+ideal_pts <- summary(unemp1_all_fit)
+
+saveRDS(ideal_pts, "/work/rkubinec/idealpts_ag_11.rds")
+
+ideal_pts <- summary(unemp1_all_fit, aggregated=FALSE)
+
+saveRDS(ideal_pts, "/work/rkubinec/idealpts_disag_11.rds")
+
+ideal_pts <- ideal_pts %>% 
   filter(!is.na(Group)) %>% 
   group_by(Group, Time_Point,Iteration) %>% 
   summarize(Ideal_Points=mean(Ideal_Points)) %>% 
@@ -18,7 +26,15 @@ saveRDS(ideal_pts, "/work/rkubinec/idealpts_11.rds")
 
 unemp2_all_fit <- readRDS('/work/rkubinec/unempall1_12_2_fit.rds')
 
-ideal_pts <- summary(unemp2_all_fit, aggregated=FALSE) %>% 
+ideal_pts <- summary(unemp2_all_fit)
+
+saveRDS(ideal_pts, "/work/rkubinec/idealpts_ag_21.rds")
+
+ideal_pts <- summary(unemp2_all_fit, aggregated=FALSE)
+
+saveRDS(ideal_pts, "/work/rkubinec/idealpts_disag_21.rds")
+
+ideal_pts <- ideal_pts %>% 
   filter(!is.na(Group)) %>% 
   group_by(Group, Time_Point,Iteration) %>% 
   summarize(Ideal_Points=mean(Ideal_Points)) %>% 
@@ -31,7 +47,15 @@ saveRDS(ideal_pts, "/work/rkubinec/idealpts_21.rds")
 
 unemp3_all_fit <- readRDS('/work/rkubinec/unempall1_12_3_fit.rds')
 
-ideal_pts <- summary(unemp3_all_fit, aggregated=FALSE) %>% 
+ideal_pts <- summary(unemp3_all_fit)
+
+saveRDS(ideal_pts, "/work/rkubinec/idealpts_ag_31.rds")
+
+ideal_pts <- summary(unemp3_all_fit, aggregated=FALSE)
+
+saveRDS(ideal_pts, "/work/rkubinec/idealpts_disag_31.rds")
+
+ideal_pts <- ideal_pts %>% 
   filter(!is.na(Group)) %>% 
   group_by(Group, Time_Point,Iteration) %>% 
   summarize(Ideal_Points=mean(Ideal_Points)) %>% 
@@ -65,7 +89,15 @@ saveRDS(un3big, "/work/rkubinec/un3big.rds")
 unemp1_all_fitm <- readRDS('/work/rkubinec/unempall2_12_1_fit.rds')
 
 
-ideal_pts <- summary(unemp1_all_fitm, aggregated=FALSE) %>% 
+ideal_pts <- summary(unemp1_all_fitm)
+
+saveRDS(ideal_pts, "/work/rkubinec/idealpts_ag_12.rds")
+
+ideal_pts <- summary(unemp1_all_fitm, aggregated=FALSE)
+
+saveRDS(ideal_pts, "/work/rkubinec/idealpts_disag_12.rds")
+
+ideal_pts <- ideal_pts %>% 
   filter(!is.na(Group)) %>% 
   group_by(Group, Time_Point,Iteration) %>% 
   summarize(Ideal_Points=mean(Ideal_Points)) %>% 
@@ -86,7 +118,15 @@ rm(list=ls()[grepl(x=ls(),pattern = "unemp")])
 
 unemp2_all_fitm <- readRDS('/work/rkubinec/unempall2_12_2_fit.rds')
 
-ideal_pts <- summary(unemp2_all_fitm, aggregated=FALSE) %>% 
+ideal_pts <- summary(unemp2_all_fitm)
+
+saveRDS(ideal_pts, "/work/rkubinec/idealpts_ag_22.rds")
+
+ideal_pts <- summary(unemp2_all_fitm, aggregated=FALSE)
+
+saveRDS(ideal_pts, "/work/rkubinec/idealpts_disag_22.rds")
+
+ideal_pts <- ideal_pts %>% 
   filter(!is.na(Group)) %>% 
   group_by(Group, Time_Point,Iteration) %>% 
   summarize(Ideal_Points=mean(Ideal_Points)) %>% 
@@ -107,9 +147,15 @@ rm(list=ls()[grepl(x=ls(),pattern = "unemp")])
 
 unemp3_all_fitm <- readRDS('/work/rkubinec/unempall2_12_3_fit.rds')
 
-unemp2_all_fitm <- readRDS('/work/rkubinec/unempall2_12_2_fit.rds')
+ideal_pts <- summary(unemp3_all_fitm)
 
-ideal_pts <- summary(unemp3_all_fitm, aggregated=FALSE) %>% 
+saveRDS(ideal_pts, "/work/rkubinec/idealpts_ag_32.rds")
+
+ideal_pts <- summary(unemp3_all_fitm, aggregated=FALSE)
+
+saveRDS(ideal_pts, "/work/rkubinec/idealpts_disag_32.rds")
+
+ideal_pts <- ideal_pts %>% 
   filter(!is.na(Group)) %>% 
   group_by(Group, Time_Point,Iteration) %>% 
   summarize(Ideal_Points=mean(Ideal_Points)) %>% 
