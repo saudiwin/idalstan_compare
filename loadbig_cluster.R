@@ -131,7 +131,6 @@ saveRDS(un3bigm, "/work/rkubinec/un3bigm.rds")
 un1big + un2big + un3big + 
   un1bigm + un2bigm + un3bigm + 
   plot_layout(nrow=2,guides="collect") + 
-  plot_annotation(caption=stringr::str_wrap("Posterior average values shown for ideal points for U.S. House legislators from 1990 to 2018. Item discrimination for Republican party-line votes was constrained to be positive. Observed data models only used recorded legislator votes while the missing data models incorporated a 2-stage adjustment for legislators who did not show up to vote."),
-                  tag_levels="A") & theme(legend.position = "bottom",plot.title=element_text(size=9))
+  plot_annotation(caption=stringr::str_wrap("Posterior average values shown for ideal points for U.S. House legislators from 1990 to 2018. Item discrimination for Republican party-line votes was constrained to be positive. Observed data models only used recorded legislator votes while the missing data models incorporated a 2-stage adjustment for legislators who did not show up to vote.")) & theme(legend.position = "bottom",plot.title=element_text(size=9))
 
 ggsave("full_dist.png",width=6,height=5,dpi = 600)
