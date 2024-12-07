@@ -2,11 +2,13 @@
 title: "Supplementary Information for Generalized Ideal Point Models"
 author: "Robert Kubinec"
 format: pdf
+toc: true
 execute: 
   cache: true
   echo: false
   warning: false
   error: false
+bibliography: references.bib
 ---
 
 ```{r setup}
@@ -18,6 +20,7 @@ library(rkriging)
 library(ggplot2)
 library(tidyverse)
 library(idealstan)
+library(patchwork)
 ```
 
 # Additional Model Details
@@ -26,7 +29,7 @@ In this section I provide a more complete derivation of additional distributions
 
 ## Ordinal Derivations: Rating Scale and Graded Response
 
-There are two possible ordinal models that can be implemented in the ideal point framework. The first is known as a rating-scale model in the IRT framework and is structurally similar to the ordered logit model. @imai2016a are the first to implement this model for ideal points using an EM algorithm.
+There are two possible ordinal models that can be implemented in the ideal point framework. The first is known as a rating-scale model in the IRT framework and is structurally similar to the ordered logit model. @imaiFastEstimationIdeal2016 were the first to implement this model for ideal points using an EM algorithm.
 
 Following the notation I introduced, a rating-scale model for $k \in K$ outcomes can be modeled as follows for observed data:
 
@@ -39,9 +42,9 @@ $$
     \end{cases}
 $$
 
-where again $\zeta(\cdot)$ represents the logit function. In this version, each ordinal category $k$ less one is assigned a cutpoint $c_k$. In ideal point terms, these cutpoints divide the ideal point space across categories. A direct appliction is to use this model to include abstentions as a middle category between yea and nay votes. In this three outcome setting, two cutting planes exist in the ideal point space such that one end of the spectrum would vote No, the opposite end of the spectrum would vote Yes, and those in between the cutpoints would vote Abstain. As the polarity of items switches, Abstain will always remain in the center of the ideal point distribution, but the Yes and No positions can flip sides. This simple but efficient model helps to model situations where abstentions are in fact quite important, such as parliamentary systems [@brauninger2016].
+where again $\zeta(\cdot)$ represents the logit function. In this version, each ordinal category $k$ less one is assigned a cutpoint $c_k$. In ideal point terms, these cutpoints divide the ideal point space across categories. A direct application is to Likert scales such as those commonly found in survey data. Importantly, because `idealstan` allows for mixed outcomes at the observation level, the number of ordinal categories $K$ can likewise vary across items.
 
-A different parameterization is known as the graded response model in IRT. This model allows the cutpoints $c_k$ to vary by bill. As a result, instead of including separate cutpoints, we can change the model by indexing each item-specific intercept for each category $k$:
+A different parameterization is known as the graded response model in IRT. This model allows the cutpoints $c_k$ to vary by item. As a result, instead of including separate cutpoints, we can change the model by indexing each item-specific intercept for each category $k$:
 
 $$
     L(Y_{ijtk}|\alpha_{it},\gamma_j,\beta_j) =  \prod_{i-1}^{I} \prod_{j=1}^{J} \prod_{t=1}^{T}
@@ -52,35 +55,85 @@ $$
     \end{cases}
 $$
 
-Though not employed in political science to any great extent, this alternative formulation to ordered logit permits more flexible inference on the cutpoints. Allowing cutpoints to vary by item will enable much more accurate prediction of categories with fewer numbers of observations. It also increases information about the items/bills, though of course at a cost of including $K$ additional parameters per item. My intention in including it here is not to suggest that it is a superior model to the standard rating-scale approach, but rather as an alternative that may be useful in some situations. Either model can be profitably used to model rollcall data with middle outcomes like abstentions.
+Though not employed in political science to any great extent, this alternative formulation to ordered logit permits more flexible inference on the cutpoints. Allowing cutpoints to vary by item will enable much more accurate prediction of categories with fewer numbers of observations. It also increases information about the items/bills, though of course at a cost of including $K$ additional parameters per item. My intention in including it here is not to suggest that it is a superior model to the standard rating-scale approach, but rather as an alternative that may be useful in some situations.
 
 ## Poisson Distribution
 
-I do not review the distributions for the Poisson count model as that has been widely applied in political science [@slapin2008].
+The Poisson distribution has a considerable history as a latent variable model for word counts [@slapinScalingModelEstimating2008], though it can be more broadly applied to any unbounded positive discrete variable. For `idealstan`, the Poisson parameterization is as follows:
+
+\begin{align}
+P(Y_{ijtk} \mid \lambda_{ijtk}) &= \frac{\lambda_{ijtk}^{Y_{ijtk}} e^{-\lambda_{ijtk}}}{Y_{ijtk}!}\\
+\lambda_{ijtk} &= e^{\gamma_j \alpha_i - \beta_j}
+\end{align}
+
+where $\lambda_{ijtk}$ is the mean count and contains the IRT linear model with the exponential link function.
 
 ## Normal and Log-Normal Distributions
 
-However, I do specify two other distributions that have not been widely used in the ideal point literature: the Normal distribution for continuous and the log-normal distribution for positive-continuous outcomes. While @kropko2013 employed the Normal distribution in a traditional IRT framework, no one has yet used the log-Normal distribution.
+The next two distributions have not been widely used in the ideal point literature but have been commonly deployed in continuous latent variable methods like principal components and factor analysis: the Normal distribution for continuous and the log-normal distribution for positive-continuous outcomes. While employed @kropkoMeasuringDynamicsPolitical2013 employed the Normal distribution in a traditional IRT framework, no one has yet used the log-Normal distribution.
 
-For a normal distribution, the ideal point model is used to predict the mean of $Y_{ijt}$ given residual standard deviation $\sigma_N$:
+For a normal distribution, the ideal point model is used to predict the mean of $Y_{ijt}$ given item-specific residual standard deviation $\sigma_j$:
 
 $$
-  L(Y_{ijt}|\alpha_{it},\gamma_j,\beta_j) =  \prod_{i-1}^{I} \prod_{j=1}^{J} \prod_{t=1}^{T} \frac{1}{ \sqrt{2\pi \sigma_N^2 }} e^{-\frac{(Y_{ijt}-(\gamma_j\alpha_{it}-\beta_j)^2}{2\sigma_N^2}}
+  L(Y_{ijt}|\alpha_{it},\gamma_j,\beta_j, \sigma_j) =  \prod_{i-1}^{I} \prod_{j=1}^{J} \prod_{t=1}^{T} \frac{1}{ \sqrt{2\pi \sigma_j^2 }} e^{-\frac{(Y_{ijt}-(\gamma_j\alpha_{it}-\beta_j)^2}{2\sigma_j^2}}
 $$
 
 The log-normal distribution is the same distribution except that the domain of the distribution is on $log(Y_{ijt})$:
 
 $$
-  L(Y_{ijt}|\alpha_{it},\gamma_j,\beta_j) =  \prod_{i-1}^{I} \prod_{j=1}^{J} \prod_{t=1}^{T} \frac{1}{ \sqrt{2\pi \sigma_N^2 }} e^{-\frac{(log(Y_{ijt})-(\gamma_j\alpha_{it}-\beta_j)^2}{2\sigma_N^2}}
+  L(Y_{ijt}|\alpha_{it},\gamma_j,\beta_j,\sigma_j) =  \prod_{i-1}^{I} \prod_{j=1}^{J} \prod_{t=1}^{T} \frac{1}{ \sqrt{2\pi \sigma_j^2 }} e^{-\frac{(log(Y_{ijt})-(\gamma_j\alpha_{it}-\beta_j)^2}{2\sigma_j^2}}
 $$
 
-The log-normal parameterization is useful for continuous variables that are only defined on positive real numbers. For variables with substantial skew, such as income, this parameterization has a more useful interpretation than the more general Normal distribution. With both of these distributions, most continuous distributions can be modeled with reasonable accuracy.
+which naturally imposes the condition that $Y_{ijt}>0$.
+
+The Log-Normal parameterization is useful for continuous variables that are only defined on positive real numbers. For variables with substantial skew, such as income, this parameterization has a more useful interpretation than the more general Normal distribution. With both of these distributions, most continuous distributions can be modeled with reasonable accuracy.
+
+The residual standard deviation $\sigma_j$ is given a weakly informative exponential prior:
+
+$$
+\sigma_j \sim E(1)
+$$
+
+Practically speaking, unbounded continuous items should be standardized (mean 0 with an SD of 1) so that the range of the outcome remains reasonably close to zero. Because MCMC algorithms are geometric, variables with wide variation can diminish sampling efficiency. Furthermore, if other items are included with different scales, the nature of a shared linear model across items can increase model misfit substantially.
 
 ## Ordered Beta Distribution
 
-The ordered beta distribution is a robust model for dependent variables that are in the contained $[0,1]$ interval. Examples of these distributions in social science data include percentages, proportions, and sliders (such as those used in divide-the-pie experiments). The ordered beta distribution is implemented instead of the simpler beta distribution in order to allow for responses at the bounds; i.e., observations of 0 (or 0%) and 1 (or 100%). Such observations are quite common in social science data and the ordered beta distribution only needs two additional parameters (ordered cutpoints) to model the full outcome. For more information on the ordered beta model, I refer you to
+The ordered beta distribution is a robust model for dependent variables that are in the contained $[0,1]$ interval [@kubinecOrderedBetaRegression2022]. Examples of these distributions in social science data include percentages, proportions, and sliders (such as those used in divide-the-pie experiments). The ordered beta distribution is implemented instead of the simpler beta distribution in order to allow for responses at the bounds; i.e., observations of 0 (or 0%) and 1 (or 100%). Such observations are quite common in social science data and the ordered beta distribution only needs two additional parameters (ordered cutpoints) to model the full outcome. Without observations at the bounds of the scale, the ordered beta distribution effectively collapses to the beta distribution on the open interval $(0,1)$.
 
-## Latent Space Formulation
+The `idealstan` parameterization is as follows: $$
+f(Y_{ijt} \mid \Omega, \Delta, \mu_j, \phi_j) =
+\begin{cases} 
+\Omega & \text{if } Y_{ijt} = 0 \\
+(1 - \Omega)\Delta & \text{if } Y_{ijt} = 1 \\
+(1 - \Omega)(1 - \Delta)\text{Beta}(\mu_j, \phi_j) & \text{if } Y_{ijt} \in (0, 1)
+\end{cases}
+$$
+
+The quantities $\Omega$ and $\Gamma$ are the probabilities of the lower endpoint 0 and the probability of a response in the open interval $(0,1)$. These probabilities are parameterized by ordered cutpoints $k \in \{1,2\}: k_1 > k_2$. In other words, in the first stage of the model, either a continuous $(0,1)$ or a discrete (0 or 1) outcome is selected, and then if the outcome is continuous, then it is also modeled with the Beta distribution.
+
+The Beta distribution is further defined as follows:
+
+$$
+f(Y_{ijt}, \omega_j, \tau_j) = \frac{\Gamma(\omega_j + \tau_j)}{\Gamma(\omega_j)\Gamma(\tau_j)}y_i^{\omega_j - 1}(1 - Y_{ijt})^{\tau_j - 1}
+$$
+
+This Beta distribution is further reparameterized to allow for a linear model to predict the expected value ($\mu$) while $\phi$ is the dispersion of the distribution. To do so, we must substitute for the shape parameters $\omega$ and $\tau$:
+
+$$
+\mu_j = \frac{\omega_j}{\omega_j + \tau_j}
+$$
+
+$$
+\phi = \omega + \tau
+$$
+
+Finally, to model $E[Y_{ijt}$, we use the same IRT linear model as above:
+
+$$
+\mu_j = g(\gamma_j\alpha_{it}-\beta_j)
+$$ where $g(\cdot)$ is the inverse logit function.
+
+For further definition of this model, see @kubinecOrderedBetaRegression2022.
 
 # Model Convergence Diagnostics
 
@@ -109,9 +162,9 @@ rhats1 + rhats2 + rhats3 + rhatsgp + rhatsar + rhatsrw +
 
 # Parallelization Speed-up Simulation
 
-In this section I report on simulations that examined the speed improvements with the use of multiple cores for within-chain parallelization of HMC gradient calculations.
+In this section I report on simulations that examined the speed improvements with the use of multiple cores for within-chain parallelization of HMC gradient calculations. @fig-static shows how estimation decreases for a given number of cores used for within-chain parallelization. The results for each core are the average across 2,000 Monte Carlo simulations of a binary/Bernoulli `idealstan` model with no missing data adjustment. For each draw, a number of persons between 10 and 200 and a number of items between 10 and 200 was selected so that the simulation includes substantial heterogeneity. Each time estimate in @fig-static is an average across this heterogeneity and as such should be a reasonably robust estimate.
 
-```{r static}
+```{r fig-static}
 #| fig-cap: "Estimation Time for Idealstan Models by No. of Cores"
 
 over_static_sims <- readRDS("data/over_static_sims.rds")
@@ -131,128 +184,200 @@ over_static_sims %>%
 
 ```
 
-# China Import Tariff Model
+As can be seen in @fig-static, the most dramatic speedups are for moving from a single core to 2 to 4 cores. Above that number of cores, estimation time continues to decrease but a decreasing rate (i.e. the second derivative is less than 0). This is a known behavior of parallel processing, especially when there is computational overhead from running multiple processes. For Markov Chain Monte Carlo, it is not possible to run embarrassingly parallel processes in which there is a low fixed cost to using multiple cores. Rather, the process is partially parallelized via the computations required to calculate the gradients necessary for Hamiltonian Markov Chain Monte Carlo, i.e., where the algorithm should "jump" next.
 
-With the Chinese import shock data, we might surmise that polarization will increase among legislators in districts where Chinese import exposure per worker is very high. This kind of polarization could arise either by increasing divergence on trade-related legislation [@hall2015] or via increased foreign policy hostility to China [@kuk2017].
+The `idealstan` package attempts to minimize this overhead by using Stan's map-reduce functionality to estimate the likelihood over subsets of data defined either by persons or items. For time-varying models, map-reduce must be performed over persons because the value of the person ideal point in time $t$ depends on the prior value $t-1$, and as a consequence, attempting to estimate the likelihood for each item separately would yield biased results. However, using map-reduce over time-varying trajectories is often optimal in any case as the time-varying parameters for each person are calculated separately in each process, permitting less computational overhead.
 
-> H2: When monthly unemployment rates rise in districts with a higher exposure to Chinese import competition, legislators in each party become more polarized.
+For static models, the user can choose to parallelize over either items or persons. There is no clear guideline for which may be faster, and in general the most important criterion may be the number of items or persons relative to cores. For example, if there are five persons and 100 items in the data but only five cores, it would make the most sense to use persons as that would yield an efficient parallelization scheme.
 
-This hypothesis expresses a conditional relationship that runs in the opposite direction of the first hypothesis. It would seem that, as existing literature has shown, exposure to Chinese import shocks shifts legislators' ideal points on trade policy and increases polarization, that there should be a strongly interactive relationshp between district-level unemployment and Chinese import exposure. When both are high, we would have a strong prior that legislators will polarize away from each other. This hypothesis can be tested with a three-way interaction of party ID, unemployment rates and Chinese shock exposure at the district level.
+<!-- # China Import Tariff Model -->
 
-Here I examine to the results of the Chinese import exposure model. The ideal point marginal effects for this model are shown in Figure \@ref(fig:chinapl). Unfortunately, it is not possible to read off the interactive relationship as the main effect is a continuous by continuous by binary variable interaction. The only way to interpret this relationship is by calculating the effect of the interaction for different values of Chinese import exposure per worker and party ID. This plot for the mean posterior values is shown in Figure \@ref(fig:chinaint). There is a strongly non-linear relationship between Chinese import exposure and unemployment. At low rates of Chinese import exposure, unemployment appears to have a weak effect on legislators in either party. At higher levels of import exposure, however, there is a much stronger relationship. In this case, it would appear that the relationship is strongly de-polarizing. Democrats with in districts with high unemployment and high import exposure tend to vote more conservative, while Republicans in similar districts tend to vote more liberal than other members of their party. This suggests that Chinese import exposure is indeed a strong moderating influence on the relationship between unemployment and voting behavior. Unfortunately, it is not possible to do a straightforward nested model comparison between the two-way and three-way interaction models, though further probing of the relationship could yield further insights into why these findings seem to run in opposite directions.
+<!-- With the Chinese import shock data, we might surmise that polarization will increase among legislators in districts where Chinese import exposure per worker is very high. This kind of polarization could arise either by increasing divergence on trade-related legislation [@hall2015] or via increased foreign policy hostility to China [@kuk2017]. -->
 
-```{r chinaint,fig.cap="Effect of Unemployment Conditional on Chinese Import Exposure per Worker, 1990-2010",eval=FALSE}
+<!-- > H2: When monthly unemployment rates rise in districts with a higher exposure to Chinese import competition, legislators in each party become more polarized. -->
 
-# need to extract the values of the covariates
+<!-- This hypothesis expresses a conditional relationship that runs in the opposite direction of the first hypothesis. It would seem that, as existing literature has shown, exposure to Chinese import shocks shifts legislators' ideal points on trade policy and increases polarization, that there should be a strongly interactive relationshp between district-level unemployment and Chinese import exposure. When both are high, we would have a strong prior that legislators will polarize away from each other. This hypothesis can be tested with a three-way interaction of party ID, unemployment rates and Chinese shock exposure at the district level. -->
 
-legis_x <- rstan::extract(china_fit1@stan_samples,"legis_x")[[1]]
+<!-- Here I examine to the results of the Chinese import exposure model. The ideal point marginal effects for this model are shown in Figure @ref(fig:chinapl). Unfortunately, it is not possible to read off the interactive relationship as the main effect is a continuous by continuous by binary variable interaction. The only way to interpret this relationship is by calculating the effect of the interaction for different values of Chinese import exposure per worker and party ID. This plot for the mean posterior values is shown in Figure @ref(fig:chinaint). There is a strongly non-linear relationship between Chinese import exposure and unemployment. At low rates of Chinese import exposure, unemployment appears to have a weak effect on legislators in either party. At higher levels of import exposure, however, there is a much stronger relationship. In this case, it would appear that the relationship is strongly de-polarizing. Democrats with in districts with high unemployment and high import exposure tend to vote more conservative, while Republicans in similar districts tend to vote more liberal than other members of their party. This suggests that Chinese import exposure is indeed a strong moderating influence on the relationship between unemployment and voting behavior. Unfortunately, it is not possible to do a straightforward nested model comparison between the two-way and three-way interaction models, though further probing of the relationship could yield further insights into why these findings seem to run in opposite directions. -->
 
-# let's separate out the different values of the covariates
+<!-- ```{r chinaint,fig.cap="Effect of Unemployment Conditional on Chinese Import Exposure per Worker, 1990-2010",eval=FALSE} -->
 
-unemp_rate <- legis_x[,2]
-import <- legis_x[,3]
-rep_unemp <- legis_x[,4]
-unemp_import <- legis_x[,6]
-rep_import <- legis_x[,7]
-rep_import_unemp <- legis_x[,9]
+<!-- # need to extract the values of the covariates -->
 
-# now we need make a grid of all values in the data
+<!-- china_fit_mod <- readRDS("data/") -->
 
-import_range <- seq(min(china_fit@score_data@score_matrix$x,na.rm=T),
-                   max(china_fit@score_data@score_matrix$x,na.rm=T),
-                   by=0.1)
+<!-- # let's separate out the different values of the covariates -->
 
+<!-- unemp_rate <- legis_x[,2] -->
 
-# iterate over data and calculate average values of response
-# conditional for discrimination of different types
+<!-- import <- legis_x[,3] -->
 
-china_pars <- rstan::extract(china_fit@stan_samples)
+<!-- rep_unemp <- legis_x[,4] -->
 
-all_plot_vals_rep <- lapply(import_range, function(i) {
-  # returns a data frame of all posterior draws for this particular 
-  # data combination
-  # iterate over discrimination vectors
-  
-  this_est <- lapply(1:nrow(china_pars$L_free), function(d) {
-    all_discrim <- china_pars$sigma_reg_free[d,]
-    pos_discrim <- all_discrim[all_discrim>0]
-    neg_discrim <- all_discrim[all_discrim<0]
-    pos <- tibble(y_pred_mean=mean(plogis((unemp_rate[d] + rep_unemp[d] +
-                                      unemp_import[d]*i +
-           rep_import_unemp[d]*i)*pos_discrim)
-           - 0.5),
-                     import=i,
-                     type="Pr(Yes|Conservative)")
-    
-    neg <- tibble(y_pred_mean=mean(plogis((unemp_rate[d] + rep_unemp[d] +
-                                      unemp_import[d]*i +
-           rep_import_unemp[d]*i)*neg_discrim)
-           - 0.5),
-                     import=i,
-                     type="Pr(Yes|Liberal)")
-    
-    combined <- bind_rows(pos,neg)
-    combined$iter <- d
-    combined$party <- "R"
-    combined
-  }) %>% bind_rows
-  
-  this_est
-}) %>% bind_rows
+<!-- unemp_import <- legis_x[,6] -->
 
-all_plot_vals_dem <- lapply(import_range, function(i) {
-    
-  this_est <- lapply(1:nrow(china_pars$L_free), function(d) {
-    all_discrim <- china_pars$sigma_reg_free[d,]
-    pos_discrim <- all_discrim[all_discrim>0]
-    neg_discrim <- all_discrim[all_discrim<0]
-    pos <- tibble(y_pred_mean=mean(plogis((unemp_rate[d] + 
-                                      unemp_import[d]*i)*pos_discrim)-0.5),
-                     import=i,
-                     type="Pr(Yes|Conservative)")
-    
-    neg <- tibble(y_pred_mean=mean(plogis((unemp_rate[d] + 
-                                      unemp_import[d]*i)*neg_discrim)-0.5),
-                     import=i,
-                     type="Pr(Yes|Liberal)")
-    
-    combined <- bind_rows(pos,neg)
-    combined$iter <- d
-    combined$party <- "D"
-    combined
-  }) %>% bind_rows
-  
-  this_est
-}) %>% bind_rows
+<!-- rep_import <- legis_x[,7] -->
 
-# combine dems and reps
+<!-- rep_import_unemp <- legis_x[,9] -->
 
-combined_all <- bind_rows(all_plot_vals_rep,all_plot_vals_dem)
+<!-- # now we need make a grid of all values in the data -->
 
-# plot the bugger
+<!-- import_range <- seq(min(china_fit@score_data@score_matrix$x,na.rm=T), -->
 
-combined_all %>%
-  group_by(party,import,type) %>% 
-  summarize(y_pred_mean_mean=mean(y_pred_mean),
-            y_pred_low=quantile(y_pred_mean,.05),
-            y_pred_high=quantile(y_pred_mean,.95)) %>% 
-  ungroup %>% 
-  ggplot(aes(y=y_pred_mean_mean,x=import)) +
-  geom_errorbar(aes(ymin=y_pred_low,
-                     ymax=y_pred_high,
-                     color=party)) +
-  theme(panel.grid = element_blank(),
-        panel.background = element_blank(),
-        strip.background = element_blank(),
-        strip.text = element_text(face="bold")) +
-  facet_wrap(~type,scales="free") +
-  xlab("Import Exposure per Worker") +
-  ylab("Marginal Effect of Unemployment") +
-  scale_colour_manual(values=c("D"="blue",
-                               "R"="red")) +
-  scale_y_continuous(labels=scales::percent)
-#   
+<!--                    max(china_fit@score_data@score_matrix$x,na.rm=T), -->
 
-ggsave("china_int_plot.png")
+<!--                    by=0.1) -->
 
-```
+<!-- # iterate over data and calculate average values of response -->
+
+<!-- # conditional for discrimination of different types -->
+
+<!-- china_pars <- rstan::extract(china_fit@stan_samples) -->
+
+<!-- all_plot_vals_rep <- lapply(import_range, function(i) { -->
+
+<!--   # returns a data frame of all posterior draws for this particular  -->
+
+<!--   # data combination -->
+
+<!--   # iterate over discrimination vectors -->
+
+<!--   this_est <- lapply(1:nrow(china_pars$L_free), function(d) { -->
+
+<!--     all_discrim <- china_pars$sigma_reg_free[d,] -->
+
+<!--     pos_discrim <- all_discrim[all_discrim>0] -->
+
+<!--     neg_discrim <- all_discrim[all_discrim<0] -->
+
+<!--     pos <- tibble(y_pred_mean=mean(plogis((unemp_rate[d] + rep_unemp[d] + -->
+
+<!--                                       unemp_import[d]*i + -->
+
+<!--            rep_import_unemp[d]*i)*pos_discrim) -->
+
+<!--            - 0.5), -->
+
+<!--                      import=i, -->
+
+<!--                      type="Pr(Yes|Conservative)") -->
+
+<!--     neg <- tibble(y_pred_mean=mean(plogis((unemp_rate[d] + rep_unemp[d] + -->
+
+<!--                                       unemp_import[d]*i + -->
+
+<!--            rep_import_unemp[d]*i)*neg_discrim) -->
+
+<!--            - 0.5), -->
+
+<!--                      import=i, -->
+
+<!--                      type="Pr(Yes|Liberal)") -->
+
+<!--     combined <- bind_rows(pos,neg) -->
+
+<!--     combined$iter <- d -->
+
+<!--     combined$party <- "R" -->
+
+<!--     combined -->
+
+<!--   }) %>% bind_rows -->
+
+<!--   this_est -->
+
+<!-- }) %>% bind_rows -->
+
+<!-- all_plot_vals_dem <- lapply(import_range, function(i) { -->
+
+<!--   this_est <- lapply(1:nrow(china_pars$L_free), function(d) { -->
+
+<!--     all_discrim <- china_pars$sigma_reg_free[d,] -->
+
+<!--     pos_discrim <- all_discrim[all_discrim>0] -->
+
+<!--     neg_discrim <- all_discrim[all_discrim<0] -->
+
+<!--     pos <- tibble(y_pred_mean=mean(plogis((unemp_rate[d] +  -->
+
+<!--                                       unemp_import[d]*i)*pos_discrim)-0.5), -->
+
+<!--                      import=i, -->
+
+<!--                      type="Pr(Yes|Conservative)") -->
+
+<!--     neg <- tibble(y_pred_mean=mean(plogis((unemp_rate[d] +  -->
+
+<!--                                       unemp_import[d]*i)*neg_discrim)-0.5), -->
+
+<!--                      import=i, -->
+
+<!--                      type="Pr(Yes|Liberal)") -->
+
+<!--     combined <- bind_rows(pos,neg) -->
+
+<!--     combined$iter <- d -->
+
+<!--     combined$party <- "D" -->
+
+<!--     combined -->
+
+<!--   }) %>% bind_rows -->
+
+<!--   this_est -->
+
+<!-- }) %>% bind_rows -->
+
+<!-- # combine dems and reps -->
+
+<!-- combined_all <- bind_rows(all_plot_vals_rep,all_plot_vals_dem) -->
+
+<!-- # plot the bugger -->
+
+<!-- combined_all %>% -->
+
+<!--   group_by(party,import,type) %>%  -->
+
+<!--   summarize(y_pred_mean_mean=mean(y_pred_mean), -->
+
+<!--             y_pred_low=quantile(y_pred_mean,.05), -->
+
+<!--             y_pred_high=quantile(y_pred_mean,.95)) %>%  -->
+
+<!--   ungroup %>%  -->
+
+<!--   ggplot(aes(y=y_pred_mean_mean,x=import)) + -->
+
+<!--   geom_errorbar(aes(ymin=y_pred_low, -->
+
+<!--                      ymax=y_pred_high, -->
+
+<!--                      color=party)) + -->
+
+<!--   theme(panel.grid = element_blank(), -->
+
+<!--         panel.background = element_blank(), -->
+
+<!--         strip.background = element_blank(), -->
+
+<!--         strip.text = element_text(face="bold")) + -->
+
+<!--   facet_wrap(~type,scales="free") + -->
+
+<!--   xlab("Import Exposure per Worker") + -->
+
+<!--   ylab("Marginal Effect of Unemployment") + -->
+
+<!--   scale_colour_manual(values=c("D"="blue", -->
+
+<!--                                "R"="red")) + -->
+
+<!--   scale_y_continuous(labels=scales::percent) -->
+
+<!-- #    -->
+
+<!-- ggsave("china_int_plot.png") -->
+
+<!-- ``` -->
+
+# References
