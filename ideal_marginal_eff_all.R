@@ -174,27 +174,6 @@ m_loc <- "data/1151_12_1_fit.rds"
   
   saveRDS(by_party,"data/by_party.rds")
   
-  old_style_version <- left_join(old_style_version, 
-                                 select(item_discrim, median, item_id))
-  
-  old_style_version %>% 
-    ggplot(aes(y=mean_est,
-               x=reorder(item_id,mean_est))) +
-    geom_pointrange(aes(ymin=low_est,
-                        ymax=high_est)) +
-    #facet_wrap(~group_id) +
-    ggthemes::theme_tufte() + 
-    scale_colour_viridis_c() +
-    coord_flip() +
-    labs(y="Marginal Change in Probability of Voting",
-         x="Rollcalls") +
-    theme(axis.text.y=element_blank(),
-          axis.ticks.y=element_blank()) +
-    ggtitle("Marginal Effect of District Monthly Unemployment on Rollcall Votes in 115th Congress",
-            subtitle="Marginal Effect of Unemployment Mediated by Legislator Ideal Point and Bill Discrimination")
-  
-  
-  
   by_party %>% 
     mutate(group_id=factor(group_id,levels=c("D","R"),
                            labels=c("Democrats", "Republicans"))) %>% 
