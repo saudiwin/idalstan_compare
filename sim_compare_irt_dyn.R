@@ -587,7 +587,7 @@ calc_sims <- group_by(over_sims, model) %>%
             rmse_coef=mean(sqrt((est_coef-true_est_coef)^2)),
             S_err=mean(as.numeric(sign(true_est_coef)!=sign(est_coef))))
 
-saveRDS(over_sims,paste0("data/sim_models_nsims_",n_sims,
+saveRDS(over_sims,paste0("/lustre/scratch/rkubinec/sim_models_nsims_",n_sims,
                "_timeproc_",time_process,
                "_missingness_",as.numeric(missingness),
                "_timevar_",time_sd,
