@@ -5,6 +5,7 @@
 
 library(doParallel)
 library(foreach)
+library(parallel)
 
 packages <- c(
   "idealstan",
@@ -37,7 +38,7 @@ cores_per_task <- 4  # Number of cores per task
 
 # Detect available cores
 total_cores <- detectCores()
-num_workers <- min(num_tasks, total_cores / cores_per_task)  # Ensure we don't overload CPU
+num_workers <- min(n_sims, total_cores / cores_per_task)  # Ensure we don't overload CPU
 
 # Register parallel backend for tasks
 cl <- makeCluster(num_workers)
