@@ -570,6 +570,8 @@ simulate_task <- function(task_id) {
 
 # Run multiple tasks in parallel using foreach
 results_list <- foreach(task_id = 1:n_sims, .packages = packages) %dopar% {
+  
+  print("Now on task: ",task_id)
   simulate_task(task_id)
 }
 
