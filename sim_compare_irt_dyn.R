@@ -23,7 +23,7 @@ packages <- c(
 
 set.seed(20250310)  # For reproducibility
 
-n_sims <- 3
+n_sims <- 500
 time_points <- 10
 n_persons <- 50
 n_items <- 200
