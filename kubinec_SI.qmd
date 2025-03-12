@@ -21,6 +21,11 @@ library(ggplot2)
 library(tidyverse)
 library(idealstan)
 library(patchwork)
+library(marginaleffects)
+library(tinytable)
+library(modelsummary)
+
+rollcalls <- readRDS('data/rollcalls.rds')
 ```
 
 # Additional Model Details
@@ -189,6 +194,116 @@ As can be seen in @fig-static, the most dramatic speedups are for moving from a 
 The `idealstan` package attempts to minimize this overhead by using Stan's map-reduce functionality to estimate the likelihood over subsets of data defined either by persons or items. For time-varying models, map-reduce must be performed over persons because the value of the person ideal point in time $t$ depends on the prior value $t-1$, and as a consequence, attempting to estimate the likelihood for each item separately would yield biased results. However, using map-reduce over time-varying trajectories is often optimal in any case as the time-varying parameters for each person are calculated separately in each process, permitting less computational overhead.
 
 For static models, the user can choose to parallelize over either items or persons. There is no clear guideline for which may be faster, and in general the most important criterion may be the number of items or persons relative to cores. For example, if there are five persons and 100 items in the data but only five cores, it would make the most sense to use persons as that would yield an efficient parallelization scheme.
+
+# Absences in the U.S. Congress
+
+As described in the main text, @fig-absence and @fig-olsabs show rates of absences over time and within each session in the U.S. House. 
+
+```{r absence}
+#| fig-cap: "Time-varying Absence Rates in the U.S. House"
+#| label: fig-absence
+
+# need vertical lines for beginning of sessions
+
+p1 <- rollcalls %>% 
+  arrange(congress, date) %>% 
+  group_by(congress) %>%      
+  mutate(session_day_counter = ifelse(row_number()==n(),date_month,NA_Date_)) %>% 
+  ungroup() %>% 
+  filter(party_code %in% c("R","D")) %>% 
+  group_by(party_code,date_month,session_day_counter) %>% 
+  summarise(`Absences`=mean(cast_code=="Abstention"),
+            session_day_counter=session_day_counter[1]) %>% 
+  ggplot(aes(y=Absences,x=date_month)) +
+  geom_line(aes(colour=party_code,linetype=party_code)) +
+  stat_smooth(aes(linetype=party_code,colour=party_code),method="lm") +
+  scale_y_continuous(labels=scales::percent,limits = c(0,0.27)) +
+  labs(y="% Absent per Vote",x="",
+       caption="Dotted lines indicate Congressional sessions.") +
+  scale_color_manual(guide="legend",name="Party",
+                     values=c("D"="blue",
+                              "R"="red")) +
+  guides(linetype=guide_legend(title="Party")) +
+  geom_vline(aes(xintercept=session_day_counter),linetype=3) +
+  ggthemes::theme_clean()
+
+p2 <- p1 +
+  ggtitle("Absence Rates by Party per Legislative Vote",
+          subtitle = "Data from U.S. House from 1990 to 2018")
+
+ggsave("absent_votes.jpg",plot = p2)
+
+p1
+
+```
+
+```{r olsabs}
+#| fig-cap: "Ordinary Least Squares Polynomial Regression of Days in Session on Absence Rates in the U.S. House"
+#| label: fig-olsabs
+
+rollcalls_abs <- rollcalls %>% 
+  arrange(congress, date) %>% 
+  group_by(congress) %>%      
+  mutate(session_day_counter = as.numeric(date) - min(as.numeric(date)) + 1) %>% 
+  ungroup() %>% 
+  filter(party_code %in% c("R","D")) %>% 
+  group_by(party_code,date_month,congress) %>% 
+  summarise(`Absences`=mean(cast_code=="Abstention"),
+            session_day_counter=max(session_day_counter))
+
+c1 <- lm(Absences ~ session_day_counter + 
+             I(session_day_counter^2) + 
+           I(session_day_counter^3) +
+             factor(congress),data=rollcalls_abs)
+
+p1 <- plot_predictions(c1,condition = "session_day_counter") +
+  ggthemes::theme_clean() + 
+  scale_y_continuous(labels=scales::percent) +
+  labs(y="% Absent by Vote",
+       x="Days in Session",
+       caption="Plot shows fitted line from OLS polynomial regression on absent rates\n by number of days into a Congressional session.")
+
+p2 <- p1 + ggtitle("Prediction from Regression of Absence Rates\non Number of Days in Session",subtitle = "Data from U.S. House from 1990 to 2018")
+
+ggsave("session_days.jpg",plot=p2)
+
+p1
+
+```
+
+# Coefficients for Hierarchical Covariates
+
+The coefficient values shown in Figure 12 in the main text are shown here in @tab-coef.
+
+```{r legisx}
+#| label: tab-coef
+#| tbl-cap: Table of Coefficients of GOP and District Unemployment Interaction by Model Type ($\phi$)
+#| cache: false
+
+library(tinytable)
+library(dplyr)
+
+readRDS("data/cov_combined.rds") %>% 
+  bind_rows %>% 
+  mutate(variable=recode(variable,
+                         `legis_x[1]`="Unemployment",
+                         `legis_x[2]`="GOP",
+                         `legis_x[3]`="UnemploymentXGOP")) %>% 
+  filter(variable %in% c("Unemployment",
+                         "UnemploymentXGOP")) %>% 
+  select(Model,Variable="variable",
+         Missingness,
+         `Posterior Median`="median",
+         `5\\% Quantile`="q5",
+         `95\\% Quantile`="q95") %>% 
+  arrange(Variable,Model) %>%
+  tt(digits=3,
+     notes="Plot shows hierarchical legislator-levle covariates for different ideal point models, including time functions and whether or not the model accounted for missingness.") %>%
+  style_tt(i=1:36,
+           fontsize=.7)
+
+```
+
 
 <!-- # China Import Tariff Model -->
 
@@ -379,5 +494,7 @@ For static models, the user can choose to parallelize over either items or perso
 <!-- ggsave("china_int_plot.png") -->
 
 <!-- ``` -->
+
+\newpage
 
 # References
