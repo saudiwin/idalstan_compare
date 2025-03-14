@@ -41,7 +41,7 @@ total_cores <- detectCores()
 num_workers <- min(n_sims, total_cores / cores_per_task)  # Ensure we don't overload CPU
 
 # Register parallel backend for tasks
-cl <- makeCluster(num_workers)
+cl <- makeCluster(num_workers,outfile="")
 registerDoParallel(cl)
 
 # Define simulation function (runs in parallel)
@@ -572,11 +572,19 @@ simulate_task <- function(task_id) {
 results_list <- foreach(task_id = 1:n_sims, .packages = packages) %dopar% {
   
   print("Now on task: ",task_id)
-  simulate_task(task_id)
+  try(simulate_task(task_id))
 }
 
+saveRDS(over_sims,paste0("/lustre/scratch/rkubinec/sim_models_nsims_",n_sims,
+                         "_timeproc_",time_process,
+                         "_missingness_",as.numeric(missingness),
+                         "_timevar_",time_sd,
+                         "_numpers_",n_persons,
+                         "_numitems_",n_items,
+                         ".rds"))
+
 # Combine results from all tasks
-over_sims <- bind_rows(results_list)
+#over_sims <- bind_rows(results_list)
 
 # Stop parallel backend
 stopCluster(cl)
@@ -584,16 +592,8 @@ stopCluster(cl)
 
 # Finish and save ---------------------------------------------------------
 
-calc_sims <- group_by(over_sims, model) %>% 
-  summarize(mean_rmse=mean(rmse),
-            cov=mean(in_interval),
-            rmse_coef=mean(sqrt((est_coef-true_est_coef)^2)),
-            S_err=mean(as.numeric(sign(true_est_coef)!=sign(est_coef))))
-
-saveRDS(over_sims,paste0("/lustre/scratch/rkubinec/sim_models_nsims_",n_sims,
-               "_timeproc_",time_process,
-               "_missingness_",as.numeric(missingness),
-               "_timevar_",time_sd,
-               "_numpers_",n_persons,
-               "_numitems_",n_items,
-               ".rds"))
+# calc_sims <- group_by(over_sims, model) %>% 
+#   summarize(mean_rmse=mean(rmse),
+#             cov=mean(in_interval),
+#             rmse_coef=mean(sqrt((est_coef-true_est_coef)^2)),
+#             S_err=mean(as.numeric(sign(true_est_coef)!=sign(est_coef))))
