@@ -403,7 +403,7 @@ simulate_task <- function(task_id) {
   
   # Step 2: Run the bootstrap procedure
   
-  over_boot <- lapply(1:num_bootstraps, function(b) {
+  over_boot <- mclapply(1:num_bootstraps, function(b) {
     
     # Step 2a: Simulate a new roll-call matrix
     boot_rc_list <- lapply(rc_list, function(rc) {
@@ -438,29 +438,52 @@ simulate_task <- function(task_id) {
     })
     
     # Step 2b: Refit DW-NOMINATE on the bootstrapped data
-    boot_fit <- dwnominate(boot_rc_list, dims=1,minvotes=5,lop=0,
+    try(boot_fit <- dwnominate(boot_rc_list, dims=1,minvotes=5,lop=0,
                            id="legis_id",polarity=sort(apply(sim_data@simul_data$true_person,1,mean),
                                                        decreasing=F, 
                                                        index=T)$ix[1],
                            start = dw_nom_fit$start,
-                           model=3)
+                           model=3))
     
-    # Step 2c: Store the bootstrapped ideal points
-    boot_fit$legislators %>% 
-      select(coord1D,ID,session) %>% 
-      mutate(bootstrap=b) %>% 
-      group_by(session) %>% 
-      mutate(coord1D=as.numeric(scale(coord1D))) %>% 
-      ungroup
+    if('try-error' %in% class(boot_fit)) {
+      
+      return(NULL)
+      
+    } else {
+      
+      # Step 2c: Store the bootstrapped ideal points
+      boot_fit$legislators %>% 
+        select(coord1D,ID,session) %>% 
+        mutate(bootstrap=b) %>% 
+        group_by(session) %>% 
+        mutate(coord1D=as.numeric(scale(coord1D))) %>% 
+        ungroup
+      
+    }
     
-  }) %>% bind_rows
+  },mc.cores=4) %>% bind_rows
   
   # calculate uncertainty intervals
+  # if enough bootstraps came back ok
   
-  dw_nom_unc <- group_by(over_boot, ID,session) %>% 
-    summarize(ideal_point=mean(coord1D),
-              ideal_point_low=quantile(coord1D,.025),
-              ideal_point_high=quantile(coord1D,.975))
+  if(nrow(over_boot)>50) {
+    
+    dw_nom_unc <- group_by(over_boot, ID,session) %>% 
+      summarize(ideal_point=mean(coord1D),
+                ideal_point_low=quantile(coord1D,.025),
+                ideal_point_high=quantile(coord1D,.975))
+    
+  } else {
+    
+    dw_nom_unc <- dw_nom_fit$legislators %>% 
+      select(coord1D,ID,session) %>% 
+      mutate(ideal_point=coord1D,
+                ideal_point_low=NA,
+                ideal_point_high=NA)
+    
+  }
+  
+  
   
   end_time <- Sys.time()
   
@@ -569,10 +592,10 @@ simulate_task <- function(task_id) {
 
 
 # Run multiple tasks in parallel using foreach
-results_list <- foreach(task_id = 1:n_sims, .packages = packages) %dopar% {
+results_list <- foreach(task_id = 1:n_sims, .packages = packages, .errorhandling="pass") %dopar% {
   
   print("Now on task: ",task_id)
-  try(simulate_task(task_id))
+  simulate_task(task_id)
 }
 
 saveRDS(over_sims,paste0("/lustre/scratch/rkubinec/sim_models_nsims_",n_sims,
