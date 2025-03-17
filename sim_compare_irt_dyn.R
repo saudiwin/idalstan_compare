@@ -594,8 +594,8 @@ simulate_task <- function(task_id) {
 # Run multiple tasks in parallel using foreach
 results_list <- foreach(task_id = 1:n_sims, .packages = packages, .errorhandling="pass") %dopar% {
   
-  print("Now on task: ",task_id)
-  simulate_task(task_id)
+  print(paste0("Now on task: ",task_id))
+  suppressMessages(simulate_task(task_id))
 }
 
 saveRDS(results_list,paste0("/lustre/scratch/rkubinec/sim_models_nsims_",n_sims,
