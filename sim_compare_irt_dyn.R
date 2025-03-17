@@ -27,7 +27,7 @@ set.seed(20250310)  # For reproducibility
 n_sims <- 500
 time_points <- 10
 n_persons <- 50
-n_items <- 200
+n_items <- 400
 time_sd <- 1
 true_coef <- .2 # size of coefficient in latent regression
 time_process <- "random" # type of time process being simulated
