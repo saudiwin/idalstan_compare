@@ -25,13 +25,13 @@ packages <- c(
 set.seed(20250310)  # For reproducibility
 
 n_sims <- 500
-time_points <- 20
+time_points <- 10
 n_persons <- 50
-n_items <- 400
+n_items <- 200
 time_sd <- 0.3
 true_coef <- .2 # size of coefficient in latent regression
 time_process <- "random" # type of time process being simulated
-missingness <- FALSE # whether to model missing data
+missingness <- TRUE # whether to model missing data
 
 # Define parallelization parameters
 cores_per_task <- 4  # Number of cores per task
