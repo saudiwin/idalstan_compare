@@ -598,7 +598,7 @@ results_list <- foreach(task_id = 1:n_sims, .packages = packages, .errorhandling
   simulate_task(task_id)
 }
 
-saveRDS(over_sims,paste0("/lustre/scratch/rkubinec/sim_models_nsims_",n_sims,
+saveRDS(results_list,paste0("/lustre/scratch/rkubinec/sim_models_nsims_",n_sims,
                          "_timeproc_",time_process,
                          "_missingness_",as.numeric(missingness),
                          "_timevar_",time_sd,
