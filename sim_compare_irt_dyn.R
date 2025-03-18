@@ -2,29 +2,24 @@
 # give them true parameters to constrain
 
 # parallelization libraries
-
-library(doParallel)
-library(foreach)
+library(future)
+library(future.apply)
 library(parallel)
-
-packages <- c(
-  "idealstan",
-  "MCMCpack",
-  "tidyverse",
-  "ggplot2",
-  "lubridate",
-  "stringr",
-  "emIRT",
-  "parallel",
-  "dwnominate"
-)
+library(idealstan)
+library(MCMCpack)
+library(tidyverse)
+library(ggplot2)
+library(lubridate)
+library(stringr)
+library(emIRT)
+library(dwnominate)
 
 
 # simulation parameters ---------------------------------------------------
 
 set.seed(20250310)  # For reproducibility
 
-n_sims <- 500
+n_sims <- 1
 time_points <- 10
 n_persons <- 50
 n_items <- 200
@@ -41,12 +36,13 @@ total_cores <- detectCores()
 num_workers <- min(n_sims, total_cores / cores_per_task)  # Ensure we don't overload CPU
 
 # Register parallel backend for tasks
-cl <- makeCluster(num_workers,outfile="")
-registerDoParallel(cl)
+# cl <- makeCluster(num_workers,outfile="")
+# registerDoParallel(cl)
 
 # Define simulation function (runs in parallel)
 simulate_task <- function(task_id) {
-  message(sprintf("Starting Task %d on %d cores...", task_id, cores_per_task))
+  
+  print(paste0("Starting task ", task_id))
   
   # simulate dataset with idealstan -----------------------------------------
   
@@ -59,7 +55,7 @@ simulate_task <- function(task_id) {
   
   wide_df <- sim_data@score_matrix %>%
     mutate(outcome_disc=as.numeric(outcome_disc)-1) %>% 
-    select(person_id, item_id, outcome_disc) %>%
+    dplyr::select(person_id, item_id, outcome_disc) %>%
     pivot_wider(names_from = item_id, values_from = outcome_disc, names_prefix = "item_")
   
   wide_df_mat <- as.matrix(wide_df[,-1])
@@ -140,7 +136,7 @@ simulate_task <- function(task_id) {
   
   
   # idealstan ---------------------------------------------------------------
-  
+  print("Running idealstan")
   start_time <- Sys.time()
   
   idealstan_fit <- sim_data %>% 
@@ -164,6 +160,8 @@ simulate_task <- function(task_id) {
   
   # Compute elapsed time
   idealstan_elapsed_time <- end_time - start_time
+  
+  print(paste0("Done with idealstan: finished in ",idealstan_elapsed_time))
   
   
   # emIRT -------------------------------------------------------------------
@@ -231,7 +229,7 @@ simulate_task <- function(task_id) {
   start_time <- Sys.time()
   
   
-  em_irt_fit <- dynIRT(.data=list(rc=rc_matrix,
+  em_irt_fit <- suppressMessages(dynIRT(.data=list(rc=rc_matrix,
                                   startlegis=startlegis,
                                   endlegis=endlegis,
                                   bill.session=bill_session,
@@ -250,7 +248,7 @@ simulate_task <- function(task_id) {
                          thresh = 1e-6,
                          maxit=500,
                          threads=4
-                       ))
+                       )))
   
   # get uncertainty
   # need to re-implement parametric bootstrap to account for uncertainty
@@ -356,7 +354,7 @@ simulate_task <- function(task_id) {
   rc_list <- lapply(sessions, function(session_data) {
     # Pivot data to wide format: legislators (rows) x votes (columns)
     rc_matrix <- session_data %>%
-      select(person_id, item_id, vote_code) %>%
+      dplyr::select(person_id, item_id, vote_code) %>%
       pivot_wider(names_from = item_id, values_from = vote_code, names_prefix = "vote_") %>%
       column_to_rownames("person_id") %>%
       as.matrix()
@@ -388,12 +386,12 @@ simulate_task <- function(task_id) {
   
   start_time <- Sys.time()
   
-  dw_nom_fit <- dwnominate::dwnominate(rc_list, 
+  dw_nom_fit <- suppressMessages(dwnominate::dwnominate(rc_list, 
                                        dims=1,minvotes=10,
                                        id="legis_id",polarity=sort(apply(sim_data@simul_data$true_person,1,mean),
                                                                    decreasing=F, 
                                                                    index=T)$ix[1],
-                                       model=3)
+                                       model=3))
   
   # Extract estimated ideal points from the original model
   original_theta <- dw_nom_fit$legislators
@@ -403,7 +401,7 @@ simulate_task <- function(task_id) {
   
   # Step 2: Run the bootstrap procedure
   
-  over_boot <- mclapply(1:num_bootstraps, function(b) {
+  over_boot <- lapply(1:num_bootstraps, function(b) {
     
     # Step 2a: Simulate a new roll-call matrix
     boot_rc_list <- lapply(rc_list, function(rc) {
@@ -438,12 +436,12 @@ simulate_task <- function(task_id) {
     })
     
     # Step 2b: Refit DW-NOMINATE on the bootstrapped data
-    try(boot_fit <- dwnominate(boot_rc_list, dims=1,minvotes=5,lop=0,
+    try(boot_fit <- suppressMessages(dwnominate(boot_rc_list, dims=1,minvotes=5,lop=0,
                            id="legis_id",polarity=sort(apply(sim_data@simul_data$true_person,1,mean),
                                                        decreasing=F, 
                                                        index=T)$ix[1],
                            start = dw_nom_fit$start,
-                           model=3))
+                           model=3)))
     
     if('try-error' %in% class(boot_fit)) {
       
@@ -453,7 +451,7 @@ simulate_task <- function(task_id) {
       
       # Step 2c: Store the bootstrapped ideal points
       boot_fit$legislators %>% 
-        select(coord1D,ID,session) %>% 
+        dplyr::select(coord1D,ID,session) %>% 
         mutate(bootstrap=b) %>% 
         group_by(session) %>% 
         mutate(coord1D=as.numeric(scale(coord1D))) %>% 
@@ -461,7 +459,7 @@ simulate_task <- function(task_id) {
       
     }
     
-  },mc.cores=4) %>% bind_rows
+  }) %>% bind_rows
   
   # calculate uncertainty intervals
   # if enough bootstraps came back ok
@@ -476,7 +474,7 @@ simulate_task <- function(task_id) {
   } else {
     
     dw_nom_unc <- dw_nom_fit$legislators %>% 
-      select(coord1D,ID,session) %>% 
+      dplyr::select(coord1D,ID,session) %>% 
       mutate(ideal_point=coord1D,
                 ideal_point_low=NA,
                 ideal_point_high=NA)
@@ -512,14 +510,14 @@ simulate_task <- function(task_id) {
            person_id=str_extract(ID, "[0-9]+"),
            time_elapsed=dw_elapsed_time) %>% 
     ungroup %>% 
-    select(time_id="session",-ID,model,person_id,
+    dplyr::select(time_id="session",-ID,model,person_id,
            matches("ideal"),time_elapsed)
   
   
   dynIRT_ideal_points <- ungroup(em_irt_results) %>% 
     mutate(model = "emIRT",
            Legislator=as.character(Legislator)) %>% 
-    select(time_id="Time",
+    dplyr::select(time_id="Time",
            person_id="Legislator",
            ideal_point="Mean_Ideal_Point",
            ideal_point_high="Upper_95_CI",
@@ -535,7 +533,7 @@ simulate_task <- function(task_id) {
     summarize(`Posterior Median`=quantile(Ideal_Points,.5),
               `High Posterior Interval`=quantile(Ideal_Points,.975),
               `Low Posterior Interval`=quantile(Ideal_Points,.025)) %>% 
-    select(person_id="Person",
+    dplyr::select(person_id="Person",
            ideal_point="Posterior Median",
            ideal_point_high="High Posterior Interval",
            ideal_point_low="Low Posterior Interval",
@@ -592,11 +590,9 @@ simulate_task <- function(task_id) {
 
 
 # Run multiple tasks in parallel using foreach
-results_list <- foreach(task_id = 1:n_sims, .packages = packages, .errorhandling="pass") %dopar% {
-  
-  print(paste0("Now on task: ",task_id))
-  suppressMessages(simulate_task(task_id))
-}
+results_list <- mclapply(1:n_sims, simulate_task, mc.cores=num_workers)
+
+results_list <- bind_rows(results_list)
 
 saveRDS(results_list,paste0("/lustre/scratch/rkubinec/sim_models_nsims_",n_sims,
                          "_timeproc_",time_process,
@@ -607,15 +603,15 @@ saveRDS(results_list,paste0("/lustre/scratch/rkubinec/sim_models_nsims_",n_sims,
                          ".rds"))
 
 # Combine results from all tasks
-#over_sims <- bind_rows(results_list)
+#
 
 # Stop parallel backend
-stopCluster(cl)
+#stopCluster(cl)
 
 
 # Finish and save ---------------------------------------------------------
 
-# calc_sims <- group_by(over_sims, model) %>% 
+# calc_sims <- group_by(over_sims, model) %>%
 #   summarize(mean_rmse=mean(rmse),
 #             cov=mean(in_interval),
 #             rmse_coef=mean(sqrt((est_coef-true_est_coef)^2)),
