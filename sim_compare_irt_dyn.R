@@ -23,7 +23,7 @@ n_sims <- 500
 time_points <- 10
 n_persons <- 50
 n_items <- 400
-time_sd <- 1
+time_sd <- .3
 true_coef <- .2 # size of coefficient in latent regression
 time_process <- "random" # type of time process being simulated
 missingness <- TRUE # whether to model missing data
