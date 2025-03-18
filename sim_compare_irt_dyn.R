@@ -19,7 +19,7 @@ library(dwnominate)
 
 set.seed(20250310)  # For reproducibility
 
-n_sims <- 1
+n_sims <- 500
 time_points <- 10
 n_persons <- 50
 n_items <- 400
@@ -33,7 +33,9 @@ cores_per_task <- 4  # Number of cores per task
 
 # Detect available cores
 total_cores <- detectCores()
-num_workers <- min(n_sims, total_cores / cores_per_task)  # Ensure we don't overload CPU
+#num_workers <- min(n_sims, total_cores / cores_per_task)  # Ensure we don't
+#overload CPU
+num_workers <- parallel::detectCores()
 
 # Register parallel backend for tasks
 # cl <- makeCluster(num_workers,outfile="")
