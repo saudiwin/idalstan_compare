@@ -19,11 +19,11 @@ library(dwnominate)
 
 set.seed(20250310)  # For reproducibility
 
-n_sims <- 500
+n_sims <- 10
 time_points <- 10
-n_persons <- 50
+n_persons <- 20
 n_items <- 400
-time_sd <- .3
+time_sd <- 1
 true_coef <- .2 # size of coefficient in latent regression
 time_process <- "random" # type of time process being simulated
 missingness <- TRUE # whether to model missing data
@@ -33,9 +33,9 @@ cores_per_task <- 4  # Number of cores per task
 
 # Detect available cores
 total_cores <- detectCores()
-#num_workers <- min(n_sims, total_cores / cores_per_task)  # Ensure we don't
+num_workers <- min(n_sims, total_cores / cores_per_task)  # Ensure we don't
 #overload CPU
-num_workers <- parallel::detectCores()
+#num_workers <- parallel::detectCores()
 
 # Register parallel backend for tasks
 # cl <- makeCluster(num_workers,outfile="")
@@ -45,6 +45,8 @@ num_workers <- parallel::detectCores()
 simulate_task <- function(task_id) {
   
   print(paste0("Starting task ", task_id))
+  
+  task_time <- Sys.time()
   
   # simulate dataset with idealstan -----------------------------------------
   
@@ -143,7 +145,7 @@ simulate_task <- function(task_id) {
   
   idealstan_fit <- sim_data %>% 
     id_estimate(model_type=1,vary_ideal_pts="random_walk",
-                nchains=1,niter=1000,warmup=500,ncores=4,
+                nchains=1,niter=1000,warmup=500,ncores=cores_per_task,
                 restrict_ind_high = as.character(sort(sim_data@simul_data$true_reg_discrim,
                                                       decreasing=T,
                                                       index=T)$ix[1]),
@@ -230,7 +232,7 @@ simulate_task <- function(task_id) {
   
   start_time <- Sys.time()
   
-  
+  sink("/dev/null")
   em_irt_fit <- suppressMessages(dynIRT(.data=list(rc=rc_matrix,
                                   startlegis=startlegis,
                                   endlegis=endlegis,
@@ -251,6 +253,7 @@ simulate_task <- function(task_id) {
                          maxit=500,
                          threads=4
                        )))
+  sink()
   
   # get uncertainty
   # need to re-implement parametric bootstrap to account for uncertainty
@@ -290,6 +293,8 @@ simulate_task <- function(task_id) {
       }
     }
     
+    sink("/dev/null")
+    
     # Refit dynIRT model to simulated data
     fit_boot <- dynIRT(
       .data=list(rc=simulated_votes,
@@ -313,6 +318,8 @@ simulate_task <- function(task_id) {
         threads=4
       )
     )
+    
+    sink()
     
     # Store bootstrapped ideal points
     bootstrap_results[, , b] <- fit_boot$means$x
@@ -388,100 +395,113 @@ simulate_task <- function(task_id) {
   
   start_time <- Sys.time()
   
-  dw_nom_fit <- suppressMessages(dwnominate::dwnominate(rc_list, 
+  sink("/dev/null") 
+  dw_nom_fit <- try(suppressMessages(dwnominate::dwnominate(rc_list, 
                                        dims=1,minvotes=10,
-                                       id="legis_id",polarity=sort(apply(sim_data@simul_data$true_person,1,mean),
-                                                                   decreasing=F, 
+                                       id="legis_id",
+                                       polarity=sort(apply(sim_data@simul_data$true_person,1,mean),
+                                                                   decreasing=T, 
                                                                    index=T)$ix[1],
-                                       model=3))
+                                       model=3)))
+  sink()
   
-  # Extract estimated ideal points from the original model
-  original_theta <- dw_nom_fit$legislators
-  
-  # Define number of bootstrap replications to calculate dw-nominate uncertainty
-  num_bootstraps <- 200
-  
-  # Step 2: Run the bootstrap procedure
-  
-  over_boot <- lapply(1:num_bootstraps, function(b) {
+  if(!('try-error' %in% class(dw_nom_fit))) {
     
-    # Step 2a: Simulate a new roll-call matrix
-    boot_rc_list <- lapply(rc_list, function(rc) {
-      
-      # Compute vote probabilities using original parameters
-      vote_probs <- plogis(outer(original_theta[,1], rc$votes, "*"))
-      
-      # fill in missing values with predictive mean matching
-      
-      yeas <- dw_nom_fit$rollcalls$midpoint1D - dw_nom_fit$rollcalls$spread1D
-      nays <- dw_nom_fit$rollcalls$midpoint1D + dw_nom_fit$rollcalls$spread1D
-      
-      impute_data <- mice::mice(data=tibble(yeas,nays), method = "pmm", m = 1, maxit = 5)
-      
-      vote_probs <- wnominate::nomprob(yea = as.matrix(impute_data$imp$yeas),
-                                       nay=as.matrix(impute_data$imp$nays),
-                                       ideal=as.matrix(dw_nom_fit$legislators$coord1D),
-                                       Beta=dw_nom_fit$beta,
-                                       dimweight=dw_nom_fit$weights)
-      
-      # Sample new votes from Bernoulli distribution
-      new_votes <- matrix(as.numeric(rbinom(length(rc$votes), size = 1, prob = vote_probs)), 
-                          nrow = nrow(rc$votes), ncol = ncol(rc$votes))
-      
-      random_index <- sample(length(new_votes), 1)  # Pick one random position
-      new_votes[random_index] <- NA  # Set the selected position to NA
-      
-      # Convert back into a rollcall object
-      attributes(new_votes) <- attributes(rc$votes)
-      rc$votes <- new_votes
-      return(rc)
-    })
+    # Extract estimated ideal points from the original model
+    original_theta <- dw_nom_fit$legislators
     
-    # Step 2b: Refit DW-NOMINATE on the bootstrapped data
-    try(boot_fit <- suppressMessages(dwnominate(boot_rc_list, dims=1,minvotes=5,lop=0,
-                           id="legis_id",polarity=sort(apply(sim_data@simul_data$true_person,1,mean),
-                                                       decreasing=F, 
-                                                       index=T)$ix[1],
-                           start = dw_nom_fit$start,
-                           model=3)))
+    # Define number of bootstrap replications to calculate dw-nominate uncertainty
+    num_bootstraps <- 200
     
-    if('try-error' %in% class(boot_fit)) {
+    # Step 2: Run the bootstrap procedure
+    
+    over_boot <- mclapply(1:num_bootstraps, function(b) {
       
-      return(NULL)
+      # Step 2a: Simulate a new roll-call matrix
+      boot_rc_list <- lapply(rc_list, function(rc) {
+        
+        # Compute vote probabilities using original parameters
+        vote_probs <- plogis(outer(original_theta[,1], rc$votes, "*"))
+        
+        # fill in missing values with predictive mean matching
+        
+        yeas <- dw_nom_fit$rollcalls$midpoint1D - dw_nom_fit$rollcalls$spread1D
+        nays <- dw_nom_fit$rollcalls$midpoint1D + dw_nom_fit$rollcalls$spread1D
+        
+        impute_data <- mice::mice(data=tibble(yeas,nays), method = "pmm", m = 1, maxit = 5)
+        
+        vote_probs <- wnominate::nomprob(yea = as.matrix(impute_data$imp$yeas),
+                                         nay=as.matrix(impute_data$imp$nays),
+                                         ideal=as.matrix(dw_nom_fit$legislators$coord1D),
+                                         Beta=dw_nom_fit$beta,
+                                         dimweight=dw_nom_fit$weights)
+        
+        # Sample new votes from Bernoulli distribution
+        new_votes <- matrix(as.numeric(rbinom(length(rc$votes), size = 1, prob = vote_probs)), 
+                            nrow = nrow(rc$votes), ncol = ncol(rc$votes))
+        
+        random_index <- sample(length(new_votes), 1)  # Pick one random position
+        new_votes[random_index] <- NA  # Set the selected position to NA
+        
+        # Convert back into a rollcall object
+        attributes(new_votes) <- attributes(rc$votes)
+        rc$votes <- new_votes
+        return(rc)
+      })
+      
+      sink("/dev/null") 
+      
+      # Step 2b: Refit DW-NOMINATE on the bootstrapped data
+      try(boot_fit <- suppressMessages(dwnominate(boot_rc_list, dims=1,minvotes=5,lop=0,
+                                                  id="legis_id",polarity=sort(apply(sim_data@simul_data$true_person,1,mean),
+                                                                              decreasing=F, 
+                                                                              index=T)$ix[1],
+                                                  start = dw_nom_fit$start,
+                                                  model=3)))
+      
+      sink()
+      
+      if('try-error' %in% class(boot_fit)) {
+        
+        return(NULL)
+        
+      } else {
+        
+        # Step 2c: Store the bootstrapped ideal points
+        boot_fit$legislators %>% 
+          dplyr::select(coord1D,ID,session) %>% 
+          mutate(bootstrap=b) %>% 
+          group_by(session) %>% 
+          mutate(coord1D=as.numeric(scale(coord1D))) %>% 
+          ungroup
+        
+      }
+      
+    },mc.cores=cores_per_task) %>% bind_rows
+    
+    # calculate uncertainty intervals
+    # if enough bootstraps came back ok
+    
+    if(nrow(over_boot)>50) {
+      
+      dw_nom_unc <- group_by(over_boot, ID,session) %>% 
+        summarize(ideal_point=mean(coord1D),
+                  ideal_point_low=quantile(coord1D,.025),
+                  ideal_point_high=quantile(coord1D,.975))
       
     } else {
       
-      # Step 2c: Store the bootstrapped ideal points
-      boot_fit$legislators %>% 
+      dw_nom_unc <- dw_nom_fit$legislators %>% 
         dplyr::select(coord1D,ID,session) %>% 
-        mutate(bootstrap=b) %>% 
-        group_by(session) %>% 
-        mutate(coord1D=as.numeric(scale(coord1D))) %>% 
-        ungroup
+        mutate(ideal_point=coord1D,
+               ideal_point_low=NA,
+               ideal_point_high=NA)
       
     }
     
-  }) %>% bind_rows
+  } 
   
-  # calculate uncertainty intervals
-  # if enough bootstraps came back ok
   
-  if(nrow(over_boot)>50) {
-    
-    dw_nom_unc <- group_by(over_boot, ID,session) %>% 
-      summarize(ideal_point=mean(coord1D),
-                ideal_point_low=quantile(coord1D,.025),
-                ideal_point_high=quantile(coord1D,.975))
-    
-  } else {
-    
-    dw_nom_unc <- dw_nom_fit$legislators %>% 
-      dplyr::select(coord1D,ID,session) %>% 
-      mutate(ideal_point=coord1D,
-                ideal_point_low=NA,
-                ideal_point_high=NA)
-    
-  }
   
   
   
@@ -507,13 +527,34 @@ simulate_task <- function(task_id) {
               ideal_point_high=quantile(ideal_point2,.975),
               ideal_point_low=quantile(ideal_point2,.025))
   
-  dwnominate_ideal_points <- dw_nom_unc %>% 
-    mutate(model = "DW-NOMINATE",
-           person_id=str_extract(ID, "[0-9]+"),
-           time_elapsed=dw_elapsed_time) %>% 
-    ungroup %>% 
-    dplyr::select(time_id="session",-ID,model,person_id,
-           matches("ideal"),time_elapsed)
+  if('try-error' %in% class(dw_nom_fit)) {
+    
+    # failed to estimate at all
+    
+    dwnominate_ideal_points <- sim_data@score_matrix %>% 
+      dplyr::select(person_id, time_id) %>% 
+      distinct %>%
+      mutate(ideal_point=NA,
+             ideal_point_low=NA,
+             ideal_point_high=NA,
+             model = "DW-NOMINATE",
+             time_elapsed=NA)
+    
+  } else {
+    
+    # estimated at least point estimates
+    
+    dwnominate_ideal_points <- dw_nom_unc %>% 
+      mutate(model = "DW-NOMINATE",
+             person_id=str_extract(ID, "[0-9]+"),
+             time_elapsed=dw_elapsed_time) %>% 
+      ungroup %>% 
+      dplyr::select(time_id="session",-ID,model,person_id,
+                    matches("ideal"),time_elapsed)
+    
+  }
+  
+  
   
   
   dynIRT_ideal_points <- ungroup(em_irt_results) %>% 
@@ -560,7 +601,7 @@ simulate_task <- function(task_id) {
   combined_ideal_points <- combined_ideal_points %>% 
     mutate(in_interval=as.numeric((true_ideal_point > ideal_point_low) & (true_ideal_point < ideal_point_high)),
            rmse = sqrt((true_ideal_point - ideal_point)^2),
-           sim=i)
+           sim=task_id)
   
   
   # latent regression -------------------------------------------------------
@@ -586,6 +627,10 @@ simulate_task <- function(task_id) {
                                      over_regs,
                                      by="model")
   
+  task_time <- Sys.time() - task_time
+  
+  combined_ideal_points$task_time <- task_time
+  
   return(combined_ideal_points)
   
 }
@@ -594,7 +639,7 @@ simulate_task <- function(task_id) {
 # Run multiple tasks in parallel using foreach
 results_list <- mclapply(1:n_sims, simulate_task, mc.cores=num_workers)
 
-results_list <- bind_rows(results_list)
+#results_list <- bind_rows(results_list)
 
 saveRDS(results_list,paste0("/lustre/scratch/rkubinec/sim_models_nsims_",n_sims,
                          "_timeproc_",time_process,
@@ -613,8 +658,10 @@ saveRDS(results_list,paste0("/lustre/scratch/rkubinec/sim_models_nsims_",n_sims,
 
 # Finish and save ---------------------------------------------------------
 
-# calc_sims <- group_by(over_sims, model) %>%
-#   summarize(mean_rmse=mean(rmse),
-#             cov=mean(in_interval),
-#             rmse_coef=mean(sqrt((est_coef-true_est_coef)^2)),
-#             S_err=mean(as.numeric(sign(true_est_coef)!=sign(est_coef))))
+calc_sims <- bind_rows(results_list) %>% 
+  group_by( model) %>%
+  summarize(mean_rmse=mean(rmse),
+            cov=mean(in_interval),
+            rmse_coef=mean(sqrt((est_coef-true_est_coef)^2)),
+            S_err=mean(as.numeric(sign(true_est_coef)!=sign(est_coef))),
+            time_est=mean(time_elapsed, na.rm=T))
