@@ -19,11 +19,11 @@ library(dwnominate)
 
 set.seed(20250310)  # For reproducibility
 
-n_sims <- 10
+n_sims <- 300
 time_points <- 10
-n_persons <- 20
-n_items <- 400
-time_sd <- 1
+n_persons <- as.numeric(Sys.getenv("NPERSON"))
+n_items <- as.numeric(Sys.getenv("NITEM"))
+time_sd <- as.numeric(Sys.getenv("TIMESD"))
 true_coef <- .2 # size of coefficient in latent regression
 time_process <- "random" # type of time process being simulated
 missingness <- TRUE # whether to model missing data
@@ -611,6 +611,8 @@ simulate_task <- function(task_id) {
   over_regs <- split(combined_ideal_points, 
                      combined_ideal_points$model) %>%
     lapply(function(this_data) ({
+      
+      print(paste0("Now on model: ",unique(this_data$model)))
       
       
       c2 <- lm(outcome ~ ideal_point, 
