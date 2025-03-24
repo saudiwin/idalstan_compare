@@ -427,7 +427,7 @@ simulate_task <- function(task_id) {
         
         yeas <- dw_nom_fit$rollcalls$midpoint1D - dw_nom_fit$rollcalls$spread1D
         nays <- dw_nom_fit$rollcalls$midpoint1D + dw_nom_fit$rollcalls$spread1D
-        
+        sink("/dev/null")
         impute_data <- mice::mice(data=tibble(yeas,nays), method = "pmm", m = 1, maxit = 5)
         
         vote_probs <- wnominate::nomprob(yea = as.matrix(impute_data$imp$yeas),
@@ -435,6 +435,8 @@ simulate_task <- function(task_id) {
                                          ideal=as.matrix(dw_nom_fit$legislators$coord1D),
                                          Beta=dw_nom_fit$beta,
                                          dimweight=dw_nom_fit$weights)
+        
+        sink()
         
         # Sample new votes from Bernoulli distribution
         new_votes <- matrix(as.numeric(rbinom(length(rc$votes), size = 1, prob = vote_probs)), 
