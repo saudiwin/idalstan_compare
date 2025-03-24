@@ -616,14 +616,25 @@ simulate_task <- function(task_id) {
       
       print(paste0("Now on model: ",unique(this_data$model)))
       
+      if(!all(is.na(this_data$ideal_point))) {
+        
+        c2 <- lm(outcome ~ ideal_point, 
+                 data=this_data)
+        c3 <- summary(c2)
+        
+        tibble(est_coef=c2$coefficients[2],
+               est_coef_pval=c3$coefficients[2,4],
+               model=this_data$model[1])
+        
+      } else {
+        
+        tibble(est_coef=NA_real_,
+               est_coef_pval=NA_real_,
+               model=this_data$model[1])
+        
+      }
       
-      c2 <- lm(outcome ~ ideal_point, 
-               data=this_data)
-      c3 <- summary(c2)
       
-      tibble(est_coef=c2$coefficients[2],
-             est_coef_pval=c3$coefficients[2,4],
-             model=this_data$model[1])
       
     })) %>% bind_rows
   
@@ -660,12 +671,4 @@ saveRDS(results_list,paste0("/lustre/scratch/rkubinec/sim_models_nsims_",n_sims,
 #stopCluster(cl)
 
 
-# Finish and save ---------------------------------------------------------
 
-calc_sims <- bind_rows(results_list) %>% 
-  group_by( model) %>%
-  summarize(mean_rmse=mean(rmse),
-            cov=mean(in_interval),
-            rmse_coef=mean(sqrt((est_coef-true_est_coef)^2)),
-            S_err=mean(as.numeric(sign(true_est_coef)!=sign(est_coef))),
-            time_est=mean(time_elapsed, na.rm=T))
