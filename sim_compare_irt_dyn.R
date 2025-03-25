@@ -19,8 +19,8 @@ library(dwnominate)
 
 set.seed(20250310)  # For reproducibility
 
-n_sims <- 10
-time_points <- 6
+n_sims <- 300
+time_points <- 10
 n_persons <- as.numeric(Sys.getenv("NPERSON"))
 n_items <- as.numeric(Sys.getenv("NITEM"))
 time_sd <- as.numeric(Sys.getenv("TIMESD"))
@@ -53,14 +53,32 @@ simulate_task <- function(task_id) {
   sim_data <- id_sim_gen(num_person=n_persons,
                          num_items=n_items,
                          time_sd=time_sd,
-                         ideal_pts_sd=1,
+                         ideal_pts_sd=1,inflate = missingness,
                          time_process="random",
+                         discrim_miss_scale=4,
+                         discrim_miss_shape=4,
+                         absence_diff_mean = 4,
                          time_points=time_points)
   
-  wide_df <- sim_data@score_matrix %>%
-    mutate(outcome_disc=as.numeric(outcome_disc)-1) %>% 
-    dplyr::select(person_id, item_id, outcome_disc) %>%
-    pivot_wider(names_from = item_id, values_from = outcome_disc, names_prefix = "item_")
+  if(missingness) {
+    
+    wide_df <- sim_data@score_matrix %>%
+      mutate(outcome_disc=na_if(outcome_disc, "Missing"),
+        outcome_disc=as.numeric(outcome_disc)-1) %>% 
+      dplyr::select(person_id, item_id, outcome_disc) %>%
+      pivot_wider(names_from = item_id, values_from = outcome_disc, names_prefix = "item_")
+    
+    
+  } else {
+    
+    wide_df <- sim_data@score_matrix %>%
+      mutate(outcome_disc=as.numeric(outcome_disc)-1) %>% 
+      dplyr::select(person_id, item_id, outcome_disc) %>%
+      pivot_wider(names_from = item_id, values_from = outcome_disc, names_prefix = "item_")
+    
+  }
+  
+  
   
   wide_df_mat <- as.matrix(wide_df[,-1])
   
@@ -124,12 +142,26 @@ simulate_task <- function(task_id) {
   names(const_list) <- paste0("person_",constraint_ids)
   
   start_time <- Sys.time()
+  
+  # if missing data, need to set starting values for items
+  
+  if(missingness) {
+    
+    beta.start <- 0
+    
+  } else {
+    
+    beta.start <- NA
+    
+  }
+  
   mcmc_pack_fit <- MCMCdynamicIRT1d(wide_df_mat,
                                     item_time_map,
                                     burnin=20000,
                                     mcmc=40000,
                                     theta.start = theta.start,
                                     tau2.start = time_sd,
+                                    beta.start=beta.start,
                                     thin = 20,
                                     A0 = 1,B0 = 1)
   # End time
