@@ -175,9 +175,21 @@ simulate_task <- function(task_id) {
   print("Running idealstan")
   start_time <- Sys.time()
   
+  if(missingness) {
+    
+    model_type <- 2
+    
+  } else {
+    
+    model_type <- 1
+    
+  }
+  
   idealstan_fit <- sim_data %>% 
-    id_estimate(model_type=1,vary_ideal_pts="random_walk",
-                nchains=1,niter=1000,warmup=500,ncores=cores_per_task,
+    id_estimate(model_type=model_type,
+                vary_ideal_pts="random_walk",
+                nchains=1,
+                niter=1000,warmup=500,ncores=cores_per_task,
                 restrict_ind_high = as.character(sort(sim_data@simul_data$true_reg_discrim,
                                                       decreasing=T,
                                                       index=T)$ix[1]),
@@ -185,7 +197,8 @@ simulate_task <- function(task_id) {
                                                      decreasing=F, 
                                                      index=T)$ix[1]),
                 fix_high = sort(sim_data@simul_data$true_reg_discrim,
-                                decreasing=T)[1],fix_low = sort(sim_data@simul_data$true_reg_discrim,
+                                decreasing=T)[1],
+                fix_low = sort(sim_data@simul_data$true_reg_discrim,
                                                                 decreasing=F)[1],
                 
                 fixtype='prefix',const_type="items")
