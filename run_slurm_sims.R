@@ -3,6 +3,7 @@
 # Load necessary libraries
 library(tibble)
 library(dplyr)
+library(tidyr)
 library(purrr)
 
 # ------------------------------------------------------------------------------
