@@ -15,7 +15,8 @@ simulations <- expand_grid(nsims=100,
                            time_points=10,
                            time_sd=c(0.2,1),
                            time_process=c("random","GP","splines"),
-                           missingness=c(0,1))
+                           missingness=c(0,1)) %>% 
+  mutate(iter=1:n())
 
 # For debugging: print the tibble of simulation parameters
 print(simulations)
@@ -30,7 +31,8 @@ print(simulations)
 submit_slurm_job <- function(sim_row) {
   # Build the command string using sprintf for clarity
   cmd <- sprintf(
-    "sbatch --export=nsims=%s,n_persons=%s,n_items=%s,time_points=%s,time_sd=%s,true_coef=%s,time_process=%s,missingness=%s,truecoef=%s compare_mods_slurm.sh",
+    "sbatch --job-name=%s --export=nsims=%s,n_persons=%s,n_items=%s,time_points=%s,time_sd=%s,true_coef=%s,time_process=%s,missingness=%s,truecoef=%s compare_mods_slurm.sh",
+    paste0("ideal_sim_",sim_row$iter),
     sim_row$nsims,
     sim_row$n_persons,
     sim_row$n_items,
