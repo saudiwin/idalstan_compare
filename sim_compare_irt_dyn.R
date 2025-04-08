@@ -19,12 +19,12 @@ library(dwnominate)
 
 set.seed(20250310)  # For reproducibility
 
-n_sims <- 300
-time_points <- 10
+n_sims <- as.numeric(Sys.getenv("NSIMS"))
+time_points <- as.numeric(Sys.getenv("TIMEPOINTS"))
 n_persons <- as.numeric(Sys.getenv("NPERSON"))
 n_items <- as.numeric(Sys.getenv("NITEM"))
 time_sd <- as.numeric(Sys.getenv("TIMESD"))
-true_coef <- .2 # size of coefficient in latent regression
+true_coef <- as.numeric(Sys.getenv("TRUECOEF")) # size of coefficient in latent regression
 time_process <- Sys.getenv("TIMEPROC") # type of time process being simulated
 missingness <- as.logical(as.numeric((Sys.getenv("MISSING")))) # whether to model missing data
 
@@ -55,9 +55,9 @@ simulate_task <- function(task_id) {
                          time_sd=time_sd,
                          ideal_pts_sd=1,inflate = missingness,
                          time_process="random",
-                         discrim_miss_scale=4,
-                         discrim_miss_shape=4,
                          absence_diff_mean = 4,
+                         absence_discrim_sd = .5,
+                         diff_sd=.5,
                          time_points=time_points)
   
   if(missingness) {
@@ -185,11 +185,16 @@ simulate_task <- function(task_id) {
     
   }
   
+  time_process_ideal <- case_match(time_process,
+                             "random"~"random_walk",
+                             .default=time_process)
+  
   idealstan_fit <- sim_data %>% 
     id_estimate(model_type=model_type,
-                vary_ideal_pts="random_walk",
+                vary_ideal_pts=time_process_ideal,
                 nchains=1,
                 niter=1000,warmup=500,ncores=cores_per_task,
+                spline_degree = 3,
                 restrict_ind_high = as.character(sort(sim_data@simul_data$true_reg_discrim,
                                                       decreasing=T,
                                                       index=T)$ix[1]),
@@ -264,14 +269,17 @@ simulate_task <- function(task_id) {
   alpha <- matrix(rnorm(J), ncol = 1)  # Item difficulty starting values
   beta <- matrix(rnorm(J), ncol = 1)   # Item discrimination starting values
   x <- matrix(0, nrow = N, ncol = Tpts)   # Ideal points (set to 0 for missing terms)
+  # set informative starting values as well
+  x[constraint_ids,] <- constraint_vals
   
   # Define priors
   x_mu0 <- as.matrix(rep(0,n_persons),ncol=1)
   x_mu0[constraint_ids,] <- constraint_vals # Prior means for respondent ideal points
-  x_sigma0 <- matrix(time_sd, nrow = N, ncol = 1)  # Prior variance for respondent ideal points
+  x_sigma0 <- matrix(1, nrow = N, ncol = 1)  # Prior variance for respondent ideal points
+  x_sigma0[constraint_ids, ] <- 0.1
   beta_mu <- matrix(0, nrow = 2, ncol = 1)   # Prior means for item parameters
-  beta_sigma <- diag(2)  # Prior covariance matrix for item parameters
-  omega2 <- matrix(0.1, nrow = N, ncol = 1)  # Evolutionary variance
+  beta_sigma <- diag(x=c(3,1),2)  # Prior covariance matrix for item parameters
+  omega2 <- matrix(time_sd^2, nrow = N, ncol = 1)  # Evolutionary variance
   
   # priors
   
@@ -333,7 +341,7 @@ simulate_task <- function(task_id) {
     
     for (t in 1:Tpts) {
       for (j in 1:J) {
-        prob_yes <- plogis(beta_hat[j] * x_hat[, t] - alpha_hat[j])  # Logistic probability
+        prob_yes <- pnorm(beta_hat[j] * x_hat[, bill_session[j] + 1] + alpha_hat[j])  # Logistic probability
         simulated_votes[, j] <- binom_func(prob_yes)
       }
     }
@@ -466,14 +474,27 @@ simulate_task <- function(task_id) {
       boot_rc_list <- lapply(rc_list, function(rc) {
         
         # Compute vote probabilities using original parameters
-        vote_probs <- plogis(outer(original_theta[,1], rc$votes, "*"))
+        #vote_probs <- plogis(outer(original_theta[,1], rc$votes, "*"))
         
         # fill in missing values with predictive mean matching
         
         yeas <- dw_nom_fit$rollcalls$midpoint1D - dw_nom_fit$rollcalls$spread1D
         nays <- dw_nom_fit$rollcalls$midpoint1D + dw_nom_fit$rollcalls$spread1D
         sink("/dev/null")
-        impute_data <- mice::mice(data=tibble(yeas,nays), method = "pmm", m = 1, maxit = 5)
+        
+        # only impute if necessary
+        
+        if(any(is.na(yeas) | is.na(nays))) {
+          
+          impute_data <- mice::mice(data=tibble(yeas,nays), method = "pmm", m = 1, maxit = 5)
+          
+        } else {
+          
+          impute_data <- list(imp=list(yeas=yeas,
+                                       nays=nays))
+          
+        }
+        
         
         vote_probs <- wnominate::nomprob(yea = as.matrix(impute_data$imp$yeas),
                                          nay=as.matrix(impute_data$imp$nays),
@@ -499,7 +520,7 @@ simulate_task <- function(task_id) {
       sink("/dev/null") 
       
       # Step 2b: Refit DW-NOMINATE on the bootstrapped data
-      try(boot_fit <- suppressMessages(dwnominate(boot_rc_list, dims=1,minvotes=5,lop=0,
+      try(boot_fit <- suppressMessages(dwnominate(boot_rc_list, dims=1,minvotes=10,lop=0,
                                                   id="legis_id",polarity=sort(apply(sim_data@simul_data$true_person,1,mean),
                                                                               decreasing=F, 
                                                                               index=T)$ix[1],
@@ -694,7 +715,6 @@ simulate_task <- function(task_id) {
   return(combined_ideal_points)
   
 }
-
 
 # Run multiple tasks in parallel using foreach
 results_list <- mclapply(1:n_sims, simulate_task, mc.cores=num_workers)

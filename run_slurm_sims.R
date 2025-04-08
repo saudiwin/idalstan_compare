@@ -1,0 +1,61 @@
+#!/usr/bin/env Rscript
+
+# Load necessary libraries
+library(tibble)
+library(dplyr)
+library(purrr)
+
+# ------------------------------------------------------------------------------
+# Create a tibble where each row represents one simulation's parameters.
+# ------------------------------------------------------------------------------
+simulations <- expand_grid(nsims=100,
+                           true_coef=0.2,
+                           n_persons=c(30),
+                           n_items=c(300,400),
+                           time_points=10,
+                           time_sd=c(0.2,1),
+                           time_process=c("random","GP","splines"),
+                           missingness=c(0,1))
+
+# For debugging: print the tibble of simulation parameters
+print(simulations)
+
+# ------------------------------------------------------------------------------
+# Define a function to submit one Slurm job given a row from the tibble.
+#
+# The function constructs an sbatch command that passes the parameters via
+# the --export flag. Note that we convert logical values (missingness) to
+# integers (0/1) for export.
+# ------------------------------------------------------------------------------
+submit_slurm_job <- function(sim_row) {
+  # Build the command string using sprintf for clarity
+  cmd <- sprintf(
+    "sbatch --export=nsims=%s,n_persons=%s,n_items=%s,time_points=%s,time_sd=%s,true_coef=%s,time_process=%s,missingness=%s,truecoef=%s compare_mods_slurm.sh",
+    sim_row$nsims,
+    sim_row$n_persons,
+    sim_row$n_items,
+    sim_row$time_points,
+    sim_row$time_sd,
+    sim_row$true_coef,
+    sim_row$time_process,
+    as.integer(sim_row$missingness),  # export as an integer (0 or 1)
+    sim_row$true_ceof
+  )
+  
+  cat("Submitting job with command:\n", cmd, "\n\n")
+  # Execute the command. This call will block until the sbatch command returns.
+  system(cmd)
+}
+
+# ------------------------------------------------------------------------------
+# Iterate over each row of the tibble and submit a Slurm job for that simulation.
+#
+# We use purrr::pwalk to apply the function to each row.
+# ------------------------------------------------------------------------------
+pwalk(simulations, function(...) {
+  # pwalk passes each row as individual arguments; we capture them in a list
+  sim_row <- list(...)
+  # Convert to a named list (if not already) to access by name in submit_slurm_job
+  sim_row <- as.list(sim_row)
+  submit_slurm_job(sim_row)
+})
