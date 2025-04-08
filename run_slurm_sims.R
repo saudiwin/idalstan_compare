@@ -44,7 +44,7 @@ submit_slurm_job <- function(sim_row) {
     sim_row$true_coef,
     sim_row$time_process,
     as.integer(sim_row$missingness),  # export as an integer (0 or 1)
-    sim_row$true_ceof
+    sim_row$iter
   )
   
   cat("Submitting job with command:\n", cmd, "\n\n")
