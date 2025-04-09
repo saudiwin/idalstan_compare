@@ -29,6 +29,8 @@ time_process <- Sys.getenv("TIMEPROC") # type of time process being simulated
 missingness <- as.logical(as.numeric((Sys.getenv("MISSING")))) # whether to model missing data
 
 print(paste0("NSIMS is: ", n_sims))
+print(paste0("TIMEPROC is: ", time_process))
+print(paste0("MISSING is: ", missingness))
 
 # Define parallelization parameters
 cores_per_task <- 4  # Number of cores per task
@@ -58,7 +60,7 @@ simulate_task <- function(task_id) {
                          num_items=n_items,
                          time_sd=time_sd,
                          ideal_pts_sd=1,inflate = missingness,
-                         time_process="random",
+                         time_process=time_process,
                          absence_diff_mean = 4,
                          absence_discrim_sd = .5,
                          diff_sd=.5,
