@@ -32,7 +32,7 @@ print(simulations)
 submit_slurm_job <- function(sim_row) {
   # Build the command string using sprintf for clarity
   cmd <- sprintf(
-    "sbatch -n 48 -t 168:00:00 -N 1 -p extended --job-name=%s --output=%s.out --error=%s.out --export=NSIMS=%s,NPERSON=%s,NITEM=%s,TIMEPOINTS=%s,TIMESD=%s,TRUECOEF=%s,TIMEPROC=%s,MISSING=%s compare_mods_slurm.sh",
+    "sbatch -n 4 -t 168:00:00 -N 1 -p extended --job-name=%s --output=%s.out --error=%s.out --export=NSIMS=%s,NPERSON=%s,NITEM=%s,TIMEPOINTS=%s,TIMESD=%s,TRUECOEF=%s,TIMEPROC=%s,MISSING=%s compare_mods_slurm.sh",
     paste0("ideal_sim_",sim_row$iter),
     paste0("ideal_sim_",sim_row$iter,"_output"),
     paste0("ideal_sim_",sim_row$iter,"_error"),
