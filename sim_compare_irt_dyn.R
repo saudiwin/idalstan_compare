@@ -28,6 +28,8 @@ true_coef <- as.numeric(Sys.getenv("TRUECOEF")) # size of coefficient in latent 
 time_process <- Sys.getenv("TIMEPROC") # type of time process being simulated
 missingness <- as.logical(as.numeric((Sys.getenv("MISSING")))) # whether to model missing data
 
+print(paste0("NSIMS is: ", n_sims))
+
 # Define parallelization parameters
 cores_per_task <- 4  # Number of cores per task
 
@@ -36,6 +38,8 @@ total_cores <- detectCores() - 1
 num_workers <- min(n_sims, total_cores / cores_per_task)  # Ensure we don't
 #overload CPU
 #num_workers <- parallel::detectCores()
+
+print(paste0("Total cores is: ",detectCores()))
 
 # Register parallel backend for tasks
 # cl <- makeCluster(num_workers,outfile="")
