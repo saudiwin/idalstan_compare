@@ -414,7 +414,10 @@ simulate_task <- function(task_id) {
   
   df <- sim_data@score_matrix %>%
     mutate(outcome_disc=as.numeric(outcome_disc),
-           vote_code = outcome_disc - 1)
+           vote_code = case_match(outcome_disc,
+                                  1~0,
+                                  2~1,
+                                  3~NA_real_))
   
   # Split data by sessions
   sessions <- split(df, df$time_id)
