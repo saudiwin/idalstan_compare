@@ -65,13 +65,11 @@ simulate_task <- function(task_id) {
   
   # simulate dataset with idealstan -----------------------------------------
   
-  spline_degree <- case_when(time_sd,
-                        time_process=="splines" & time_sd==0.4 ~ 2,
+  spline_degree <- case_when(time_process=="splines" & time_sd==0.4 ~ 2,
                        time_process=="splines" & time_sd==1 ~ 3,
                        TRUE ~ 2)
   
-  time_sd <- case_when(time_sd, 
-                       time_process=="splines"~0.4,
+  time_sd <- case_when(time_process=="splines"~0.4,
                        TRUE~time_sd)
   
   sim_data <- id_sim_gen(num_person=n_persons,
