@@ -65,6 +65,15 @@ simulate_task <- function(task_id) {
   
   # simulate dataset with idealstan -----------------------------------------
   
+  spline_degree <- case_when(time_sd,
+                        time_process=="splines" & time_sd==0.4 ~ 2,
+                       time_process=="splines" & time_sd==1 ~ 3,
+                       TRUE ~ 2)
+  
+  time_sd <- case_when(time_sd, 
+                       time_process=="splines"~0.4,
+                       TRUE~time_sd)
+  
   sim_data <- id_sim_gen(num_person=n_persons,
                          num_items=n_items,
                          time_sd=time_sd,
@@ -73,7 +82,8 @@ simulate_task <- function(task_id) {
                          absence_diff_mean = 4,
                          absence_discrim_sd = .5,
                          diff_sd=.5,
-                         time_points=time_points)
+                         time_points=time_points,
+                         spline_degree = spline_degree)
   
   if(missingness) {
     
@@ -202,6 +212,7 @@ simulate_task <- function(task_id) {
   
   time_process_ideal <- case_match(time_process,
                              "random"~"random_walk",
+                             "AR" ~ "AR1",
                              .default=time_process)
   
   idealstan_fit <- sim_data %>% 
@@ -209,7 +220,7 @@ simulate_task <- function(task_id) {
                 vary_ideal_pts=time_process_ideal,
                 nchains=1,
                 niter=1000,warmup=500,ncores=cores_per_task,
-                spline_degree = 3,
+                spline_degree =  spline_degree,
                 restrict_ind_high = as.character(sort(sim_data@simul_data$true_reg_discrim,
                                                       decreasing=T,
                                                       index=T)$ix[1]),
@@ -256,7 +267,7 @@ simulate_task <- function(task_id) {
                 vary_ideal_pts=time_process_ideal,
                 nchains=1,use_method = "pathfinder",
                 niter=1000,warmup=500,ncores=cores_per_task,
-                spline_degree = 3,
+                spline_degree =  spline_degree,
                 restrict_ind_high = as.character(sort(sim_data@simul_data$true_reg_discrim,
                                                       decreasing=T,
                                                       index=T)$ix[1]),
@@ -303,7 +314,7 @@ simulate_task <- function(task_id) {
                 use_method="laplace",
                 niter=1000,
                 warmup=500,ncores=cores_per_task,
-                spline_degree = 3,
+                spline_degree = spline_degree,
                 restrict_ind_high = as.character(sort(sim_data@simul_data$true_reg_discrim,
                                                       decreasing=T,
                                                       index=T)$ix[1]),
@@ -314,7 +325,6 @@ simulate_task <- function(task_id) {
                                 decreasing=T)[1],
                 fix_low = sort(sim_data@simul_data$true_reg_discrim,
                                decreasing=F)[1],
-                
                 fixtype='prefix',const_type="items",
                 seed=this_seed)
   
@@ -566,7 +576,7 @@ simulate_task <- function(task_id) {
                                        polarity=sort(apply(sim_data@simul_data$true_person,1,mean),
                                                                    decreasing=T, 
                                                                    index=T)$ix[1],
-                                       model=3)))
+                                       model=spline_degree)))
   sink()
   
   if(!('try-error' %in% class(dw_nom_fit))) {
@@ -636,7 +646,7 @@ simulate_task <- function(task_id) {
                                                                               decreasing=F, 
                                                                               index=T)$ix[1],
                                                   start = dw_nom_fit$start,
-                                                  model=3)))
+                                                  model=spline_degree)))
       
       sink()
       
