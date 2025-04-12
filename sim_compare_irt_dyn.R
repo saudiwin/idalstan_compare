@@ -16,8 +16,8 @@ library(dwnominate)
 
 
 # simulation parameters ---------------------------------------------------
-
-set.seed(20250310)  # For reproducibility
+this_seed <- 20250310
+set.seed(this_seed)  # For reproducibility
 
 n_sims <- as.numeric(Sys.getenv("NSIMS"))
 time_points <- as.numeric(Sys.getenv("TIMEPOINTS"))
@@ -27,6 +27,15 @@ time_sd <- as.numeric(Sys.getenv("TIMESD"))
 true_coef <- as.numeric(Sys.getenv("TRUECOEF")) # size of coefficient in latent regression
 time_process <- Sys.getenv("TIMEPROC") # type of time process being simulated
 missingness <- as.logical(as.numeric((Sys.getenv("MISSING")))) # whether to model missing data
+
+n_sims <- 1
+time_points <- 10
+n_persons <- 30
+n_items <- 200
+time_sd <- .4
+true_coef <- .2 # size of coefficient in latent regression
+time_process <- "random" # type of time process being simulated
+missingness <- FALSE
 
 print(paste0("NSIMS is: ", n_sims))
 print(paste0("TIMEPROC is: ", time_process))
@@ -168,7 +177,7 @@ simulate_task <- function(task_id) {
                                     theta.start = theta.start,
                                     tau2.start = time_sd,
                                     beta.start=beta.start,
-                                    thin = 20,
+                                    thin = 20,seed = this_seed,
                                     A0 = 1,B0 = 1)
   # End time
   end_time <- Sys.time()
@@ -212,7 +221,8 @@ simulate_task <- function(task_id) {
                 fix_low = sort(sim_data@simul_data$true_reg_discrim,
                                                                 decreasing=F)[1],
                 
-                fixtype='prefix',const_type="items")
+                fixtype='prefix',const_type="items",
+                seed=this_seed)
   
   
   # End time
@@ -222,6 +232,98 @@ simulate_task <- function(task_id) {
   idealstan_elapsed_time <- end_time - start_time
   
   print(paste0("Done with idealstan: finished in ",idealstan_elapsed_time))
+  
+  # idealstan pathfinder ---------------------------------------------------------------
+  print("Running idealstan -- pathfinder")
+  start_time <- Sys.time()
+  
+  if(missingness) {
+    
+    model_type <- 2
+    
+  } else {
+    
+    model_type <- 1
+    
+  }
+  
+  time_process_ideal <- case_match(time_process,
+                                   "random"~"random_walk",
+                                   .default=time_process)
+  
+  idealstan_pathfinder_fit <- sim_data %>% 
+    id_estimate(model_type=model_type,
+                vary_ideal_pts=time_process_ideal,
+                nchains=1,use_method = "pathfinder",
+                niter=1000,warmup=500,ncores=cores_per_task,
+                spline_degree = 3,
+                restrict_ind_high = as.character(sort(sim_data@simul_data$true_reg_discrim,
+                                                      decreasing=T,
+                                                      index=T)$ix[1]),
+                restrict_ind_low = as.character(sort(sim_data@simul_data$true_reg_discrim,
+                                                     decreasing=F, 
+                                                     index=T)$ix[1]),
+                fix_high = sort(sim_data@simul_data$true_reg_discrim,
+                                decreasing=T)[1],
+                fix_low = sort(sim_data@simul_data$true_reg_discrim,
+                               decreasing=F)[1],
+                
+                fixtype='prefix',const_type="items",
+                seed=this_seed)
+  
+  
+  # End time
+  end_time <- Sys.time()
+  
+  # Compute elapsed time
+  idealstan_pathfinder_elapsed_time <- end_time - start_time
+  
+  # idealstan laplace ---------------------------------------------------------------
+  print("Running idealstan -- laplace")
+  start_time <- Sys.time()
+  
+  if(missingness) {
+    
+    model_type <- 2
+    
+  } else {
+    
+    model_type <- 1
+    
+  }
+  
+  time_process_ideal <- case_match(time_process,
+                                   "random"~"random_walk",
+                                   .default=time_process)
+  
+  idealstan_laplace_fit <- sim_data %>% 
+    id_estimate(model_type=model_type,
+                vary_ideal_pts=time_process_ideal,
+                nchains=1,
+                use_method="laplace",
+                niter=1000,
+                warmup=500,ncores=cores_per_task,
+                spline_degree = 3,
+                restrict_ind_high = as.character(sort(sim_data@simul_data$true_reg_discrim,
+                                                      decreasing=T,
+                                                      index=T)$ix[1]),
+                restrict_ind_low = as.character(sort(sim_data@simul_data$true_reg_discrim,
+                                                     decreasing=F, 
+                                                     index=T)$ix[1]),
+                fix_high = sort(sim_data@simul_data$true_reg_discrim,
+                                decreasing=T)[1],
+                fix_low = sort(sim_data@simul_data$true_reg_discrim,
+                               decreasing=F)[1],
+                
+                fixtype='prefix',const_type="items",
+                seed=this_seed)
+  
+  
+  # End time
+  end_time <- Sys.time()
+  
+  # Compute elapsed time
+  idealstan_laplace_elapsed_time <- end_time - start_time
   
   
   # emIRT -------------------------------------------------------------------
@@ -662,11 +764,47 @@ simulate_task <- function(task_id) {
            time_elapsed=idealstan_elapsed_time) %>% 
     ungroup
   
+  idealstan_pathfinder_id_pts <- summary(idealstan_pathfinder_fit,
+                              aggregated=FALSE) %>%
+    group_by(Time_Point) %>% 
+    mutate(Ideal_Points=as.numeric(scale(Ideal_Points))) %>% 
+    group_by(Person,Time_Point) %>% 
+    summarize(`Posterior Median`=quantile(Ideal_Points,.5),
+              `High Posterior Interval`=quantile(Ideal_Points,.975),
+              `Low Posterior Interval`=quantile(Ideal_Points,.025)) %>% 
+    dplyr::select(person_id="Person",
+                  ideal_point="Posterior Median",
+                  ideal_point_high="High Posterior Interval",
+                  ideal_point_low="Low Posterior Interval",
+                  time_id="Time_Point") %>% 
+    mutate(model="pathfinder",
+           time_elapsed=idealstan_pathfinder_elapsed_time) %>% 
+    ungroup
+  
+  idealstan_laplace_id_pts <- summary(idealstan_laplace_fit,
+                              aggregated=FALSE) %>%
+    group_by(Time_Point) %>% 
+    mutate(Ideal_Points=as.numeric(scale(Ideal_Points))) %>% 
+    group_by(Person,Time_Point) %>% 
+    summarize(`Posterior Median`=quantile(Ideal_Points,.5),
+              `High Posterior Interval`=quantile(Ideal_Points,.975),
+              `Low Posterior Interval`=quantile(Ideal_Points,.025)) %>% 
+    dplyr::select(person_id="Person",
+                  ideal_point="Posterior Median",
+                  ideal_point_high="High Posterior Interval",
+                  ideal_point_low="Low Posterior Interval",
+                  time_id="Time_Point") %>% 
+    mutate(model="laplace",
+           time_elapsed=idealstan_laplace_elapsed_time) %>% 
+    ungroup
+  
   combined_ideal_points <- bind_rows(
     mcmcpack_ideal_points,
     dwnominate_ideal_points,
     dynIRT_ideal_points,
-    idealstan_id_pts
+    idealstan_id_pts,
+    idealstan_pathfinder_id_pts,
+    idealstan_laplace_id_pts
   )
   
   # merge in true values
