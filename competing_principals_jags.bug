@@ -1,0 +1,36 @@
+model {
+  for (i in 1:n.legislators) {
+    for (j in 1:n.item) {
+      probit(CJR[i,j]) <- beta[j] * theta[i] - alpha[j];
+    }
+  }
+  for (k in 1:2) {
+    for (j in 1:n.item) {
+      lead[k,j] ~ dbern(0.5)
+    }
+  }
+  for (i in 1:n.partisans) {
+    for (j in 1:n.item) {
+      Y_cat[i,j] ~ dcat(Q[i,j,1:3])
+      Q[i,j,1] <- pow(probVoteDisagree * (1 - CJR[i,j]), p[i,j]) * pow(probVoteAgree * (1 - CJR[i,j]), 1 - p[i,j])
+      Q[i,j,3] <- pow(probVoteAgree * CJR[i,j], p[i,j]) * pow(probVoteDisagree * CJR[i,j], 1 - p[i,j])
+      Q[i,j,2] <- 1 - Q[i,j,1] - Q[i,j,3]
+      p[i,j] <- lead[party[i], j]
+    }
+  }
+  for (i in (n.partisans+1):n.legislators) {
+    for (j in 1:n.item) {
+      Y_bin[i - n.partisans,j] ~ dbern(CJR[i,j])
+    }
+  }
+  delta[1] ~ dbeta(1,1)
+  delta[2] ~ dbeta(1,1)
+  probVoteDisagree <- delta[1]
+  probVoteAgree <- delta[2]
+  for(j in 1:n.item) { alpha[j] ~ dnorm(0, 0.25) }
+  beta[fix.bill[1]] <-  4
+  for(j in (fix.bill[1]+1):(fix.bill[2]-1)) { beta[j] ~ dnorm(0, 0.25) }
+  beta[fix.bill[2]] <- -4
+  for(j in (fix.bill[2]+1):n.item) { beta[j] ~ dnorm(0, 0.25) }
+  for(i in 1:n.legislators)  { theta[i] ~ dnorm(0, 1) }
+}
