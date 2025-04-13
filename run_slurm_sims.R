@@ -11,10 +11,10 @@ library(purrr)
 # ------------------------------------------------------------------------------
 simulations <- expand_grid(nsims=100,
                            true_coef=0.2,
-                           n_persons=c(30),
-                           n_items=c(200,500),
-                           time_points=10,
-                           time_sd=c(0.4,1),
+                           n_persons=c(50),
+                           n_items=c(100,200,300,400),
+                           time_points=c(10,20),
+                           time_sd=c(0.25,1),
                            time_process=c("random","GP","splines","AR"),
                            missingness=c(0,1)) %>% 
   mutate(iter=1:n())
