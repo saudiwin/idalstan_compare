@@ -28,14 +28,14 @@ true_coef <- as.numeric(Sys.getenv("TRUECOEF")) # size of coefficient in latent 
 time_process <- Sys.getenv("TIMEPROC") # type of time process being simulated
 missingness <- as.logical(as.numeric((Sys.getenv("MISSING")))) # whether to model missing data
 
-n_sims <- 1
-time_points <- 10
-n_persons <- 30
-n_items <- 200
-time_sd <- .4
-true_coef <- .2 # size of coefficient in latent regression
-time_process <- "random" # type of time process being simulated
-missingness <- FALSE
+# n_sims <- 1
+# time_points <- 10
+# n_persons <- 50
+# n_items <- 200
+# time_sd <- .4
+# true_coef <- .2 # size of coefficient in latent regression
+# time_process <- "random" # type of time process being simulated
+# missingness <- FALSE
 
 print(paste0("NSIMS is: ", n_sims))
 print(paste0("TIMEPROC is: ", time_process))
