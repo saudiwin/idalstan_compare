@@ -145,15 +145,15 @@ simulate_task <- function(task_id) {
   
   constraint_ids <- c(sort(apply(sim_data@simul_data$true_person,1,mean),
                            decreasing=TRUE,
-                           index=TRUE)$ix[1],
+                           index=TRUE)$ix[1:2],
                       sort(apply(sim_data@simul_data$true_person,1,mean),
                            decreasing=F, 
-                           index=T)$ix[1])
+                           index=T)$ix[1:2])
   
   constraint_vals <- c(sort(apply(sim_data@simul_data$true_person,1,mean),
-                            decreasing=T)[1],
+                            decreasing=T)[1:2],
                        sort(apply(sim_data@simul_data$true_person,1,mean),
-                            decreasing=F)[1])
+                            decreasing=F)[1:2])
   
   # use same technique for starting values
   
@@ -221,14 +221,14 @@ simulate_task <- function(task_id) {
                 spline_degree =  spline_degree,
                 restrict_ind_high = as.character(sort(sim_data@simul_data$true_reg_discrim,
                                                       decreasing=T,
-                                                      index=T)$ix[1]),
+                                                      index=T)$ix[1:2]),
                 restrict_ind_low = as.character(sort(sim_data@simul_data$true_reg_discrim,
                                                      decreasing=F, 
-                                                     index=T)$ix[1]),
+                                                     index=T)$ix[1:2]),
                 fix_high = sort(sim_data@simul_data$true_reg_discrim,
-                                decreasing=T)[1],
+                                decreasing=T)[1:2],
                 fix_low = sort(sim_data@simul_data$true_reg_discrim,
-                                                                decreasing=F)[1],
+                                                                decreasing=F)[1:2],
                 
                 fixtype='prefix',const_type="items",
                 seed=this_seed)
@@ -268,14 +268,14 @@ simulate_task <- function(task_id) {
                 spline_degree =  spline_degree,ar1_down = -1,
                 restrict_ind_high = as.character(sort(sim_data@simul_data$true_reg_discrim,
                                                       decreasing=T,
-                                                      index=T)$ix[1]),
+                                                      index=T)$ix[1:2]),
                 restrict_ind_low = as.character(sort(sim_data@simul_data$true_reg_discrim,
                                                      decreasing=F, 
-                                                     index=T)$ix[1]),
+                                                     index=T)$ix[1:2]),
                 fix_high = sort(sim_data@simul_data$true_reg_discrim,
-                                decreasing=T)[1],
+                                decreasing=T)[1:2],
                 fix_low = sort(sim_data@simul_data$true_reg_discrim,
-                               decreasing=F)[1],
+                               decreasing=F)[1:2],
                 
                 fixtype='prefix',const_type="items",
                 seed=this_seed)
@@ -315,14 +315,14 @@ simulate_task <- function(task_id) {
                 spline_degree = spline_degree,
                 restrict_ind_high = as.character(sort(sim_data@simul_data$true_reg_discrim,
                                                       decreasing=T,
-                                                      index=T)$ix[1]),
+                                                      index=T)$ix[1:2]),
                 restrict_ind_low = as.character(sort(sim_data@simul_data$true_reg_discrim,
                                                      decreasing=F, 
-                                                     index=T)$ix[1]),
+                                                     index=T)$ix[1:2]),
                 fix_high = sort(sim_data@simul_data$true_reg_discrim,
-                                decreasing=T)[1],
+                                decreasing=T)[1:2],
                 fix_low = sort(sim_data@simul_data$true_reg_discrim,
-                               decreasing=F)[1],
+                               decreasing=F)[1:2],
                 fixtype='prefix',const_type="items",
                 seed=this_seed)
   
@@ -882,6 +882,7 @@ saveRDS(results_list,paste0("/lustre/scratch/rkubinec/sim_models_nsims_",n_sims,
                          "_timevar_",time_sd,
                          "_numpers_",n_persons,
                          "_numitems_",n_items,
+                         "_timepoints_",time_points,
                          ".rds"))
 
 # Combine results from all tasks
