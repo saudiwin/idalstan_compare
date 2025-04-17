@@ -28,6 +28,8 @@ read_and_annotate <- function(filename) {
   keys <- parts[seq(1, ncol(parts), 2)]
   values <- parts[seq(2, ncol(parts), 2)]
   
+  if(! ("timepoints" %in% keys)) return(NULL)
+  
   # Create a named list of parameter values
   param_list <- as.list(values)
   names(param_list) <- keys
@@ -49,8 +51,11 @@ read_and_annotate <- function(filename) {
   
   df <- df %>% bind_rows %>% 
   bind_cols(as_tibble(param_list)) %>% 
-    mutate(across(one_of(c("nsims","missingness",'timevar','numpers','numitems')),
+    mutate(across(one_of(c("nsims","missingness",'timevar','numpers','numitems',
+                           "timepoints")),
            as.numeric))
+  
+  if(df$numpers[1]==30) return(NULL)
   
   return(df)
 }
@@ -81,15 +86,16 @@ sim_draws <- ungroup(sim_draws) %>%
                               1,0),
          coef_rmse=rse(as.numeric(true_est_coef),as.numeric(est_coef)))
 
-calc_sum <- group_by(sim_draws, model, timevar, missingness, timeproc, numitems) %>% 
-  summarize(mean_rmse=mean(rmse, na.rm=T),
-            coef_rmse=mean(coef_rmse, na.rm=T),
+calc_sum <- group_by(sim_draws, model, timevar, missingness, timeproc, numitems,
+                     timepoints) %>% 
+  summarize(mean_rmse=mean(rmse[!sign_rotation], na.rm=T),
+            coef_rmse=mean(coef_rmse[!sign_rotation], na.rm=T),
             elapsed_time=mean(as.numeric(time_elapsed), na.rm=T),
-            cov_ideal=mean(in_interval, na.rm=T),
-            s_error=mean(est_coef_pval<0.05 & sign(est_coef) != sign(true_est_coef),
+            cov_ideal=mean(in_interval[!sign_rotation], na.rm=T),
+            s_error=mean(est_coef_pval[!sign_rotation]<0.05 & sign(est_coef[!sign_rotation]) != sign(true_est_coef[!sign_rotation]),
                          na.rm=T),
-            m_error=mean(ifelse(est_coef_pval<0.05,
-                                abs(est_coef) / abs(true_est_coef),
+            m_error=mean(ifelse(est_coef_pval[!sign_rotation]<0.05,
+                                abs(est_coef[!sign_rotation]) / abs(true_est_coef[!sign_rotation]),
                                 NA_real_), na.rm=T),
             missing_CIs=mean(is.na(ideal_point_low)),
             missing_est=mean(is.na(ideal_point)),
@@ -117,11 +123,72 @@ missing_rmse_norotate <- filter(sim_draws, sign_rotation==0) %>%
 
 sim_draws %>% 
   distinct(model,true_est_coef, est_coef, timeproc,missingness) %>% 
-  filter(timeproc=="GP") %>% 
+ # filter(timeproc=="GP") %>% 
   ggplot(aes(y=true_est_coef,
              x=est_coef)) +
   geom_point() +
+  facet_wrap(~model) + 
+  geom_abline(slope=1, intercept=0, linetype=2, colour="red", size=2)
+
+# plot coverage rates
+
+calc_sum %>% 
+  ggplot(aes(x=cov_ideal)) +
+  geom_histogram() +
+  facet_wrap(~model) +
+  geom_vline(xintercept = .95, linetype=2)
+
+calc_sum %>% 
+  #filter(timeproc!="GP") %>% 
+  ggplot(aes(x=mean_rmse)) +
+  geom_histogram() +
   facet_wrap(~model)
+
+calc_sum %>% 
+  group_by(model) %>% 
+  summarize(mean_cov=mean(cov_ideal,na.rm=T))
+
+calc_sum %>% 
+  group_by(model) %>% 
+  summarize(mean_rmse=mean(mean_rmse,na.rm=T)) %>% 
+  arrange(mean_rmse)
+
+calc_sum %>% 
+  group_by(model,missingness) %>% 
+  summarize(mean_rmse=mean(mean_rmse,na.rm=T)) %>% 
+  arrange(mean_rmse)
+
+calc_sum %>% 
+  group_by(model,missingness) %>% 
+  summarize(mean_rmse=mean(mean_rmse,na.rm=T)) %>% 
+  arrange(mean_rmse)
+
+sim_draws %>% 
+  ggplot(aes(y=rmse,
+             x=reorder(model,rmse))) +
+  stat_summary(fun.data="mean_cl_normal") +
+  facet_wrap(~timeproc)
+
+sim_draws %>% 
+  ggplot(aes(y=coef_rmse,
+             x=reorder(model,coef_rmse))) +
+  stat_summary(fun.data="mean_cl_normal") +
+  facet_wrap(~timeproc)
+
+calc_sum %>% 
+  group_by(model) %>% 
+  summarize(mean_rmse=mean(mean_rmse,na.rm=T)) %>% 
+  arrange(mean_rmse)
+
+calc_sum %>% 
+  group_by(model) %>% 
+  summarize(mean_s_error=mean(s_error,na.rm=T)) %>% 
+  arrange(mean_s_error)
+
+calc_sum %>% 
+  group_by(model) %>% 
+  summarize(mean_m_error=mean(m_error,na.rm=T)) %>% 
+  arrange(mean_m_error)
 
 sim_draws %>% 
   ggplot(aes(x=ideal_point)) +
