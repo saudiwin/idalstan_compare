@@ -181,10 +181,16 @@ simulate_task <- function(task_id) {
     
   }
   
+  # make constraints for MCMC pack
+  
+  constraint_list <- as.list(constraint_vals)
+  names(constraint_list) <- constraint_ids
+  
   mcmc_pack_fit <- MCMCdynamicIRT1d(wide_df_mat,
                                     item_time_map,
                                     burnin=20000,
                                     mcmc=40000,
+                                    theta.constraints = constraint_list,
                                     theta.start = theta.start,
                                     tau2.start = time_sd,
                                     beta.start=beta.start,
@@ -200,6 +206,43 @@ simulate_task <- function(task_id) {
   # idealstan ---------------------------------------------------------------
   print("Running idealstan")
   start_time <- Sys.time()
+  
+  # identify items to constrain
+  
+  item_time_ids <- distinct(sim_data@score_matrix, item_id, time_id)
+  
+  true_item <- tibble(discrim=sim_data@simul_data$true_reg_discrim) %>% 
+    mutate(item_id=factor(1:n()))
+  
+  item_time_ids <- left_join(item_time_ids, true_item)
+  
+  # need to cut
+  
+  item_time_ids <- mutate(item_time_ids,
+                          time_id=as.numeric(time_id),
+                          time_period=as.numeric(cut(time_id, 2, 
+                                          labels=c(1,2)))) %>% 
+    group_by(time_period) %>% 
+    filter(discrim %in% c(max(discrim),min(discrim)))
+  
+  # need to convert to beta regression parameters
+  
+  get_gbeta_shapes <- function(y, a = -1, b = +1, phi = 100,
+                               return="alpha") {
+    x     <- (y - a) / (b - a)
+    alpha <- phi * x
+    beta  <- phi * (1 - x)
+    if(return=="alpha") return(alpha)
+    if(return=="beta") return(beta)
+  }
+  
+  item_time_ids <- mutate(item_time_ids,
+                          shape=get_gbeta_shapes(discrim,phi=750),
+                          scale=get_gbeta_shapes(discrim, return="beta",phi=750))
+  
+  
+  high_ids <- arrange(ungroup(item_time_ids), desc(discrim)) %>% slice(c(1:2))
+  low_ids <- arrange(ungroup(item_time_ids), discrim) %>% slice(c(1:2))
   
   if(missingness) {
     
@@ -224,17 +267,12 @@ simulate_task <- function(task_id) {
                 spline_degree =  spline_degree,
                 gp_alpha=case_when(time_process=="GP" & time_sd==1 ~ .2,
                                    TRUE ~ .5),
-                restrict_ind_high = as.character(sort(sim_data@simul_data$true_reg_discrim,
-                                                      decreasing=T,
-                                                      index=T)$ix[1:2]),
-                restrict_ind_low = as.character(sort(sim_data@simul_data$true_reg_discrim,
-                                                     decreasing=F, 
-                                                     index=T)$ix[1:2]),
-                fix_high = sort(sim_data@simul_data$true_reg_discrim,
-                                decreasing=T)[1:2],
-                fix_low = sort(sim_data@simul_data$true_reg_discrim,
-                                                                decreasing=F)[1:2],
-                
+                restrict_ind_high = high_ids$item_id,
+                restrict_ind_low = low_ids$item_id,
+                restrict_N_high = high_ids$shape,
+                restrict_sd_low = low_ids$shape,
+                restrict_sd_high = high_ids$scale,
+                restrict_N_low = low_ids$scale,
                 fixtype='prefix',const_type="items",
                 seed=this_seed)
   
@@ -274,17 +312,12 @@ simulate_task <- function(task_id) {
                 spline_degree =  spline_degree,ar1_down = -1,
                 gp_alpha=case_when(time_process=="GP" & time_sd==1 ~ .2,
                                    TRUE ~ .5),
-                restrict_ind_high = as.character(sort(sim_data@simul_data$true_reg_discrim,
-                                                      decreasing=T,
-                                                      index=T)$ix[1:2]),
-                restrict_ind_low = as.character(sort(sim_data@simul_data$true_reg_discrim,
-                                                     decreasing=F, 
-                                                     index=T)$ix[1:2]),
-                fix_high = sort(sim_data@simul_data$true_reg_discrim,
-                                decreasing=T)[1:2],
-                fix_low = sort(sim_data@simul_data$true_reg_discrim,
-                               decreasing=F)[1:2],
-                
+                restrict_ind_high = high_ids$item_id,
+                restrict_ind_low = low_ids$item_id,
+                restrict_N_high = high_ids$shape,
+                restrict_sd_low = low_ids$shape,
+                restrict_sd_high = high_ids$scale,
+                restrict_N_low = low_ids$scale,
                 fixtype='prefix',const_type="items",
                 seed=this_seed)
   
@@ -324,16 +357,12 @@ simulate_task <- function(task_id) {
                 spline_degree = spline_degree,
                 gp_alpha=case_when(time_process=="GP" & time_sd==1 ~ .2,
                                    TRUE ~ .5),
-                restrict_ind_high = as.character(sort(sim_data@simul_data$true_reg_discrim,
-                                                      decreasing=T,
-                                                      index=T)$ix[1:2]),
-                restrict_ind_low = as.character(sort(sim_data@simul_data$true_reg_discrim,
-                                                     decreasing=F, 
-                                                     index=T)$ix[1:2]),
-                fix_high = sort(sim_data@simul_data$true_reg_discrim,
-                                decreasing=T)[1:2],
-                fix_low = sort(sim_data@simul_data$true_reg_discrim,
-                               decreasing=F)[1:2],
+                restrict_ind_high = high_ids$item_id,
+                restrict_ind_low = low_ids$item_id,
+                restrict_N_high = high_ids$shape,
+                restrict_sd_low = low_ids$shape,
+                restrict_sd_high = high_ids$scale,
+                restrict_N_low = low_ids$scale,
                 fixtype='prefix',const_type="items",
                 seed=this_seed)
   

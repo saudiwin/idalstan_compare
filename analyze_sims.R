@@ -48,6 +48,8 @@ read_and_annotate <- function(filename) {
     item
     
   })
+  # get rid of runs that failed
+  if(all(sapply(df, is.null))) return(NULL)
   
   df <- df %>% bind_rows %>% 
   bind_cols(as_tibble(param_list)) %>% 
