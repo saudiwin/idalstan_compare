@@ -162,6 +162,11 @@ calc_sum %>%
 
 calc_sum %>% 
   group_by(model,missingness) %>% 
+  summarize(mean_s=mean(s_error,na.rm=T)) %>% 
+  arrange(mean_s)
+
+calc_sum %>% 
+  group_by(model,missingness) %>% 
   summarize(mean_rmse=mean(mean_rmse,na.rm=T)) %>% 
   arrange(mean_rmse)
 

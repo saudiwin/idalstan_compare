@@ -289,21 +289,6 @@ simulate_task <- function(task_id) {
   print("Running idealstan -- pathfinder")
   start_time <- Sys.time()
   
-  if(missingness) {
-    
-    model_type <- 2
-    
-  } else {
-    
-    model_type <- 1
-    
-  }
-  
-  time_process_ideal <- case_match(time_process,
-                                   "random"~"random_walk",
-                                   "AR" ~ "AR1",
-                                   .default=time_process)
-  
   idealstan_pathfinder_fit <- sim_data %>% 
     id_estimate(model_type=model_type,
                 vary_ideal_pts=time_process_ideal,
@@ -331,21 +316,6 @@ simulate_task <- function(task_id) {
   # idealstan laplace ---------------------------------------------------------------
   print("Running idealstan -- laplace")
   start_time <- Sys.time()
-  
-  if(missingness) {
-    
-    model_type <- 2
-    
-  } else {
-    
-    model_type <- 1
-    
-  }
-  
-  time_process_ideal <- case_match(time_process,
-                                   "random"~"random_walk",
-                                   "AR" ~ "AR1",
-                                   .default=time_process)
   
   idealstan_laplace_fit <- sim_data %>% 
     id_estimate(model_type=model_type,
