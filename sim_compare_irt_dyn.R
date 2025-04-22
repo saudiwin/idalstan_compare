@@ -262,7 +262,7 @@ simulate_task <- function(task_id) {
   idealstan_fit <- sim_data %>% 
     id_estimate(model_type=model_type,
                 vary_ideal_pts=time_process_ideal,
-                nchains=1,ar1_down = -1,
+                nchains=1,ar1_down = -1,time_var = 1,
                 niter=1000,warmup=500,ncores=cores_per_task,
                 spline_degree =  spline_degree,
                 gp_alpha=case_when(time_process=="GP" & time_sd==1 ~ .2,
@@ -292,7 +292,7 @@ simulate_task <- function(task_id) {
   idealstan_pathfinder_fit <- sim_data %>% 
     id_estimate(model_type=model_type,
                 vary_ideal_pts=time_process_ideal,
-                nchains=1,use_method = "pathfinder",
+                nchains=1,use_method = "pathfinder",time_var = 1,
                 niter=1000,warmup=500,ncores=cores_per_task,
                 spline_degree =  spline_degree,ar1_down = -1,
                 gp_alpha=case_when(time_process=="GP" & time_sd==1 ~ .2,
@@ -323,7 +323,7 @@ simulate_task <- function(task_id) {
                 nchains=1,
                 use_method="laplace",
                 niter=1000,ar1_down = -1,
-                warmup=500,ncores=cores_per_task,
+                warmup=500,ncores=cores_per_task,time_var = 1,
                 spline_degree = spline_degree,
                 gp_alpha=case_when(time_process=="GP" & time_sd==1 ~ .2,
                                    TRUE ~ .5),
