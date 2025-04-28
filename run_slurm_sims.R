@@ -10,7 +10,7 @@ library(purrr)
 # Create a tibble where each row represents one simulation's parameters.
 # ------------------------------------------------------------------------------
 simulations <- expand_grid(nsims=100,
-                           true_coef=0.2,
+                           true_coef=0.1,
                            n_persons=c(60),
                            n_items=c(100,200,300,400),
                            time_points=c(10,20),
