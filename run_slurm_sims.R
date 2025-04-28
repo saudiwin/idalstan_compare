@@ -15,8 +15,8 @@ simulations <- expand_grid(nsims=100,
                            n_items=c(100,200,300,400),
                            time_points=c(10,20),
                            time_sd=c(0.25,1),
-                           #time_process=c("random","GP","splines"),
-                           time_process="AR",
+                           time_process=c("random","GP","splines","AR"),
+                           #time_process="AR",
                            missingness=c(0,1)) %>% 
   mutate(iter=1:n())
 
