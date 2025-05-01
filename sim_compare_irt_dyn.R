@@ -72,13 +72,15 @@ simulate_task <- function(task_id) {
   time_sd <- case_when(time_process=="splines"~0.4,
                        TRUE~time_sd)
   
+  num_ids <- 1
+  
   sim_data <- id_sim_gen(num_person=n_persons,
                          num_items=n_items,
                          time_sd=time_sd,
                          ideal_pts_sd=1,inflate = missingness,
                          time_process=time_process,
-                         absence_diff_mean = 4,
-                         absence_discrim_sd = .5,
+                         absence_diff_mean = 2,
+                         #absence_discrim_sd = .5,
                          diff_sd=.5,
                          gp_rho=.5,
                          gp_alpha=case_when(time_process=="GP" & time_sd==1 ~ .2,
@@ -148,21 +150,21 @@ simulate_task <- function(task_id) {
   
   constraint_ids <- c(sort(apply(sim_data@simul_data$true_person,1,mean),
                            decreasing=TRUE,
-                           index=TRUE)$ix[1:2],
+                           index=TRUE)$ix[1:num_ids],
                       sort(apply(sim_data@simul_data$true_person,1,mean),
                            decreasing=F, 
-                           index=T)$ix[1:2])
+                           index=T)$ix[1:num_ids])
   
   constraint_vals <- c(sort(apply(sim_data@simul_data$true_person,1,mean),
-                            decreasing=T)[1:2],
+                            decreasing=T)[1:num_ids],
                        sort(apply(sim_data@simul_data$true_person,1,mean),
-                            decreasing=F)[1:2])
+                            decreasing=F)[1:num_ids])
   
   # use same technique for starting values
   
   theta.start <- rep(0, n_persons)
-  theta.start[constraint_ids[1]] <- constraint_vals[1]
-  theta.start[constraint_ids[2]] <- constraint_vals[2]
+  theta.start[constraint_ids[1:num_ids]] <- constraint_vals[1:num_ids]
+  theta.start[constraint_ids[(num_ids+1):(2*num_ids)]] <- constraint_vals[(num_ids+1):(2*num_ids)]
   
   const_list <- lapply(constraint_vals, function(x) {x})
   names(const_list) <- paste0("person_",constraint_ids)
@@ -241,8 +243,8 @@ simulate_task <- function(task_id) {
                           scale=get_gbeta_shapes(discrim, return="beta",phi=750))
   
   
-  high_ids <- arrange(ungroup(item_time_ids), desc(discrim)) %>% slice(c(1:2))
-  low_ids <- arrange(ungroup(item_time_ids), discrim) %>% slice(c(1:2))
+  high_ids <- arrange(ungroup(item_time_ids), desc(discrim)) %>% slice(c(1:num_ids))
+  low_ids <- arrange(ungroup(item_time_ids), discrim) %>% slice(c(1:num_ids))
   
   if(missingness) {
     

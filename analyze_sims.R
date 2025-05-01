@@ -345,3 +345,34 @@ p6 <- sim_draws %>%
 saveRDS(p6,"data/plot_time_elapsed.rds")
 
 ggsave("plots/time_elapsed.png",plot=p6)
+
+# S Errors
+
+s_err_data <- sim_draws %>% 
+  mutate(time_elapsed=as.numeric(time_elapsed)/60) %>% 
+  mutate(missingness=factor(missingness,labels=c("Ignorable","Non-ignorable")),
+         timeproc=factor(timeproc, levels=c("AR","GP","randomwalk","splines"),
+                         labels=c("AR(1)","Gaussian Process","Random Walk","Spline"))) %>% 
+  group_by(model, timevar, missingness, timeproc, numitems,
+           timepoints,sign_rotation,sim,est_coef,true_est_coef) %>%
+  distinct %>% 
+  summarize(s_error=mean(ifelse(sign_rotation,
+                                est_coef_pval<0.05 & sign(est_coef) == sign(true_est_coef),
+                                est_coef_pval<0.05 & sign(est_coef) != sign(true_est_coef)),na.rm=T)) %>% 
+  group_by(timeproc, model) %>% 
+  summarize(mean_s_err=mean(s_error,na.rm=T))
+
+p7 <- s_err_data %>% 
+  ggplot(aes(y=mean_s_err,
+             x=reorder(model, mean_s_err))) +
+  geom_col() +
+  #geom_text(aes(label=time_label),nudge_y=4) +
+  scale_x_discrete(guide = guide_axis(n.dodge = 2)) +
+  facet_wrap(~timeproc) +
+  labs(y="Proportion of S Errors",
+       x="") +
+  ggthemes::theme_clean()
+
+saveRDS(p7,"data/s_errors.rds")
+
+ggsave("plots/s_errors.png",plot=p7)
