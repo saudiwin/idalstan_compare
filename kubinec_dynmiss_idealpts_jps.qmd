@@ -10,7 +10,7 @@ date-format: long
 format: 
   pdf: default
 linestretch: 1.5
-abstract: 'This paper presents a novel parameterization of ideal point models that addresses long-standing issues in the estimation of time-varying ideal points for diverse time series processes, sparse data, and missing data. In addition, the model employs Stan, a robust Markov Chain Monte Carlo sampler, to permit parallelization of Bayesian inference and to resolve issues of convergence for high-dimensional time-series. The model is compared to existing dynamic ideal point models using simulations to diagnose issues of bias and convergence and then to empirical data from the U.S. Congress from 1990 to 2018. Novel parameterizations in the model permit the estimation of monthly changes in Congressperson ideological trajectories while incorporating non-ignorable missing data. All models are implemented in the R package `idealstan`. WORD COUNT: 11,725'
+abstract: "This paper presents idealstan, a measurement framework that addresses long-standing issues in the estimation of dynamic ideal points by incorporating diverse time series processes, techniques for sparse data, and adjustments for selection bias. In addition, the model employs Stan, a robust Markov Chain Monte Carlo sampler, to permit parallelization of Bayesian inference and to resolve issues of convergence for high-dimensional time-series. The model is compared to existing dynamic ideal point models using Monte Carlo simulations to show that idealstan is both faster and less biased than existing approaches. The model is then applied to the challenge of estimating monthly trajectories from 1990 to 2018 for Congressionpersons' ideal points while accounting for selection bias. WORD COUNT: 11,725"
 bibliography: "BibTexDatabase.bib"
 fig-cap-location: top
 csl: apsr.csl
@@ -80,15 +80,17 @@ num_days <- distinct(unemp1,bioname,date_month) %>%
 
 \newpage
 
-This paper resolves long-standing issues in dynamic ideal point modeling within a novel Bayesian modeling framework. The goal is to make the ideal point model a robust tool for measuring latent concepts across the social sciences, applicable to time-varying, noisy, and potentially missing data from social media, surveys, legislatures, bureaucracies, or social networks. Implemented in Stan [@CarpenterGelmanHoffmanEtAl2017], a probabilistic programming language for Bayesian inference, this framework allows for flexible time-series processes, diverse data distributions, and novel missing data approaches. The `idealstan` R package implements these models with advances in Bayesian computation to handle larger datasets than was previously feasible with Markov Chain Monte Carlo methods.
+This paper resolves long-standing issues in dynamic ideal point modeling within a novel Bayesian modeling framework. The goal is to make the ideal point model a robust tool for measuring complex latent traits, applicable to data from social media, surveys, legislatures, bureaucracies, or social networks. Implemented in Stan [@CarpenterGelmanHoffmanEtAl2017], a probabilistic programming language for Bayesian inference, this framework allows for flexible time-series processes, diverse data distributions, and novel missing data adjustments. The `idealstan` R package implements these models with advances in Bayesian computation to handle larger datasets than was previously feasible with Markov Chain Monte Carlo methods.
 
 Initially designed for measuring U.S. Congressional ideology, the ideal point model has proven valuable for various social science measurement challenges, including Twitter data [@barbera2015; @kubinec2018], the UN Security Council [@baileyEstimatingDynamicState2017], and the level of democracy [@coppedgeMethodologyVarietiesDemocracy2019; @pemsteinDemocraticCompromiseLatent2017], to name only a few. Its utility lies in measuring latent traits where data are imperfect proxies of theoretically defined concepts. However, while social scientists increasingly have access to granular time-varying data--and often with considerable measurement error--dynamic ideal point modeling remains difficult to apply to big datasets, especially in the presence of non-ignorable missing data, sparse measures, and mixed outcomes.
 
-The model's contributions are two-fold: 1) integrating novel time series processes and distributions into dynamic ideal point models, and 2) addressing computational challenges with big and sparse datasets. The main advantage of this framework is to enable researchers to estimate theoretically-relevant latent traits with robust Bayesian uncertainty. The approach further democratizes advanced measurement models, making them accessible to applied researchers without advanced training in Bayesian methods [@claassen2020].
+This paper's contributions are two-fold: 1) implementing and evaluating robust time-series specifications for dynamic ideal point estimation, and 2) addressing estimation challenges with big and sparse datasets. The main advantage of this framework is that it permits nuanced identification of time-varying latent traits, permitting researchers to overcome vexing measurement challenges and avoid downstream inferential errors. The approach further democratizes advanced measurement models, making them accessible to applied researchers without advanced training in Bayesian methods [@claassen2020].
 
-Employing these methods, I estimate monthly ideal points for all legislators in the U.S. House from 1990 to 2018. This type of estimation is impossible with existing methods because sparsity undermines models' ability to converge. In addition, as I show with simulations, time-series processes are much more difficult to identify statistically, which can limit the applicability of existing models.
+I first show with Monte Carlo simulations how the `idealstan` method compares to existing approaches. As I show, `idealstan` is notably faster than existing Bayesian implementations but also shows improved identification of latent traits in terms of RMSE and sign rotation. Furthermore, idealstan's implementation of novel time series specifications like Gaussian Processes helps it to identify latent traits that existing methods lack the flexibility to estimate. Finally, idealstan is robust to the inclusion of selection bias (i.e., non-ignorable missing data), which can exacerbate identification and measurement issues in available methods.
 
-All models can be fit with `idealstan`, which employs Stan's Hamiltonian Monte Carlo algorithms for robust inference on challenging posterior geometries. By combining missing data adjustments, time-varying inference, and scalable computation, this framework provides a versatile tool for addressing complex time-varying measurement challenges across the social sciences.
+To show how idealstan can identify granular latent traits, I estimate monthly ideal points for all legislators in the U.S. House from 1990 to 2018. This type of estimation is impossible with existing methods because sparsity undermines models' ability to converge. As I show, properly estimating latent traits involves carefully selecting a time-series specification that is theoretically-motivated and also employing a statistical methodology that can maximally extract latent signals from the data.
+
+By combining missing data adjustments, time-varying inference, and scalable computation, idealstan provides a robust method for addressing next-generation dynamic measurement challenges across the social sciences.
 
 # The Importance of Measuring Over Time
 
@@ -102,15 +104,17 @@ All models can be fit with `idealstan`, which employs Stan's Hamiltonian Monte C
 
 <!-- In the social sciences, measurement error is almost always non-trivial. For example, voting records, which are one of the most directly observable forms of political data, are nonetheless riddled with inaccurate records and duplicates [@ansolabehereQualityVoterRegistration2010]. Measurement error is more commonly recognized with higher-level concepts like democracy that have led to ongoing scholarly debates [@littleMeasuringDemocraticBacksliding2024; @millerHowLittleMengs2024; @knutsenConceptualMeasurementIssues2024]. However, virtually all social science variables have at least some measurement error because collecting data on humans, who have agency that allows them to hide or misreport information, is never a trivial matter. While many scholars recognize these structural limitations, and measurement models have a long history in statistics [@flake2019], it can be relatively difficult to apply measurement models to real-world datasets, especially when the tool needs to be able to incorporate relevant theoretical priors about the latent trait. Building a theoretically-valid measurement model can be a very useful contribution to our ability to analyze concepts, such as the influential work on legislative ideology in the United States [@poole1997; @jackman2004], but deriving an appropriate model can involve extensive technical work to incorporate theoretical priors [@caugheyDynamicEstimationLatent2015]. The model I present in this paper, which I shall refer to as `idealstan` as that is the name of the associated software package, aims to contribute a general purpose measurement model that applies to diverse datasets and problems while also permitting the incorporation of theory into measurement choices. By doing so, I hope to mainstream relatively complex Bayesian measurement models that have often taken months or years to derive and permit them to be rapidly deployed to diverse phenomena. -->
 
-Ideal point models have a long history in political science, and time-varying ideal point models have been available for almost as long. Latent measurements derived from these models, including DW-NOMINATE scores for the U.S. Congress and comparable measures for the U.N. General Assembly and human rights compliance, have made an outsize impact on research in the discipline. These uni-dimensional estimates of hard-to-measure traits permit researchers to test hypotheses with over-time variation to explore evolutionary changes. While over-time variation is no substitute for a causally-identified experiment, it can help rule out important inference issues like reverse causality and is necessary for methods like difference-in-differences.
+Ideal point models have a long history in political science, and time-varying ideal point models have been available for almost as long. Latent measurements derived from these models, including DW-NOMINATE scores for the U.S. Congress and comparable measures for the U.N. General Assembly, democracy, state capacity, and human rights compliance [@fariss2014; @baileyEstimatingDynamicState2017; @poole1997; @shor2022; @hansonLeviathansLatentDimensions2021; @coppedgeMethodologyVarietiesDemocracy2019], have made an outsize impact on research in the discipline. These uni-dimensional estimates of hard-to-measure traits permit researchers to test hypotheses with over-time variation to explore evolutionary changes. While over-time variation is no substitute for a causally-identified experiment, it can help rule out important inference issues like reverse causality and is necessary for dynamic causal inference methods like difference-in-differences.
 
-For these reasons, the growth of the availability of big datasets with over-time variation, such as datasets derived from social media, digitized documents, historical coding exercise, or long-running surveys, offer important new areas of application of the ideal point model. However, it can be difficult to repurpose ideal point models to new time-varying domains as over-time variation poses significant hurdles. Many advances in ideal point modeling remain limited to static models, such as missing-data adjustment and diverse outcomes, while existing models have specific time-series processes that may not apply well to other types of phenomena.
+For these reasons, the growth of the availability of big datasets with over-time variation, such as datasets derived from social media, digitized historical documents, or long-running surveys, offer important new areas of application of the ideal point model. However, it can be difficult to repurpose ideal point models to new time-varying domains as over-time variation poses significant hurdles when trying to identify a noisy latent trait. Many advances in ideal point modeling remain limited to static models, such as missing-data adjustment [@rosas2015] and diverse outcomes [@hare2018; @duck-mayr2020], while existing models incorporate a limited range of time-series processes that may not apply well to other types of phenomena [@reunig2019].
 
-The aim of this paper is to derive novel parameterizations of ideal point models to address these long-standing issues. I argue that a useful time-varying ideal point model should be able to handle diverse types of data, allow for diverse time series processes, and be robust to both computational complexity and high-dimensional inference. These are considerable challenges, but the model presented here makes progress on all of these fronts.
+The aim of this paper is to derive novel parameterizations of ideal point models to address these long-standing issues. I argue that a useful time-varying ideal point model should be able to handle diverse types of data, adjust for non-ignorable missing data (i.e., selection bias), allow for diverse time series processes, and be robust to both computational complexity and high-dimensional inference. These are considerable challenges, but the model presented here makes progress on all of these fronts.
 
-Before beginning the review notation, I first note that I will only consider the case of a 1-dimensional latent variable. The reasons for this focus is largely practical; analyzing multiple-dimensional latent variables would complicate the syntax without adding any useful new features as multi-dimensional ideal point analysis has already been extensively explored [@poole2005; @armstrong2014]. Furthermore, in social science settings, the dimensionality of latent variables is usually quite low and adding in additional dimensions can lead to overly-complex models that are difficult to interpret [@morucciModelComplexitySupervised2024], especially in the case of time-varying latent variables. In any case, all of the analyses that I present below can be straightforwardly modified to accommodate additional noncompensatory dimensions, and for that reason I leave that extension for future research.
+Before beginning the model definition, I first note that I will only consider the case of a 1-dimensional latent variable. The reasons for this focus is largely practical; analyzing multiple-dimensional latent variables would complicate the syntax without adding any useful new features as multi-dimensional ideal point analysis has already been extensively explored [@poole2005; @armstrong2014]. Furthermore, in social science settings, the dimensionality of latent variables is usually quite low and adding in additional dimensions can lead to overly-complex models that are difficult to interpret [@morucciModelComplexitySupervised2024], especially in the case of time-varying latent variables. In any case, all of the analyses that I present below can be straightforwardly modified to accommodate additional noncompensatory dimensions, and for that reason I leave that extension for future research.
 
-In this paper I employ a Bayesian interpretation of this model [@jackman2004] that I estimate using Hamiltonian Markov Chain Monte Carlo with Stan [@CarpenterGelmanHoffmanEtAl2017]. I am interested in posterior inference on a set of unobserved parameters $\{\alpha_i,\gamma_j,\beta_j\} \in \theta$ that is conditional on the observed data $Y_{ij}$, or $Pr(\theta|Y_{ij})$. To do so, I define independent priors on $\theta$, $Pr(\theta)$, which is multiplied by the likelihood $L(\cdot)$ that is defined by @eq-Bayes:[^1]
+In this paper I employ a Bayesian interpretation of this model [@jackman2004] that I estimate using Hamiltonian Markov Chain Monte Carlo (HMC) with Stan [@CarpenterGelmanHoffmanEtAl2017]. The two main advantages of using Stan and HMC is that HMC is an algorithm that is remarkably robust for high-dimensional inference of highly correlated parameters—as often occurs in dynamic latent variable modeling—and Stan's use of auto-differentiation permits it to incorporate a wide array of statistical distributions, whether for likelihoods or priors. This combination of robustness and flexibility is what underpins the advances described in this paper. A third and not-insignificant feature, as I explain later, is the ability to parallelize computations, which can dramatically reduce one of the biggest barriers to Bayesian modeling—computational overhead.
+
+I am interested in posterior inference on a set of unobserved parameters $\{\alpha_{it},\gamma_j,\beta_j\} \in \theta$ that is conditional on the observed data $Y_{ij}$, or $Pr(\theta|Y_{ij})$. To do so, I define independent priors on $\theta$, $Pr(\theta)$, which is multiplied by the likelihood $L(\cdot)$ that is defined by @eq-Bayes:[^1]
 
 [^1]: I use the proportional symbol $\propto$ to reflect the fact that the term in the denominator representing the probability of the data $Pr(Y_{ij})$ is normally omitted in computational Bayesian analysis as it is fixed with respect to the parameters [@gelman2013].
 
@@ -118,7 +122,147 @@ $$
 Pr(\theta|Y_{ij}) \propto Pr(\theta)L(Y_{ij}|\theta)
 $$ {#eq-Bayes}
 
-My presentation of the Bayesian ideal point model departs somewhat from conventional parameterizations in order to be more flexible and to incorporate recent advances in measurement modeling. I start by specifying the priors in terms of the distributions assigned to each parameter in $\theta$:
+Given the standard definition of an ideal point model as a form of an item-response theory specification [@bafumiPracticalIssuesImplementing2005], we can estimate the time-varying ideal points $\alpha_{it}$, discrimination parameters $\gamma_j$, and difficulty parameters $\beta_j$ given our observations $Y_{ijt}$ for each person $i$, time point $t$, and indicator $j$ with the following likelihood $L(\cdot)$:
+
+$$
+L(Y_{ijt}=1) = \prod^{I}_{i=1}\prod^{T}_{t=1} \prod^{J}_{j=1} logit^{-1}(\gamma_j \alpha_{it} - \beta_j)
+$$ {#eq-basic}
+
+We begin with the assumption that $Y_{ijt}$ is distributed Bernoulli and requires a logit link function as is customary in the literature; later on we will relax this restriction.
+
+Given that @eq-basic has no data on the right-hand side, we must impose some restrictions or priors to identify the parameters [@bafumiPracticalIssuesImplementing2005]. In a Bayesian context, we assign informative prior distributions to identify the scale and rotation of the latent traits/ideal points $\alpha_{it}$. To implement a time-series process for $\alpha_{it}$, we incorporate the time-series process in the prior [@martin2002]. In other words, the time-series method is defined over the latent trait in the latent space, which permits direct inference of the unobserved quantity and robust uncertainty estimation so long as the MCMC algorithm converges.
+
+## Time-varying Inference
+
+In this section, I show how the dynamic ideal point model can be defined for several different time-series processes for a set of latent dynamic ideal points $\alpha_{it}$.
+
+There are two main specifications that have been employed in modeling approaches to date. The first method, polynomials or splines, were first used by the DW-NOMINATE model [@rosenthal2007; @armstrong2014; @Caughey2016], which employs a linear time trend to allow for over-time variation at the legislator level across Congressional sessions. The DW-NOMINATE method allows for up to a 3rd-order polynomial trend, but these have not been implemented in DW-NOMINATE scores to date. @bailey2007 employs a 4th-order polynomial to provide common space scores for the American judiciary, which he argues, "represents a trade-off between flexibility and computation."
+
+The other widely-used approach is the random walk model of @quinn2002 in which ideal points in time $t$ are equal to ideal points in $t-1$ plus a Normally-distributed random jump. This much more flexible model—at the cost of estimating one latent trait per person per time point—is quite helpful at determining the probable trend in ideal points over time because it imposes virtually no structure on the time-series trends, although as I discuss below, it adds a considerable greater demand in terms of finding a unique identified solution. While the random walk prior has been widely applied in empirical settings, @reuning2019 note that it may have difficulty capturing rapid shifts in time trends.
+
+While I implement both of the methods above—including a generalized parameterization for polynomial splines—I also implement two new methods, the autoregressive equation of order 1 (AR(1)) and the Gaussian process. These two time-series specifications have not been employed to date in the dynamic ideal point literature, and I incorprorate them because they may be relevant to specific measurement challenges. An AR(1) time-series variable will always return to an over-time mean, i.e, it is "stationary." By contrast, a Gaussian process is only of the most flexible kinds of time-series processes, permitting dramatic shifts from one time point to the next—at the cost of considerably more computational complexity than the random-walk parameterization.
+
+It is not my intention in this paper to determine which of these time-series specifications is superior. Rather, I aim to show how these different processes can solve different measurement challenges given costs and trade-offs in terms of the availability of prior information, the nature of the latent trait, and computational feasibility.
+
+I begin by defining the random walk by stipulating a relationship in the prior between $\alpha_{it}$ and $\alpha_{it-1}$:
+
+$$
+\alpha_{it} \sim N(\delta_i+ \alpha_{it-1},\sigma_i)
+$$
+
+We further give every person $i$ a separate over-time variance parameter $\sigma_i$ and intercept/offset $\delta_i$. For computational reasons, the implementation of this model in `idealstan` employs a non-centered parameterization [@betancourt2013] that reduces dependence between the variance $\sigma_i$ and the prior value of $\alpha_{it-1}$:
+
+$$
+\begin{split}
+\epsilon_{it} &\sim N(0,1)\\
+\sigma_i &\sim E(1)\\
+\alpha_{it} &= \delta_i + \alpha_{it-1} + \sigma_i\epsilon_{it}
+\end{split}
+$$
+
+The first new time-series model that I consider is an AR(1) or autoregressive parameterization, which can be understood as a generalization of the random-walk model. To do so, we must add a parameter to the model, $\psi_i$ that is constrained to lie in the $(-1,1)$ interval:
+
+$$
+\begin{split}
+\epsilon_{it} &\sim N(0,1)\\
+\sigma_i &\sim E(1)\\
+\alpha_{it} &= \delta_i + \psi_i\alpha_{it-1} + \sigma_i\epsilon_{it}
+\end{split}
+$$
+
+If $\psi_i$ lies in the $(-1,1)$ interval, then the series is stationary and will always return or decay to the long-term mean of the series $\delta_i$. By comparison, the random walk model can be thought of as an AR(1) model where $\psi_i$ is fixed at 1. This type of time series model implies that a given person or legislator has a stable over-time average ideal point and that movement away from that over-time average is some kind of exogenous shock that will eventually decay.
+
+Both the AR(1) model and the random walk are models of discrete time, or a set number of time points. The next two time series processes that I consider are both continuous models of time; given any set of time points, they are capable of producing smooth interpolations between observed time points. The first such time process I consider is a Gaussian process ideal point model in which the ideal points $\alpha_{it}$ vary in terms of a Gaussian process with a squared-exponential kernel. A Gaussian process (GP) is chosen because it represents the most flexible framework possible for semi-parametric inference of either spatial or temporal autocorrelation [@rasmussen2006]. Given the limited application of this model in political science research (though see @duck-mayr2020 for an application to item-response theory utility functions), I briefly review the notation for a GP before combining it with the ideal point model.
+
+A GP is usually defined as a "distribution over functions" [@rasmussen2006, 13]. We assume that underlying an observed time series $x_t$ is an unobserved function $f(x_t)$. To estimate the most likely values of $f(x_t)$, $f(x_t)$ is defined as a multivariate Normally-distributed latent variable where the mean and covariance of this distribution are themselves functions of the mean and covariance of $f(x_t)$:
+
+$$
+f(x_t) \sim N(\mu(f(x_t)),\Sigma(f(x_t)))
+$$
+
+Usually the $\mu(f(x_t))$ function is assumed to be 0 as it does not vary with $t$. Instead, much of the flexibility of the distribution involves specifying a function for $\Sigma(f(x_t))$, the covariance. The function most often used, and incorporated here, is the squared-exponential kernel $k_t(\cdot)$:
+
+$$
+k_t(x_t,x_{t'}) = \large \sigma^2_f  e^{\displaystyle -\frac{(x_t - x_{t'})^2}{ 2l^2}} + \sigma^2_{x_t}  
+$$
+
+What this function does is convert all the distances in terms of time between $x_t$ and $x_{t'}$ into a positive semi-definite covariance matrix $\Sigma$. We can then sample from this multivariate Normal with covariance $\Sigma$ to estimate a distribution over the possible time-series functions $f(x_t)$. The GP framework is so flexible that it can fit an *infinite* number of basis functions of $x_t$ [@rasmussen2006, 14]. Other semi-parametric functions, such as splines and polynomials, are special cases of the GP for certain values of the hyper parameters used in the covariance function [@rasmussen2006, 137-140]. What is even more appealing is that the GP can handle time-varying covariates $X_t\phi'$ simply by including them in place of $\mu(x_t)$. The multivariate Normal will then sample from the specified covariate matrix while averaging over the possible values of the covariates.
+
+What gives the GP the ability to fit so many different functions are the three hyper-parameters in @eq-gpcov. $\sigma^2_{if}$ can be referred to as the marginal standard deviation and represents the total amount of variance in $x_t$ explained by the covariance function $k(x_t,x_{t'})$. A higher value for this hyperparameter will result in more bounce in the time series. $\sigma^2_{ix_t}$, on the other hand, represents residual variance in the time series $x_t$ that the covariance function does not fully explain (which could be interpreted as additional measurement error). Finally, the length-scale parameter $l^2_i$ represents a smoothing factor controlling how much different in time are correlated together. A very low length-scale will allow the time-series to cross the origin at a much higher rate. Conversely, higher length-scales result in smoother functions. The three hyper-parameters both overlap and interact, which makes isolating the effect of any one hyper-parameter difficult.
+
+To employ the GP as a time process for ideal points, we simply replace the observed $x_t$ with the latent ideal points $\alpha_{it}$:
+
+$$
+\alpha_{it} \sim N(0,k_t(\alpha_{it},\alpha_{it'}))
+$$
+
+This straightforward parameterization shows some of the power of Bayesian modeling. We can include virtually any time process by simply changing the definition of the prior of the ideal points $\alpha_{it}$. Of course, whether this model can be identified in a latent variable model with measurement error is a different question. Because of the GP's complexity, I turn next to consider a different option, basis splines, that permit more control over the flexibility of the time-series process.
+
+Splines are a method of constructing semi-parametric time-series by combining polynomial functions of time [@ratkovic2010]. While there are many different kinds, I consider here basis splines due to their ability to fit into the latent variable framework. A basis spline separates a polynomial function of time into individual basis functions that the space of all possible polynomial functions for a given polynomial degree [@deboorCalculatingBsplines1972; @gordonBSPLINECURVESSURFACES1974]. Because each of the individual functions are relatively simple, this construction allows for a wide variety of polynomial functions to be derived while also enabling efficient sampling.
+
+One central feature of splines is that they are polynomial functions defined over a series of sequential partitions of a given time series known as knots. A spline of a given order is a polynomial function of a given degree (by convention, one less than the order) that is defined for each sequential partition given by the location of the knots. Each piecewise polynomial function must begin and end at the same point of each sequential partition, ensuring a smooth combined function.
+
+The presentation below follows that of @kharratzadeh2017. Given a spline order $d$ and a given number $s$ of sequential knots $q$, we can define a basis matrix $B_{q,d}$ as a function of continuous time points $t \in \mathbb{R}|t_{min} < t < T$:
+
+$$
+B_{s,d}(t) = \omega_{s,d} B_{s,d}(t) + (1 - \omega_{s+1,d}B_{s+1,d-1}(t))
+$$
+
+where the function $\omega(\cdot)$ can be defined as:
+
+$$
+\omega_{s,d} = \begin{cases} 
+\frac{t-q_s}{q_{s+d-1}-q_s}, & \text{if } q_s \neq q_{s+d-1} \\
+0, & \text{otherwise}
+\end{cases}
+$$
+
+The resulting basis matrix $B_{s,d}(t)$ is a set of vectors of number of columns $T$ and number rows equal to the order of the spline. The polynomial function of $t$ can then be generated by multiplying the basis matrix by a vector of spline coefficients $A_i$ :
+
+$$
+S_{q,d}(t) = B_{s,d}(t)A_i
+$$
+
+where the length of spline coefficient vector $A_i$ is equal to the number of knots plus the degree of the spline. While in practice $t$ is in a set of discrete time points, defining the function over a continuous interval permits interpolation of the time series, a convenient feature of the spline technique.
+
+We can then sample the spline coefficients by defining a loose prior distribution for $A_i$ as a function of a scaling parameter $\tau$ and a location parameter $A'_i$:
+
+\begin{align}
+A'_i &\sim N(0,1)\\
+\tau &\sim E(1)\\
+A_i &= A_i'\tau
+\end{align} \label{eq-splineprior}
+
+The adjustment with $A_i'$ and $\tau$ is to permit non-centered sampling which is more efficient.
+
+The main advantage of using basis splines as I demonstrate in the empirical application is that it is possible to fine-tune the complexity of the time series function, which is valuable as it allows for theoretical priors to govern the amount of possible over-time variation in the latent trait. Increasing either the degree of the polynomial or the number of knots increases the number of coefficients per person by one. In cases of high sparsity, a low number of knots (or even no knots at all) and a low degree polynomial can be used to find a stable latent variable estimation even with very limited data per time point.
+
+In summary, these different time series models can be understood in terms of order of complexity. Except for splines, all of the time series models require at least one parameter per time point $t$. The random walk is the simplest of these models as it only requires one additional parameter, $\sigma_i$, per person $i$. The AR(1) model is more complex as it introduces an additional parameter to control the decay rate in the series, $\psi_i$. The GP is the most complex as it has three separate parameters per person, $\sigma^2_{if}$, $l_i^2$ and $\sigma^2_{iY}$, in addition to one estimate per time point $t$. For these reasons, the GP is the most demanding model to fit for a latent variable model as there needs to be a substantial amount of data per time point to estimate a flexible time trend while also separating our measurement noise.
+
+For these reasons, I argue that lower-dimensional time series methods like splines can be useful even given that functions like the GP (or even a random walk) are by nature more flexible. As the ideal point model is a measurement model, it can be difficult to separate measurement noise from the additional noise arising from flexible time series processes. In order for measurement to be successful, the time series specification should match the theoretical understanding of the latent construct of interest, as I explain in the empirical section.
+
+## Time-Varying Non-Ignorable Missing Data
+
+Having defined these time series models, I know show that it is possible to combine these time-series processes with the model of missing data in @eq-inflate1 to permit inference on ideal points that vary over time and may have non-ignorable missingness:
+
+$$
+    L(Y_{ijtr}|\alpha_{it},\gamma_j,\beta_j,\nu_j,\omega_j) = 
+    \prod^{T}_{t=1} \prod^{I}_{i=1} \prod^{J}_{j=1}
+    \begin{cases}
+    \zeta(\alpha_{it}'\nu_j - \omega_j ) & \text{if } r=0, \text{ and} \\
+    (1-\zeta({\alpha_{it}'\nu_j - \omega_j}))L(Y_{ijtr}|\alpha_{it},\gamma_j,\beta_j) & \text{if } r=1
+    \end{cases}
+$$
+
+To change from a random-walk to a different time-series model for $\alpha_{it}$, we can simply change the prior for $\alpha_{it}$ that we include in $Pr(\theta)$ with one of the previously-defined time processes. I do not index the item parameters by $t$ because in many applications of the model, the item parameters only occur at one point in time, such as bills in a legislature. It is possible in some situations, such as students taking a test multiple times, for item parameters to vary over time as well. Inference on these parameters' time-series trends would then involve defining time-series priors over these parameters, whether jointly with $\alpha_{it}$ or separately, which is a possible area for future research.
+
+## Identification of Time-Varying Latent Variables
+
+As I have mentioned, identification for models with time-varying $\alpha_{it}$ is a challenging endeavor that lacks a comprehensive discussion in the literature, often leaving practitioners to spend considerable time guessing what settings might produce an identified latent variable. @quinn2002 addressed this issue for random-walk models by restricting the variance $\sigma_i$ to values strictly between 0 and 0.1. This hard-coded constraint forces the time series to change little over time, though it also limits inference as the time series can only differ so much from each other. By contrast, I impose generally diffuse priors, or priors strong enough to impose some scaling identifiability, without forcing hard constraints on variance or other parameters. The Generalized Beta prior on the item discrimination parameters $\gamma_j$ is able to enforce a fixed scale for the latent trait while informative priors on pinned items is sufficient to identify a particular mode.
+
+However, if the data are very sparse in terms of having very few items per time point, then identification can be a serious challenge as pinning the discrimination parameter of a particular item may not constrain the time-series process sufficiently. This identification issue is particularly problematic when items are only observed in single time points as is the case with legislative data (rollcall votes are not repeated). In these cases, the spline function becomes particularly useful, as I show later, because it can rule out edge modes where latent traits shift and oscillate radically, such as a legislator moving from conservative to liberal across consecutive time points.
+
+I start by specifying the priors in terms of the distributions assigned to each parameter in $\theta$:
 
 \begin{align}
 \alpha_i &\sim \text{Normal}(0,3)\\
@@ -191,126 +335,6 @@ This model does not generally require more identifying information than previous
 \nu_j &\sim \text{GeneralizedBeta}(2,2)\\
 \omega_j &\sim \text{Normal}(0,3)
 \end{align}\label{eq-missprior}
-
-## Time-varying Inference
-
-The model specified in @eq-Bayes is a static model: it estimates one ideal point per person for the entire sample. Increasingly, time-varying estimation is useful as the scale and complexity of datasets also increases. In this section, I show how `idealstan` can be extended to allow for a variety of time-varying processes of the person ideal points $\alpha_i$. Importantly, these models are all jointly estimated with the missing-data two-stage model mentioned previously.
-
-The most well-known time-varying ideal point estimates come from the DW-NOMINATE model [@rosenthal2007; @armstrong2014; @Caughey2016], which employs a linear time trend to allow for limited over-time variation at the legislator level over time. The other widely-used approach is the random walk model of @quinn2002 in which ideal points in time $t$ are equal to ideal points in $t-1$ plus a Normally-distributed random jump. This much more flexible model is quite helpful at determining the probable trend in ideal points over time because it imposes virtually no structure on the time-series trends, although as I discuss below, it adds a considerable greater demand in terms of finding a unique identified solution. There are extensions of the random walk, such as employing a Student T's distribution to allow for more stable patterns over time [@reuning2019], though these approaches have the same difficulties with identification.
-
-To produce a wider range of possibilities to time-varying inference, I introduce three alternative time series models: AR(1) processes, Gaussian processes, and basis splines. I begin by defining the random walk by placing a subscript $t$ on the ideal points $\alpha_i$ and stipulating a relationship in the prior between time points:
-
-$$
-\alpha_{it} \sim N(\delta_i+ \alpha_{it-1},\sigma_i)
-$$ {#eq-rwc}
-
-We give every person $i$ a separate over-time variance parameter $\sigma_i$ and intercept/offset $\delta_i$. For computational reasons, the implementation of this model in `idealstan` employs a non-centered parameterization [@betancourt2013] that reduces dependence between the variance $\sigma_i$ and the prior value of $\alpha_{it-1}$:
-
-$$
-\begin{split}
-\epsilon_{it} &\sim N(0,1)\\
-\sigma_i &\sim E(1)\\
-\alpha_{it} &= \delta_i + \alpha_{it-1} + \sigma_i\epsilon_{it}
-\end{split}
-$$ {#eq-rwnc}
-
-The first new time-series model that I consider is an AR(1) or autoregressive parameterization, which can be understood as a generalization of the random-walk model. To do so, we must add a parameter to the model, $\psi_i$ that is constrained to lie in the $(-1,1)$ interval:
-
-$$
-\begin{split}
-\epsilon_{it} &\sim N(0,1)\\
-\sigma_i &\sim E(1)\\
-\alpha_{it} &= \delta_i + \psi_i\alpha_{it-1} + \sigma_i\epsilon_{it}
-\end{split}
-$$ {#eq-ar1}
-
-If $\psi_i$ lies in the $(-1,1)$ interval, then the series is stationary and will always return or decay to the long-term mean of the series $\delta_i$. By comparison, the random walk model can be thought of as an AR(1) model where $\psi_i$ is fixed at 1. This type of time series model implies that a given person or legislator has a stable over-time average ideal point and that movement away from that over-time average is some kind of exogenous shock that will eventually decay.
-
-Both the AR(1) model and the random walk are models of discrete time, or a set number of time points. The next two time series processes that I consider are both continuous models of time; given any set of time points, they are capable of producing smooth interpolations between observed time points. The first such time process I consider is a Gaussian process ideal point model in which the ideal points $\alpha_{it}$ vary in terms of a Gaussian process with a squared-exponential kernel. A Gaussian process (GP) is chosen because it represents the most flexible framework possible for semi-parametric inference of either spatial or temporal autocorrelation [@rasmussen2006]. Given the limited application of this model in political science research, let alone ideal point models specifically, I briefly review the notation for a GP before combining it with the ideal point model.
-
-A GP is usually defined as a "distribution over functions" [@rasmussen2006, 13]. We assume that underlying an observed time series $x_t$ is an unobserved function $f(x_t)$. To estimate the most likely values of $f(x_t)$, I can assume $f(x_t)$ is multivariate Normally-distributed where the mean and covariance of this distribution are themselves functions of the mean and covariance of $f(x_t)$:
-
-$$
-f(x_t) \sim N(\mu(f(x_t)),\Sigma(f(x_t)))
-$$ {#eq-gp1}
-
-Usually the $\mu(f(x_t))$ function is assumed to be 0 as it does not vary with $t$. Instead, much of the flexibility of the distribution involves specifying a function for $\Sigma(f(x_t))$, the covariance. The function most often used, and incorporated here, is the squared-exponential kernel $k_t(\cdot)$:
-
-$$
-k_t(x_t,x_{t'}) = \large \sigma^2_f  e^{\displaystyle -\frac{(x_t - x_{t'})^2}{ 2l^2}} + \sigma^2_{x_t}  
-$$ {#eq-gpcov}
-
-What this function does is convert all the distances in terms of time between $x_t$ and $x_{t'}$ into a positive semi-definite covariance matrix $\Sigma$. We can then sample from this multivariate Normal with covariance $\Sigma$ to estimate a distribution over the possible time-series functions $f(x_t)$. The GP framework is so flexible that it can fit an *infinite* number of basis functions of $x_t$ [@rasmussen2006, 14]. Other semi-parametric functions, such as splines and polynomials, are special cases of the GP for certain values of the hyper parameters used in the covariance function [@rasmussen2006, 137-140]. What is even more appealing is that the GP can handle time-varying covariates $X_t\phi'$ simply by including them in place of $\mu(x_t)$. The multivariate Normal will then sample from the specified covariate matrix while averaging over the possible values of the covariates.
-
-What gives the GP the ability to fit so many different functions are the three hyper-parameters in @eq-gpcov. $\sigma^2_{if}$ can be referred to as the marginal standard deviation and represents the total amount of variance in $x_t$ explained by the covariance function $k(x_t,x_{t'})$. A higher value for this hyperparameter will result in more bounce in the time series. $\sigma^2_{ix_t}$, on the other hand, represents residual variance in the time series $x_t$ that the covariance function does not fully explain (which could be interpreted as additional measurement error). Finally, the length-scale parameter $l^2_i$ represents a smoothing factor controlling how much different in time are correlated together. A very low length-scale will allow the time-series to cross the origin at a much higher rate. Conversely, higher length-scales result in smoother functions. The three hyper-parameters both overlap and interact, which makes isolating the effect of any one hyper-parameter difficult.
-
-To employ the GP as a time process for ideal points, we simply replace the observed $x_t$ with the latent ideal points $\alpha_{it}$:
-
-$$
-\alpha_i \sim N(0,k_t(\alpha_{it},\alpha_{it'}))
-$$ {#eq-gpideal}
-
-This straightforward parameterization shows some of the power of Bayesian modeling. We can include virtually any time process by simply defining the time series over a set of parameters rather than a set of observed data. Of course, whether this model can be identified in a latent variable model with measurement error is a different question. Because of the GP's complexity, I turn next to consider a different option, basis splines, that permit more control over the flexibility of the time-series process.
-
-Splines are a method of constructing semi-parametric time-series by combining polynomial functions of time [@perperoglouReviewSplineFunction2019]. While there are many different kinds, I consider here basis splines due to their ability to fit into the latent variable framework. A basis spline separates a polynomial function of time into individual basis functions that the space of all possible polynomial functions for a given polynomial degree [@deboorCalculatingBsplines1972; @gordonBSPLINECURVESSURFACES1974]. Because each of the individual functions are relatively simple, this construction allows for a wide variety of polynomial functions to be derived while also enabling efficient sampling.
-
-One central feature of splines is that they are polynomial functions defined over a series of sequential partitions of a given time series known as knots. A spline of a given order is a polynomial function of a given degree (by convention, one less than the order) that is defined for each sequential partition given by the location of the knots. Each piecewise polynomial function must begin and end at the same point of each sequential partition, ensuring a smooth combined function.
-
-The presentation below follows that of @kharratzadeh2017. Given a spline order $d$ and a given number $s$ of sequential knots $q$, we can define a basis matrix $B_{q,d}$ as a function of continuous time points $t \in \mathbb{R}|t_{min} < t < T$:
-
-$$
-B_{s,d}(t) = \omega_{s,d} B_{s,d}(t) + (1 - \omega_{s+1,d}B_{s+1,d-1}(t))
-$$ {#eq-bfunc}
-
-where the function $\omega(\cdot)$ can be defined as:
-
-$$
-\omega_{s,d} = \begin{cases} 
-\frac{t-q_s}{q_{s+d-1}-q_s}, & \text{if } q_s \neq q_{s+d-1} \\
-0, & \text{otherwise}
-\end{cases}
-$$
-
-The resulting basis matrix $B_{s,d}(t)$ is a set of vectors of number of columns $T$ and number rows equal to the order of the spline. The polynomial function of $t$ can then be generated by multiplying the basis matrix by a vector of spline coefficients $A_i$ :
-
-$$
-S_{q,d}(t) = B_{s,d}(t)A_i
-$$ {#eq-splinefunc}
-
-where the length of spline coefficient vector $A_i$ is equal to the number of knots plus the degree of the spline. While in practice $t$ is in a set of discrete time points, defining the function over a continuous interval permits interpolation of the time series, a convenient feature of the spline technique.
-
-We can then sample the spline coefficients by defining a loose prior distribution for $A_i$ as a function of a scaling parameter $\tau$ and a location parameter $A'_i$:
-
-\begin{align}
-A'_i &\sim N(0,1)\\
-\tau &\sim E(1)\\
-A_i &= A_i'\tau
-\end{align} \label{eq-splineprior}
-
-The adjustment with $A_i'$ and $\tau$ is to permit non-centered sampling which is more efficient.
-
-The main advantage of using basis splines as I demonstrate in the empirical application is that it is possible to fine-tune the complexity of the time series function, which is valuable as it allows for theoretical priors to govern the amount of possible over-time variation in the latent trait. Increasing either the degree of the polynomial or the number of knots increases the number of coefficients per person by one. In cases of high sparsity, a low number of knots (or even no knots at all) and a low degree polynomial can be used to find a stable latent variable estimation even with very limited data per time point.
-
-As a result, these different time series models can be understood in terms of order of complexity. Except for splines, all of the time series models require at least one parameter per time point $t$. The random walk is the simplest of these models as it only requires one additional parameter, $\sigma_i$, per person $i$. The AR(1) model is more complex as it introduces an additional parameter to control the decay rate in the series, $\psi_i$. The GP is the most complex as it has three separate parameters per person, $\sigma^2_{if}$, $l_i^2$ and $\sigma^2_{iY}$, in addition to one estimate per time point $t$. For these reasons, the GP is the most demanding model to fit for a latent variable model as there needs to be a substantial amount of data per time point to estimate a flexible time trend while also separating our measurement noise.
-
-For these reasons, I argue that lower-dimensional time series methods like splines are most useful in situations where data are relatively sparse per time point. As the ideal point model is a measurement model, it can be difficult to separate measurement noise from the additional noise arising from flexible time series processes.
-
-Having defined these time series models, I know show that it is possible to combine these time-series processes with the model of missing data in @eq-inflate1 to permit inference on ideal points that vary over time and may have non-ignorable missingness:
-
-$$
-    L(Y_{ijtr}|\alpha_{it},\gamma_j,\beta_j,\nu_j,\omega_j) = 
-    \prod^{T}_{t=1} \prod^{I}_{i=1} \prod^{J}_{j=1}
-    \begin{cases}
-    \zeta(\alpha_{it}'\nu_j - \omega_j ) & \text{if } r=0, \text{ and} \\
-    (1-\zeta({\alpha_{it}'\nu_j - \omega_j}))L(Y_{ijtr}|\alpha_{it},\gamma_j,\beta_j) & \text{if } r=1
-    \end{cases}
-$$ {#eq-inflate1}
-
-To change from a random-walk to a different time-series model for $\alpha_{it}$, we can simply change the prior for $\alpha_{it}$ that we include in $Pr(\theta)$ with one of the previously-defined time processes. I do not index the item parameters by $t$ because in many applications of the model, the item parameters only occur at one point in time, such as bills in a legislature. It is possible in some situations, such as students taking a test multiple times, for item parameters to vary over time as well. Inference on these parameters' time-series trends would then involve defining time-series priors over these parameters, whether jointly with $\alpha_{it}$ or separately, which is a possible area for future research.
-
-As I have mentioned, identification for models with time-varying $\alpha_{it}$ is a challenging endeavor without extensive discussion in the literature. @quinn2002 addressed this issue for random-walk models by restricting the variance $\sigma_i$ to values strictly between 0 and 0.1. This hard-coded constraint forces the time series to change little over time, though it also limits inference as the time series can only differ so much from each other. By contrast, I impose generally diffuse priors, or priors strong enough to impose some scaling identifiability, without forcing hard constraints on variance or other parameters. The Generalized Beta prior on the item discrimination parameters $\gamma_j$ is able to enforce a fixed scale for the latent trait while informative priors on pinned items is sufficient to identify a particular mode.
-
-However, if the data are very sparse in terms of having very few items per time point, then identification can be a serious challenge as pinning the discrimination parameter of a particular item may not constrain the time-series process sufficiently. This identification issue is particularly problematic when items are only observed in single time points as is the case with legislative data (rollcall votes are not repeated). In these cases, the spline function becomes particularly useful, as I show later, because it can rule out edge modes where latent traits shift and oscillate radically, such as a legislator moving from conservative to liberal across consecutive time points.
 
 ## Diverse Distributions
 
