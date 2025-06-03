@@ -842,6 +842,7 @@ simulate_task <- function(task_id) {
   # latent regression -------------------------------------------------------
   
   #loop over models, run regression with scores
+  # use sample of full data
   
   over_regs <- split(combined_ideal_points, 
                      combined_ideal_points$model) %>%
@@ -851,8 +852,10 @@ simulate_task <- function(task_id) {
       
       if(!all(is.na(this_data$ideal_point))) {
         
+        # select 200 data points at random
+        
         c2 <- lm(outcome ~ ideal_point, 
-                 data=this_data)
+                 data=slice(this_data, sample(1:n(),200)))
         c3 <- summary(c2)
         
         tibble(est_coef=c2$coefficients[2],
