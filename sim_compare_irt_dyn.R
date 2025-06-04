@@ -128,7 +128,8 @@ simulate_task <- function(task_id) {
   
   true_ideal <- true_ideal %>% 
     ungroup %>% 
-    mutate(true_ideal_point=scale(true_ideal_point)) %>% 
+    mutate(true_ideal_point_raw=true_ideal_point,
+           true_ideal_point=scale(true_ideal_point)) %>% 
     ungroup
   
   
@@ -521,7 +522,7 @@ simulate_task <- function(task_id) {
   
   # Compute 95% confidence intervals using quantiles
   em_irt_results <- bootstrap_long %>%
-    #group_by(Time) %>% 
+    group_by(Bootstrap) %>% 
     mutate(Ideal_Point=as.numeric(scale(Ideal_Point))) %>% 
     group_by(Legislator, Time) %>%
     summarise(
@@ -719,7 +720,7 @@ simulate_task <- function(task_id) {
            person_id=str_extract(time_id,"(?<=_)\\d+"),
            time_id=as.numeric(str_extract(time_id,"(?<=t)\\d+")),
            time_elapsed=mcmc_elapsed_time) %>% 
-    #group_by(time_id) %>% 
+    group_by(iter_id) %>% 
     mutate(ideal_point2=as.numeric(scale(ideal_point))) %>% 
     group_by(model,person_id,time_id,time_elapsed) %>% 
     summarize(ideal_point=median(ideal_point2),
@@ -769,7 +770,7 @@ simulate_task <- function(task_id) {
   
   idealstan_id_pts <- summary(idealstan_fit,
                               aggregated=FALSE) %>%
-    #group_by(Time_Point) %>% 
+    group_by(Iteration) %>% 
     mutate(Ideal_Points=as.numeric(scale(Ideal_Points))) %>% 
     group_by(Person,Time_Point) %>% 
     summarize(`Posterior Median`=quantile(Ideal_Points,.5),
@@ -786,7 +787,7 @@ simulate_task <- function(task_id) {
   
   idealstan_pathfinder_id_pts <- summary(idealstan_pathfinder_fit,
                               aggregated=FALSE) %>%
-    #group_by(Time_Point) %>% 
+    group_by(Iteration) %>% 
     mutate(Ideal_Points=as.numeric(scale(Ideal_Points))) %>% 
     group_by(Person,Time_Point) %>% 
     summarize(`Posterior Median`=quantile(Ideal_Points,.5),
@@ -803,7 +804,7 @@ simulate_task <- function(task_id) {
   
   idealstan_laplace_id_pts <- summary(idealstan_laplace_fit,
                               aggregated=FALSE) %>%
-    #group_by(Time_Point) %>% 
+    group_by(Iteration) %>% 
     mutate(Ideal_Points=as.numeric(scale(Ideal_Points))) %>% 
     group_by(Person,Time_Point) %>% 
     summarize(`Posterior Median`=quantile(Ideal_Points,.5),
@@ -844,6 +845,8 @@ simulate_task <- function(task_id) {
   #loop over models, run regression with scores
   # use sample of full data
   
+  this_sample <- sample(1:nrow(idealstan_id_pts),200)
+  
   over_regs <- split(combined_ideal_points, 
                      combined_ideal_points$model) %>%
     lapply(function(this_data) ({
@@ -855,7 +858,7 @@ simulate_task <- function(task_id) {
         # select 200 data points at random
         
         c2 <- lm(outcome ~ ideal_point, 
-                 data=slice(this_data, sample(1:n(),200)))
+                 data=slice(ungroup(this_data), this_sample))
         c3 <- summary(c2)
         
         tibble(est_coef=c2$coefficients[2],
