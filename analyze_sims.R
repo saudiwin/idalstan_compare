@@ -255,6 +255,43 @@ saveRDS(p3,"data/plot_coef_corrected.rds")
 
 ggsave("plots/coef_corrected.png",plot=p3)
 
+# M errors
+
+out_m_err <- sim_draws %>% 
+  mutate(missingness=factor(missingness,labels=c("Ignorable","Non-ignorable")),
+         timeproc=factor(timeproc, levels=c("AR","GP","randomwalk","splines"),
+                         labels=c("AR(1)","Gaussian Process","Random Walk","Spline"))) %>% 
+  distinct(model,missingness, timeproc, sign_rotation, est_coef_pval,
+           true_est_coef,true_coef,est_coef) %>% 
+  group_by(model, missingness, timeproc) %>% 
+  summarize(list_var=list(Hmisc::smean.cl.normal(ifelse(est_coef_pval[!sign_rotation]<0.05,
+                                                        abs(est_coef[!sign_rotation]) / abs(true_coef[!sign_rotation]),
+                                                        NA_real_)))) %>% 
+  ungroup %>% 
+  mutate(mean_est=sapply(list_var, function(x) x['Mean']),
+         low_ci=sapply(list_var, function(x) x['Lower']),
+         high_ci=sapply(list_var, function(x) x['Upper'])) %>% 
+  select(-list_var)
+
+p3m <-  out_m_err %>% 
+  ggplot(aes(y=mean_est,
+             x=reorder(model,mean_est))) +
+  geom_pointrange(aes(ymin=low_ci, ymax=high_ci,
+                      linetype=missingness,
+                      colour=missingness),
+                  position=position_dodge(.5)) +
+  facet_wrap(~timeproc,scales="free_y") +
+  labs(y="RMSE",x="",
+       caption=stringr::str_wrap("Plot shows averages with 5% to 95% CIs for RMSE of true to estimated ideal point scores. Facets show different true time series processes used to generate the data and for idealstan/Pathfinder/Laplace methods, also used to estimate.",
+                                 width=60)) + 
+  scale_x_discrete(guide = guide_axis(n.dodge = 2)) +
+  ggthemes::theme_clean() +
+  theme(legend.position = "top")
+
+saveRDS(p3m,"data/plot_m_errors.rds")
+
+ggsave("plots/m_errors.png",plot=p3m)
+
 # coverage
 
 out_coverage_correct <- sim_draws %>% 
