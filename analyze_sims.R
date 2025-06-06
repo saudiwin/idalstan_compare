@@ -169,7 +169,7 @@ calc_sum %>%
   mutate(mean_est=sapply(list_var, function(x) x['Mean']),
          low_ci=sapply(list_var, function(x) x['Lower']),
          high_ci=sapply(list_var, function(x) x['Upper'])) %>% 
-  select(-list_var)
+    dplyr::select(-list_var)
 
   p1 <- out_rmse %>% ggplot(aes(y=mean_est,
                                 x=reorder(model,mean_est))) +
@@ -201,7 +201,7 @@ ggsave("plots/rmse_all.png",plot=p1)
   mutate(mean_est=sapply(list_var, function(x) x['Mean']),
          low_ci=sapply(list_var, function(x) x['Lower']),
          high_ci=sapply(list_var, function(x) x['Upper'])) %>% 
-  select(-list_var)
+    dplyr::select(-list_var)
 
   p2 <-  out_rmse_correct %>% 
 ggplot(aes(y=mean_est,
@@ -234,7 +234,7 @@ out_coef_correct <- sim_draws %>%
   mutate(mean_est=sapply(list_var, function(x) x['Mean']),
          low_ci=sapply(list_var, function(x) x['Lower']),
          high_ci=sapply(list_var, function(x) x['Upper'])) %>% 
-  select(-list_var)
+  dplyr::select(-list_var)
 
 p3 <-  out_coef_correct %>% 
   ggplot(aes(y=mean_est,
@@ -263,24 +263,26 @@ out_m_err <- sim_draws %>%
                          labels=c("AR(1)","Gaussian Process","Random Walk","Spline"))) %>% 
   distinct(model,missingness, timeproc, sign_rotation, est_coef_pval,
            true_est_coef,true_coef,est_coef) %>% 
-  group_by(model, missingness, timeproc) %>% 
-  summarize(list_var=list(Hmisc::smean.cl.normal(ifelse(est_coef_pval[!sign_rotation]<0.05,
-                                                        abs(est_coef[!sign_rotation]) / abs(true_coef[!sign_rotation]),
+  group_by(model,missingness) %>% 
+  summarize(list_var=list(Hmisc::smean.cl.normal(ifelse(est_coef_pval<0.05,
+                                                        abs(est_coef) / abs(true_est_coef * (ifelse(sign_rotation,-1,1))),
                                                         NA_real_)))) %>% 
   ungroup %>% 
   mutate(mean_est=sapply(list_var, function(x) x['Mean']),
          low_ci=sapply(list_var, function(x) x['Lower']),
          high_ci=sapply(list_var, function(x) x['Upper'])) %>% 
-  select(-list_var)
+  dplyr::select(-list_var)
 
 p3m <-  out_m_err %>% 
   ggplot(aes(y=mean_est,
              x=reorder(model,mean_est))) +
+  # geom_point(aes(linetype=missingness,colour=missingness),
+  #            position=position_dodge(.5)) +
   geom_pointrange(aes(ymin=low_ci, ymax=high_ci,
                       linetype=missingness,
                       colour=missingness),
                   position=position_dodge(.5)) +
-  facet_wrap(~timeproc,scales="free_y") +
+  #facet_wrap(~timeproc,scales="free_y") +
   labs(y="RMSE",x="",
        caption=stringr::str_wrap("Plot shows averages with 5% to 95% CIs for RMSE of true to estimated ideal point scores. Facets show different true time series processes used to generate the data and for idealstan/Pathfinder/Laplace methods, also used to estimate.",
                                  width=60)) + 
@@ -304,7 +306,7 @@ out_coverage_correct <- sim_draws %>%
   mutate(mean_est=sapply(list_var, function(x) x['Mean']),
          low_ci=sapply(list_var, function(x) x['Lower']),
          high_ci=sapply(list_var, function(x) x['Upper'])) %>% 
-  select(-list_var)
+  dplyr::select(-list_var)
 
 p4 <-  out_coverage_correct %>% 
   ggplot(aes(y=mean_est,
@@ -338,7 +340,7 @@ out_sign_rotate <- sim_draws %>%
   mutate(mean_est=sapply(list_var, function(x) x['Mean']),
          low_ci=sapply(list_var, function(x) x['Lower']),
          high_ci=sapply(list_var, function(x) x['Upper'])) %>% 
-  select(-list_var)
+  dplyr::select(-list_var)
 
 p5 <-  out_sign_rotate %>% 
   ggplot(aes(y=mean_est,
@@ -374,7 +376,7 @@ out_sign_rotate <- sim_draws %>%
   mutate(mean_est=sapply(list_var, function(x) x['Mean']),
          low_ci=sapply(list_var, function(x) x['Lower']),
          high_ci=sapply(list_var, function(x) x['Upper'])) %>% 
-  select(-list_var)
+  dplyr::select(-list_var)
 
 p5a <-  out_sign_rotate %>% 
   ggplot(aes(y=mean_est,
@@ -395,6 +397,42 @@ p5a <-  out_sign_rotate %>%
 saveRDS(p5a,"data/plot_sign_rotate_timep.rds")
 
 ggsave("plots/sign_rotate_timep.png",plot=p5a)
+
+out_sign_rotate_miss <- sim_draws %>% 
+  mutate(missingness=factor(missingness,labels=c("Ignorable","Non-ignorable")),
+         timeproc=factor(timeproc, levels=c("AR","GP","randomwalk","splines"),
+                         labels=c("AR(1)","Gaussian Process","Random Walk","Spline")),
+         timepoints=factor(timepoints)) %>% 
+  distinct(model, timeproc, sign_rotation,numitems, timevar,timepoints,
+           sim) %>% 
+  filter(timeproc=="Random Walk") %>% 
+  group_by(model, timepoints) %>%
+  summarize(list_var=list(Hmisc::smean.cl.boot(sign_rotation))) %>% 
+  ungroup %>% 
+  mutate(mean_est=sapply(list_var, function(x) x['Mean']),
+         low_ci=sapply(list_var, function(x) x['Lower']),
+         high_ci=sapply(list_var, function(x) x['Upper'])) %>% 
+  dplyr::select(-list_var)
+
+p5b <-  out_sign_rotate_miss %>% 
+  ggplot(aes(y=mean_est,
+             x=reorder(model,mean_est))) +
+  geom_pointrange(aes(ymin=low_ci, ymax=high_ci,
+                      linetype=missingness,
+                      colour=missingness),
+                  position=position_dodge(.5)) +
+  #facet_wrap(~timepoints,scales="free_y") +
+  #geom_hline(yintercept = 0.95, linetype=2) +
+  labs(y="RMSE",x="",
+       caption=stringr::str_wrap("Plot shows averages with 5% to 95% CIs for RMSE of true to estimated ideal point scores. Facets show different true time series processes used to generate the data and for idealstan/Pathfinder/Laplace methods, also used to estimate.",
+                                 width=60)) + 
+  scale_x_discrete(guide = guide_axis(n.dodge = 2)) +
+  ggthemes::theme_clean() +
+  theme(legend.position = "top")
+
+saveRDS(p5b,"data/plot_sign_rotate_miss.rds")
+
+ggsave("plots/sign_rotate_miss.png",plot=p5b)
 
 p6 <- sim_draws %>% 
   mutate(time_elapsed=as.numeric(time_elapsed)/60) %>% 
@@ -419,24 +457,27 @@ saveRDS(p6,"data/plot_time_elapsed.rds")
 
 ggsave("plots/time_elapsed.png",plot=p6)
 
-p6a <- sim_draws %>% 
-  mutate(time_elapsed=as.numeric(time_elapsed)/60) %>% 
-  mutate(missingness=factor(missingness,labels=c("Ignorable","Non-ignorable")),
-         timeproc=factor(timeproc, levels=c("AR","GP","randomwalk","splines"),
-                         labels=c("AR(1)","Gaussian Process","Random Walk","Spline")),
-         numitems=paste(numitems, "Items")) %>% 
+time_data_numitems <- sim_draws %>% 
+  filter(timeproc=="randomwalk") %>% 
   distinct(time_elapsed, model, numitems) %>% 
+  mutate(time_elapsed=as.numeric(time_elapsed)/60) %>% 
+  mutate(numitems=paste(numitems, "Items"),
+         model=recode(model,
+                      `DW-NOMINATE`="DW-\nNOMINATE")) %>% 
   group_by(model, numitems) %>% 
   summarize(mean_time=mean(time_elapsed,na.rm=T)) %>% 
-  mutate(time_label=round(mean_time, 2)) %>% 
+  mutate(time_label=round(mean_time, 2))
+  
+  p6a <- time_data_numitems %>% 
   ggplot(aes(y=mean_time,
              x=reorder(model, mean_time))) +
   geom_col() +
-  geom_text(aes(label=time_label),nudge_y=7) +
+  geom_text(aes(label=time_label),nudge_y=15) +
   scale_x_discrete(guide = guide_axis(n.dodge = 2)) +
   facet_wrap(~numitems) +
   labs(y="Average # of Minutes per Run",
-       x="") +
+       x="",
+       caption=stringr::str_wrap("Plot shows average number of minutes over simulation draws employing the random-walk DGP, including both missing and observed versions.")) +
   ggthemes::theme_clean()
 
 saveRDS(p6a,"data/plot_time_elapsed_numitems.rds")
@@ -450,20 +491,27 @@ s_err_data <- sim_draws %>%
   mutate(missingness=factor(missingness,labels=c("Ignorable","Non-ignorable")),
          timeproc=factor(timeproc, levels=c("AR","GP","randomwalk","splines"),
                          labels=c("AR(1)","Gaussian Process","Random Walk","Spline"))) %>% 
-  group_by(model, timevar, missingness, timeproc, numitems,
-           timepoints,sign_rotation,sim,est_coef,true_est_coef) %>%
-  distinct %>% 
-  summarize(s_error=mean(ifelse(sign_rotation,
-                                est_coef_pval<0.05 & sign(est_coef) == sign(true_est_coef),
-                                est_coef_pval<0.05 & sign(est_coef) != sign(true_est_coef)),na.rm=T)) %>%
-  # summarize(s_error=mean(est_coef_pval<0.05 & sign(est_coef) != sign(true_est_coef),na.rm=T)) %>% 
-  group_by(timeproc, model) %>% 
-  summarize(mean_s_err=mean(s_error,na.rm=T))
+  distinct(model, timevar, missingness, timeproc, numitems,
+           timepoints,sign_rotation,sim,est_coef,true_est_coef,true_coef,est_coef_pval,sim) %>% 
+  group_by(model, timeproc) %>% 
+  mutate(s_errors=ifelse(sign_rotation,
+                         est_coef_pval<0.05 & sign(est_coef) == sign(true_est_coef),
+                         est_coef_pval<0.05 & sign(est_coef) != sign(true_est_coef)),
+         s_errors_true=ifelse(sign_rotation,
+                              NA_real_,
+                              est_coef_pval<0.05 & sign(est_coef) != sign(true_coef))) %>% 
+  summarize(list_var=list(Hmisc::smean.cl.boot(s_errors))) %>%
+  ungroup %>%
+  mutate(mean_est=sapply(list_var, function(x) x['Mean']),
+         low_ci=sapply(list_var, function(x) x['Lower']),
+         high_ci=sapply(list_var, function(x) x['Upper']))
+  
+
 
  p7 <- s_err_data %>% 
-  ggplot(aes(y=mean_s_err,
-             x=reorder(model, mean_s_err))) +
-  geom_col() +
+  ggplot(aes(y=mean_est,
+             x=reorder(model, mean_est))) +
+  geom_pointrange(aes(ymin=low_ci, ymax=high_ci)) +
   #geom_text(aes(label=time_label),nudge_y=4) +
   scale_x_discrete(guide = guide_axis(n.dodge = 2)) +
   facet_wrap(~timeproc) +

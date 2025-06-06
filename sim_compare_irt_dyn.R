@@ -28,6 +28,8 @@ true_coef <- as.numeric(Sys.getenv("TRUECOEF")) # size of coefficient in latent 
 time_process <- Sys.getenv("TIMEPROC") # type of time process being simulated
 missingness <- as.logical(as.numeric((Sys.getenv("MISSING")))) # whether to model missing data
 
+sim_iter <- Sys.getenv("ITER")
+
 # n_sims <- 5
 # time_points <- 10
 # n_persons <- 50
@@ -894,13 +896,7 @@ results_list <- mclapply(1:n_sims, simulate_task, mc.cores=num_workers)
 
 #results_list <- bind_rows(results_list)
 
-saveRDS(results_list,paste0("/lustre/scratch/rkubinec/sim_models_nsims_",n_sims,
-                         "_timeproc_",time_process,
-                         "_missingness_",as.numeric(missingness),
-                         "_timevar_",time_sd,
-                         "_numpers_",n_persons,
-                         "_numitems_",n_items,
-                         "_timepoints_",time_points,
+saveRDS(results_list,paste0("/lustre/scratch/rkubinec/sim_models_iter",sim_iter,
                          ".rds"))
 
 # Combine results from all tasks
