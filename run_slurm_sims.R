@@ -10,7 +10,7 @@ library(purrr)
 # Create a tibble where each row represents one simulation's parameters.
 # ------------------------------------------------------------------------------
 simulations <- bind_rows(rep(expand_grid(nsims=25,
-                           true_coef=0.05,
+                           true_coef=0.025,
                            n_persons=c(60),
                            n_items=c(100,200,300,400),
                            time_points=c(10,20),
