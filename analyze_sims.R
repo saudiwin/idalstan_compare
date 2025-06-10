@@ -4,7 +4,29 @@ library(tidyverse)
 library(ggplot2)
 library(lubridate)
 
-all_sims <- list.files("data/",pattern="sim\\_models\\_",
+# get simulation key
+
+simulations <- bind_rows(expand_grid(nsims=50,
+                                     true_coef=0.05,
+                                     n_persons=c(60),
+                                     n_items=c(100,200,300,400),
+                                     time_points=c(10,20),
+                                     time_sd=c(0.25,.5),
+                                     time_process=c("random","GP","splines","AR"),
+                                     #time_process="AR",
+                                     missingness=c(0,1)),
+                         expand_grid(nsims=50,
+                                     true_coef=0.05,
+                                     n_persons=c(60),
+                                     n_items=c(100,200,300,400),
+                                     time_points=c(10,20),
+                                     time_sd=c(0.25,.5),
+                                     time_process=c("random","GP","splines","AR"),
+                                     #time_process="AR",
+                                     missingness=c(0,1))) %>% 
+  mutate(iter=1:n())
+
+all_sims <- list.files("data/",pattern="sim\\_models\\_iter",
                        full.names = T)
 
 # convert to data 
@@ -12,57 +34,32 @@ all_sims <- list.files("data/",pattern="sim\\_models\\_",
 # Function to extract parameters from filename and read data
 read_and_annotate <- function(filename) {
   # Remove the .rds extension
-  base <- str_remove(basename(filename), "\\.rds$")
+  iter_num <- as.numeric(str_extract(filename, "[0-9]+"))
   
-  # Remove the leading "sim_models_" part
-  params_str <- str_remove(base, "^sim_models_")
+  df <- readRDS(filename) %>% 
+    lapply(function(x) {
+      
+      if('try-error' %in% class(x)) return(NULL)
+        
+        x
+      
+    }) %>% 
+    bind_rows
   
-  # fix random walk
+  df$iter <- iter_num
   
-  params_str <- str_replace_all(params_str, "random(_?walk)?", "randomwalk")
+  # merge in cats
   
-  # Split into key-value pairs
-  parts <- str_split(params_str, "_", simplify = TRUE)
-  
-  # Convert alternating keys and values into a named list
-  keys <- parts[seq(1, ncol(parts), 2)]
-  values <- parts[seq(2, ncol(parts), 2)]
-  
-  if(! ("timepoints" %in% keys)) return(NULL)
-  
-  # Create a named list of parameter values
-  param_list <- as.list(values)
-  names(param_list) <- keys
-  
-  # Read in the RDS file
-  df <- readRDS(filename)
-  
-  if(all(sapply(df, function(c) 'try-error' %in% class(c)))) return(NULL)
-  
-  # null out the try errors
-  
-  df <- lapply(df, function(item) {
-    
-    if('try-error' %in% class(item)) return(NULL)
-    
-    item
-    
-  })
-  # get rid of runs that failed
-  if(all(sapply(df, is.null))) return(NULL)
-  
-  df <- df %>% bind_rows %>% 
-  bind_cols(as_tibble(param_list)) %>% 
-    mutate(across(one_of(c("nsims","missingness",'timevar','numpers','numitems',
-                           "timepoints")),
-           as.numeric))
-  
-  if(df$numpers[1]==30) return(NULL)
+  df <- left_join(dplyr::select(df,-true_coef),
+                  simulations,
+                  by="iter")
   
   return(df)
 }
 
 sim_draws <- lapply(all_sims, function(i) {
+  
+  print(paste0("now on iter ",i))
   
   this_data <- read_and_annotate(i)
   
@@ -83,7 +80,7 @@ rse <- function(col1,col2) {
 # add in sign_rotation parameter
 
 sim_draws <- ungroup(sim_draws) %>% 
-  group_by(model, numitems, task_time, sim) %>% 
+  group_by(model, n_items, task_time, sim) %>% 
   mutate(sign_rotation=ifelse(mean(rse(ideal_point,true_ideal_point),na.rm=T)>mean((rse(-1*ideal_point,
                                                                       true_ideal_point)),na.rm=T),
                               1,0)) %>% 
@@ -94,15 +91,15 @@ sim_draws <- ungroup(sim_draws) %>%
                                    true_ideal_point),
                                rse(ideal_point,true_ideal_point)),
          coef_rmse_corrected=ifelse(sign_rotation,
-                                    rse(-1*as.numeric(true_est_coef),
+                                    rse(-1*as.numeric(true_coef),
                                         as.numeric(est_coef)),
-                                    rse(as.numeric(true_est_coef),as.numeric(est_coef))),
+                                    rse(as.numeric(true_coef),as.numeric(est_coef))),
          coverage_correct=ifelse(sign_rotation,
                                  as.numeric(-1 * true_ideal_point > ideal_point_low & -1*true_ideal_point < ideal_point_high),
                                  as.numeric((true_ideal_point > ideal_point_low) & (true_ideal_point < ideal_point_high))))
 
-calc_sum <- group_by(sim_draws, model, timevar, missingness, timeproc, numitems,
-                     timepoints) %>% 
+calc_sum <- group_by(sim_draws, model, time_sd, missingness, time_process, n_items,
+                     time_points) %>% 
   summarize(mean_rmse=mean(rmse_corrected, na.rm=T),
             coef_rmse=mean(coef_rmse_corrected, na.rm=T),
             elapsed_time=mean(as.numeric(time_elapsed), na.rm=T),
@@ -117,7 +114,7 @@ calc_sum <- group_by(sim_draws, model, timevar, missingness, timeproc, numitems,
             sign_rotate=mean(sign_rotation,na.rm=T))
 
 calc_sum_norotate <- filter(sim_draws, sign_rotation==0) %>% 
-  group_by(model, timevar, missingness, timeproc, numitems) %>% 
+  group_by(model, time_sd, missingness, time_process, n_items) %>% 
   summarize(mean_rmse=mean(rmse, na.rm=T),
             coef_rmse=mean(coef_rmse, na.rm=T),
             elapsed_time=mean(as.numeric(time_elapsed), na.rm=T),
@@ -137,8 +134,8 @@ missing_rmse_norotate <- filter(sim_draws, sign_rotation==0) %>%
             coef_rmse=mean(coef_rmse, na.rm=T))
 
 # sim_draws %>% 
-#   distinct(model,true_est_coef, est_coef, timeproc,missingness) %>% 
-#  # filter(timeproc=="GP") %>% 
+#   distinct(model,true_est_coef, est_coef, time_process,missingness) %>% 
+#  # filter(time_process=="GP") %>% 
 #   ggplot(aes(y=true_est_coef,
 #              x=est_coef)) +
 #   geom_point() +
@@ -161,9 +158,9 @@ calc_sum %>%
   
   out_rmse <- sim_draws %>% 
   mutate(missingness=factor(missingness,labels=c("Ignorable","Non-ignorable")),
-         timeproc=factor(timeproc, levels=c("AR","GP","randomwalk","splines"),
+         time_process=factor(time_process, levels=c("AR","GP","random","splines"),
                          labels=c("AR(1)","Gaussian Process","Random Walk","Spline"))) %>% 
-  group_by(model, missingness, timeproc) %>% 
+  group_by(model, missingness, time_process) %>% 
   summarize(list_var=list(Hmisc::smean.cl.normal(rmse))) %>% 
   ungroup %>% 
   mutate(mean_est=sapply(list_var, function(x) x['Mean']),
@@ -177,7 +174,7 @@ calc_sum %>%
                         linetype=missingness,
                         colour=missingness),
                     position=position_dodge(.5)) +
-    facet_wrap(~timeproc,scales="free_y") +
+    facet_wrap(~time_process,scales="free_y") +
     labs(y="RMSE",x="",
          caption=stringr::str_wrap("Plot shows averages with 5% to 95% CIs for RMSE of true to estimated ideal point scores. Facets show different true time series processes used to generate the data and for idealstan/Pathfinder/Laplace methods, also used to estimate.",
                                    width=60)) + 
@@ -193,9 +190,9 @@ ggsave("plots/rmse_all.png",plot=p1)
   
   out_rmse_correct <- sim_draws %>% 
   mutate(missingness=factor(missingness,labels=c("Ignorable","Non-ignorable")),
-         timeproc=factor(timeproc, levels=c("AR","GP","randomwalk","splines"),
+         time_process=factor(time_process, levels=c("AR","GP","random","splines"),
                          labels=c("AR(1)","Gaussian Process","Random Walk","Spline"))) %>% 
-  group_by(model, missingness, timeproc) %>% 
+  group_by(model, missingness, time_process) %>% 
   summarize(list_var=list(Hmisc::smean.cl.normal(rmse_corrected))) %>% 
   ungroup %>% 
   mutate(mean_est=sapply(list_var, function(x) x['Mean']),
@@ -210,7 +207,7 @@ ggplot(aes(y=mean_est,
                       linetype=missingness,
                       colour=missingness),
                position=position_dodge(.5)) +
-  facet_wrap(~timeproc,scales="free_y") +
+  facet_wrap(~time_process,scales="free_y") +
   labs(y="RMSE",x="",
        caption=stringr::str_wrap("Plot shows averages with 5% to 95% CIs for RMSE of true to estimated ideal point scores. Facets show different true time series processes used to generate the data and for idealstan/Pathfinder/Laplace methods, also used to estimate.",
                                  width=60)) + 
@@ -226,9 +223,12 @@ ggsave("plots/rmse_all_corrected.png",plot=p2)
 
 out_coef_correct <- sim_draws %>% 
   mutate(missingness=factor(missingness,labels=c("Ignorable","Non-ignorable")),
-         timeproc=factor(timeproc, levels=c("AR","GP","randomwalk","splines"),
+         time_process=factor(time_process, levels=c("AR","GP","random","splines"),
                          labels=c("AR(1)","Gaussian Process","Random Walk","Spline"))) %>% 
-  group_by(model, missingness, timeproc) %>% 
+  ungroup %>% 
+  distinct(sim, iter, model, missingness, time_process,
+           coef_rmse_corrected) %>% 
+  group_by(model, missingness, time_process) %>% 
   summarize(list_var=list(Hmisc::smean.cl.normal(coef_rmse_corrected))) %>% 
   ungroup %>% 
   mutate(mean_est=sapply(list_var, function(x) x['Mean']),
@@ -243,7 +243,7 @@ p3 <-  out_coef_correct %>%
                       linetype=missingness,
                       colour=missingness),
                   position=position_dodge(.5)) +
-  facet_wrap(~timeproc) +
+  facet_wrap(~time_process,scales="free_y") +
   labs(y="RMSE",x="",
        caption=stringr::str_wrap("Plot shows averages with 5% to 95% CIs for RMSE of true to estimated ideal point scores. Facets show different true time series processes used to generate the data and for idealstan/Pathfinder/Laplace methods, also used to estimate.",
                                  width=60)) + 
@@ -259,9 +259,9 @@ ggsave("plots/coef_corrected.png",plot=p3)
 
 out_m_err <- sim_draws %>% 
   mutate(missingness=factor(missingness,labels=c("Ignorable","Non-ignorable")),
-         timeproc=factor(timeproc, levels=c("AR","GP","randomwalk","splines"),
+         time_process=factor(time_process, levels=c("AR","GP","random","splines"),
                          labels=c("AR(1)","Gaussian Process","Random Walk","Spline"))) %>% 
-  distinct(model,missingness, timeproc, sign_rotation, est_coef_pval,
+  distinct(model,missingness, time_process, sign_rotation, est_coef_pval,
            true_est_coef,true_coef,est_coef) %>% 
   group_by(model,missingness) %>% 
   summarize(list_var=list(Hmisc::smean.cl.normal(ifelse(est_coef_pval<0.05,
@@ -282,7 +282,7 @@ p3m <-  out_m_err %>%
                       linetype=missingness,
                       colour=missingness),
                   position=position_dodge(.5)) +
-  #facet_wrap(~timeproc,scales="free_y") +
+  #facet_wrap(~time_process,scales="free_y") +
   labs(y="RMSE",x="",
        caption=stringr::str_wrap("Plot shows averages with 5% to 95% CIs for RMSE of true to estimated ideal point scores. Facets show different true time series processes used to generate the data and for idealstan/Pathfinder/Laplace methods, also used to estimate.",
                                  width=60)) + 
@@ -298,9 +298,9 @@ ggsave("plots/m_errors.png",plot=p3m)
 
 out_coverage_correct <- sim_draws %>% 
   mutate(missingness=factor(missingness,labels=c("Ignorable","Non-ignorable")),
-         timeproc=factor(timeproc, levels=c("AR","GP","randomwalk","splines"),
+         time_process=factor(time_process, levels=c("AR","GP","random","splines"),
                          labels=c("AR(1)","Gaussian Process","Random Walk","Spline"))) %>% 
-  group_by(model, missingness, timeproc) %>% 
+  group_by(model, missingness, time_process) %>% 
   summarize(list_var=list(Hmisc::smean.cl.normal(coverage_correct))) %>% 
   ungroup %>% 
   mutate(mean_est=sapply(list_var, function(x) x['Mean']),
@@ -315,7 +315,7 @@ p4 <-  out_coverage_correct %>%
                       linetype=missingness,
                       colour=missingness),
                   position=position_dodge(.5)) +
-  facet_wrap(~timeproc,scales="free_y") +
+  facet_wrap(~time_process,scales="free_y") +
   geom_hline(yintercept = 0.95, linetype=2) +
   labs(y="RMSE",x="",
        caption=stringr::str_wrap("Plot shows averages with 5% to 95% CIs for RMSE of true to estimated ideal point scores. Facets show different true time series processes used to generate the data and for idealstan/Pathfinder/Laplace methods, also used to estimate.",
@@ -330,11 +330,11 @@ ggsave("plots/coverage_corrected.png",plot=p4)
 
 out_sign_rotate <- sim_draws %>% 
   mutate(missingness=factor(missingness,labels=c("Ignorable","Non-ignorable")),
-         timeproc=factor(timeproc, levels=c("AR","GP","randomwalk","splines"),
+         time_process=factor(time_process, levels=c("AR","GP","random","splines"),
                          labels=c("AR(1)","Gaussian Process","Random Walk","Spline"))) %>% 
-  distinct(model, missingness, timeproc, sign_rotation,numitems, timevar,timepoints,
+  distinct(model, missingness, time_process, sign_rotation,n_items, time_sd,time_points,
            sim) %>% 
-  group_by(model, missingness, timeproc) %>%
+  group_by(model, missingness, time_process) %>%
   summarize(list_var=list(Hmisc::smean.cl.boot(sign_rotation))) %>% 
   ungroup %>% 
   mutate(mean_est=sapply(list_var, function(x) x['Mean']),
@@ -349,7 +349,7 @@ p5 <-  out_sign_rotate %>%
                       linetype=missingness,
                       colour=missingness),
                   position=position_dodge(.5)) +
-  facet_wrap(~timeproc,scales="free_y") +
+  facet_wrap(~time_process,scales="free_y") +
   #geom_hline(yintercept = 0.95, linetype=2) +
   labs(y="RMSE",x="",
        caption=stringr::str_wrap("Plot shows averages with 5% to 95% CIs for RMSE of true to estimated ideal point scores. Facets show different true time series processes used to generate the data and for idealstan/Pathfinder/Laplace methods, also used to estimate.",
@@ -364,13 +364,13 @@ ggsave("plots/sign_rotate.png",plot=p5)
 
 out_sign_rotate <- sim_draws %>% 
   mutate(missingness=factor(missingness,labels=c("Ignorable","Non-ignorable")),
-         timeproc=factor(timeproc, levels=c("AR","GP","randomwalk","splines"),
+         time_process=factor(time_process, levels=c("AR","GP","random","splines"),
                          labels=c("AR(1)","Gaussian Process","Random Walk","Spline")),
-         timepoints=factor(timepoints)) %>% 
-  distinct(model, timeproc, sign_rotation,numitems, timevar,timepoints,
+         time_points=factor(time_points)) %>% 
+  distinct(model, time_process, sign_rotation,n_items, time_sd,time_points,
            sim) %>% 
-  filter(timeproc=="Random Walk") %>% 
-  group_by(model, timepoints) %>%
+  filter(time_process=="Random Walk") %>% 
+  group_by(model, time_points) %>%
   summarize(list_var=list(Hmisc::smean.cl.boot(sign_rotation))) %>% 
   ungroup %>% 
   mutate(mean_est=sapply(list_var, function(x) x['Mean']),
@@ -382,10 +382,10 @@ p5a <-  out_sign_rotate %>%
   ggplot(aes(y=mean_est,
              x=reorder(model,mean_est))) +
   geom_pointrange(aes(ymin=low_ci, ymax=high_ci,
-                      linetype=timepoints,
-                      colour=timepoints),
+                      linetype=time_points,
+                      colour=time_points),
                   position=position_dodge(.5)) +
-  #facet_wrap(~timepoints,scales="free_y") +
+  #facet_wrap(~time_points,scales="free_y") +
   #geom_hline(yintercept = 0.95, linetype=2) +
   labs(y="RMSE",x="",
        caption=stringr::str_wrap("Plot shows averages with 5% to 95% CIs for RMSE of true to estimated ideal point scores. Facets show different true time series processes used to generate the data and for idealstan/Pathfinder/Laplace methods, also used to estimate.",
@@ -400,13 +400,13 @@ ggsave("plots/sign_rotate_timep.png",plot=p5a)
 
 out_sign_rotate_miss <- sim_draws %>% 
   mutate(missingness=factor(missingness,labels=c("Ignorable","Non-ignorable")),
-         timeproc=factor(timeproc, levels=c("AR","GP","randomwalk","splines"),
+         time_process=factor(time_process, levels=c("AR","GP","random","splines"),
                          labels=c("AR(1)","Gaussian Process","Random Walk","Spline")),
-         timepoints=factor(timepoints)) %>% 
-  distinct(model, timeproc, sign_rotation,numitems, timevar,timepoints,
+         time_points=factor(time_points)) %>% 
+  distinct(model, time_process, sign_rotation,n_items, time_sd,time_points,
            sim) %>% 
-  filter(timeproc=="Random Walk") %>% 
-  group_by(model, timepoints) %>%
+  filter(time_process=="Random Walk") %>% 
+  group_by(model, time_points) %>%
   summarize(list_var=list(Hmisc::smean.cl.boot(sign_rotation))) %>% 
   ungroup %>% 
   mutate(mean_est=sapply(list_var, function(x) x['Mean']),
@@ -421,7 +421,7 @@ p5b <-  out_sign_rotate_miss %>%
                       linetype=missingness,
                       colour=missingness),
                   position=position_dodge(.5)) +
-  #facet_wrap(~timepoints,scales="free_y") +
+  #facet_wrap(~time_points,scales="free_y") +
   #geom_hline(yintercept = 0.95, linetype=2) +
   labs(y="RMSE",x="",
        caption=stringr::str_wrap("Plot shows averages with 5% to 95% CIs for RMSE of true to estimated ideal point scores. Facets show different true time series processes used to generate the data and for idealstan/Pathfinder/Laplace methods, also used to estimate.",
@@ -437,10 +437,10 @@ ggsave("plots/sign_rotate_miss.png",plot=p5b)
 p6 <- sim_draws %>% 
   mutate(time_elapsed=as.numeric(time_elapsed)/60) %>% 
   mutate(missingness=factor(missingness,labels=c("Ignorable","Non-ignorable")),
-         timeproc=factor(timeproc, levels=c("AR","GP","randomwalk","splines"),
+         time_process=factor(time_process, levels=c("AR","GP","random","splines"),
                          labels=c("AR(1)","Gaussian Process","Random Walk","Spline"))) %>% 
-  distinct(time_elapsed, timeproc, model) %>% 
-  group_by(timeproc, model) %>% 
+  distinct(time_elapsed, time_process, model) %>% 
+  group_by(time_process, model) %>% 
   summarize(mean_time=mean(time_elapsed,na.rm=T)) %>% 
          mutate(time_label=round(mean_time, 2)) %>% 
   ggplot(aes(y=mean_time,
@@ -448,7 +448,7 @@ p6 <- sim_draws %>%
   geom_col() +
   geom_text(aes(label=time_label),nudge_y=4) +
   scale_x_discrete(guide = guide_axis(n.dodge = 2)) +
-  facet_wrap(~timeproc) +
+  facet_wrap(~time_process) +
   labs(y="Average # of Minutes per Run",
        x="") +
   ggthemes::theme_clean()
@@ -457,43 +457,44 @@ saveRDS(p6,"data/plot_time_elapsed.rds")
 
 ggsave("plots/time_elapsed.png",plot=p6)
 
-time_data_numitems <- sim_draws %>% 
-  filter(timeproc=="randomwalk") %>% 
-  distinct(time_elapsed, model, numitems) %>% 
+time_data_n_items <- sim_draws %>% 
+  filter(time_process=="random") %>% 
+  distinct(time_elapsed, model, n_items) %>% 
   mutate(time_elapsed=as.numeric(time_elapsed)/60) %>% 
-  mutate(numitems=paste(numitems, "Items"),
+  mutate(n_items=paste(n_items, "Items"),
          model=recode(model,
                       `DW-NOMINATE`="DW-\nNOMINATE")) %>% 
-  group_by(model, numitems) %>% 
+  group_by(model, n_items) %>% 
   summarize(mean_time=mean(time_elapsed,na.rm=T)) %>% 
   mutate(time_label=round(mean_time, 2))
   
-  p6a <- time_data_numitems %>% 
+  p6a <- time_data_n_items %>% 
   ggplot(aes(y=mean_time,
              x=reorder(model, mean_time))) +
   geom_col() +
   geom_text(aes(label=time_label),nudge_y=15) +
   scale_x_discrete(guide = guide_axis(n.dodge = 2)) +
-  facet_wrap(~numitems) +
+  facet_wrap(~n_items) +
   labs(y="Average # of Minutes per Run",
        x="",
        caption=stringr::str_wrap("Plot shows average number of minutes over simulation draws employing the random-walk DGP, including both missing and observed versions.")) +
   ggthemes::theme_clean()
 
-saveRDS(p6a,"data/plot_time_elapsed_numitems.rds")
+saveRDS(p6a,"data/plot_time_elapsed_n_items.rds")
 
-ggsave("plots/time_elapsed_numitems.png",plot=p6a)
+ggsave("plots/time_elapsed_n_items.png",plot=p6a)
 
 # S Errors
 
 s_err_data <- sim_draws %>% 
   mutate(time_elapsed=as.numeric(time_elapsed)/60) %>% 
   mutate(missingness=factor(missingness,labels=c("Ignorable","Non-ignorable")),
-         timeproc=factor(timeproc, levels=c("AR","GP","randomwalk","splines"),
+         time_process=factor(time_process, levels=c("AR","GP","random","splines"),
                          labels=c("AR(1)","Gaussian Process","Random Walk","Spline"))) %>% 
-  distinct(model, timevar, missingness, timeproc, numitems,
-           timepoints,sign_rotation,sim,est_coef,true_est_coef,true_coef,est_coef_pval,sim) %>% 
-  group_by(model, timeproc) %>% 
+  distinct(model, time_sd, missingness, time_process, n_items,
+           time_points,sign_rotation,sim,est_coef,true_est_coef,true_coef,est_coef_pval,sim) %>% 
+  filter(time_process=="Random Walk") %>% 
+  group_by(model) %>% 
   mutate(s_errors=ifelse(sign_rotation,
                          est_coef_pval<0.05 & sign(est_coef) == sign(true_est_coef),
                          est_coef_pval<0.05 & sign(est_coef) != sign(true_est_coef)),
@@ -514,7 +515,7 @@ s_err_data <- sim_draws %>%
   geom_pointrange(aes(ymin=low_ci, ymax=high_ci)) +
   #geom_text(aes(label=time_label),nudge_y=4) +
   scale_x_discrete(guide = guide_axis(n.dodge = 2)) +
-  facet_wrap(~timeproc) +
+  #facet_wrap(~time_process) +
   labs(y="Proportion of S Errors",
        x="") +
   ggthemes::theme_clean()
