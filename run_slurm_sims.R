@@ -9,7 +9,8 @@ library(purrr)
 # ------------------------------------------------------------------------------
 # Create a tibble where each row represents one simulation's parameters.
 # ------------------------------------------------------------------------------
-simulations <- bind_rows(rep(expand_grid(nsims=25,
+simulations <- expand_grid(nsims=25,
+                                     ntimes=1:3,
                            true_coef=0.025,
                            n_persons=c(60),
                            n_items=c(100,200,300,400),
@@ -17,7 +18,7 @@ simulations <- bind_rows(rep(expand_grid(nsims=25,
                            time_sd=c(0.25,1),
                            time_process=c("random","GP","splines","AR"),
                            #time_process="AR",
-                           missingness=c(0,1)),4)) %>% 
+                           missingness=c(0,1)) %>% 
   mutate(iter=1:n())
 
 # For debugging: print the tibble of simulation parameters
