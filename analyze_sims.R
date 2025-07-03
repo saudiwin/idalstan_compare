@@ -6,24 +6,16 @@ library(lubridate)
 
 # get simulation key
 
-simulations <- bind_rows(expand_grid(nsims=50,
-                                     true_coef=0.05,
-                                     n_persons=c(60),
-                                     n_items=c(100,200,300,400),
-                                     time_points=c(10,20),
-                                     time_sd=c(0.25,.5),
-                                     time_process=c("random","GP","splines","AR"),
-                                     #time_process="AR",
-                                     missingness=c(0,1)),
-                         expand_grid(nsims=50,
-                                     true_coef=0.05,
-                                     n_persons=c(60),
-                                     n_items=c(100,200,300,400),
-                                     time_points=c(10,20),
-                                     time_sd=c(0.25,.5),
-                                     time_process=c("random","GP","splines","AR"),
-                                     #time_process="AR",
-                                     missingness=c(0,1))) %>% 
+simulations <- expand_grid(nsims=25,
+                           ntimes=1:3,
+                           true_coef=0.025,
+                           n_persons=c(60),
+                           n_items=c(100,200,300,400),
+                           time_points=c(10,20),
+                           time_sd=c(0.25,1),
+                           time_process=c("random","GP","splines","AR"),
+                           #time_process="AR",
+                           missingness=c(0,1)) %>% 
   mutate(iter=1:n())
 
 all_sims <- list.files("data/",pattern="sim\\_models\\_iter",
@@ -80,7 +72,7 @@ rse <- function(col1,col2) {
 # add in sign_rotation parameter
 
 sim_draws <- ungroup(sim_draws) %>% 
-  group_by(model, n_items, task_time, sim) %>% 
+  group_by(model,sim,iter) %>% 
   mutate(sign_rotation=ifelse(mean(rse(ideal_point,true_ideal_point),na.rm=T)>mean((rse(-1*ideal_point,
                                                                       true_ideal_point)),na.rm=T),
                               1,0)) %>% 
@@ -185,6 +177,73 @@ calc_sum %>%
 saveRDS(p1,"data/plot_rmse_all.rds")
 
 ggsave("plots/rmse_all.png",plot=p1)
+
+# now do Kendall's tau
+
+calc_sum %>% 
+  group_by(model,missingness) %>% 
+  summarize(mean_s=mean(s_error,na.rm=T)) %>% 
+  arrange(mean_s)
+
+out_kendall <- sim_draws %>% 
+  mutate(missingness=factor(missingness,labels=c("Ignorable","Non-ignorable")),
+         time_process=factor(time_process, levels=c("AR","GP","random","splines"),
+                             labels=c("AR(1)","Gaussian Process","Random Walk","Spline"))) %>% 
+  group_by(iter, sim, model, time_process, 
+           missingness) %>% 
+  summarize(kendall_tau=ifelse(any(is.na(ideal_point)),
+                               NA_real_,
+                               pcaPP::cor.fk(ideal_point, true_ideal_point)),
+         kendall_tau2=ifelse(any(is.na(ideal_point)),
+                             NA_real_,
+                             pcaPP::cor.fk(ideal_point, true_ideal_point_raw))) %>% 
+  group_by(model, missingness, time_process) %>% 
+  summarize(list_var=list(Hmisc::smean.cl.normal(kendall_tau)),
+            list_var2=list(Hmisc::smean.cl.normal(kendall_tau2))) %>% 
+  ungroup %>% 
+  mutate(mean_est=sapply(list_var, function(x) x['Mean']),
+         low_ci=sapply(list_var, function(x) x['Lower']),
+         high_ci=sapply(list_var, function(x) x['Upper']),
+         mean_est2=sapply(list_var2, function(x) x['Mean']),
+         low_ci2=sapply(list_var2, function(x) x['Lower']),
+         high_ci2=sapply(list_var2, function(x) x['Upper'])) %>% 
+  dplyr::select(-list_var)
+
+p1a <- out_kendall %>% ggplot(aes(y=mean_est,
+                              x=reorder(model,mean_est))) +
+  geom_pointrange(aes(ymin=low_ci, ymax=high_ci,
+                      linetype=missingness,
+                      colour=missingness),
+                  position=position_dodge(.5)) +
+  facet_wrap(~time_process,scales="free_y") +
+  labs(y="RMSE",x="",
+       caption=stringr::str_wrap("Plot shows averages with 5% to 95% CIs for RMSE of true to estimated ideal point scores. Facets show different true time series processes used to generate the data and for idealstan/Pathfinder/Laplace methods, also used to estimate.",
+                                 width=60)) + 
+  scale_x_discrete(guide = guide_axis(n.dodge = 2)) +
+  ggthemes::theme_clean() +
+  theme(legend.position = "top")
+
+saveRDS(p1a,"data/kendall_tau.rds")
+
+ggsave("plots/kendall_tau.png",plot=p1a)
+
+p1b <- out_kendall %>% ggplot(aes(y=mean_est2,
+                                  x=reorder(model,mean_est2))) +
+  geom_pointrange(aes(ymin=low_ci2, ymax=high_ci2,
+                      linetype=missingness,
+                      colour=missingness),
+                  position=position_dodge(.5)) +
+  facet_wrap(~time_process,scales="free_y") +
+  labs(y="RMSE",x="",
+       caption=stringr::str_wrap("Plot shows averages with 5% to 95% CIs for RMSE of true to estimated ideal point scores. Facets show different true time series processes used to generate the data and for idealstan/Pathfinder/Laplace methods, also used to estimate.",
+                                 width=60)) + 
+  scale_x_discrete(guide = guide_axis(n.dodge = 2)) +
+  ggthemes::theme_clean() +
+  theme(legend.position = "top")
+
+saveRDS(p1b,"data/kendall_tau2.rds")
+
+ggsave("plots/kendall_tau2.png",plot=p1b)
 
 
   
@@ -332,7 +391,7 @@ out_sign_rotate <- sim_draws %>%
   mutate(missingness=factor(missingness,labels=c("Ignorable","Non-ignorable")),
          time_process=factor(time_process, levels=c("AR","GP","random","splines"),
                          labels=c("AR(1)","Gaussian Process","Random Walk","Spline"))) %>% 
-  distinct(model, missingness, time_process, sign_rotation,n_items, time_sd,time_points,
+  distinct(model, missingness, time_process, sign_rotation,n_items, time_sd,time_points,iter,
            sim) %>% 
   group_by(model, missingness, time_process) %>%
   summarize(list_var=list(Hmisc::smean.cl.boot(sign_rotation))) %>% 
@@ -403,10 +462,10 @@ out_sign_rotate_miss <- sim_draws %>%
          time_process=factor(time_process, levels=c("AR","GP","random","splines"),
                          labels=c("AR(1)","Gaussian Process","Random Walk","Spline")),
          time_points=factor(time_points)) %>% 
-  distinct(model, time_process, sign_rotation,n_items, time_sd,time_points,
+  distinct(model, time_process, sign_rotation,n_items, time_sd,time_points,missingness,
            sim) %>% 
   filter(time_process=="Random Walk") %>% 
-  group_by(model, time_points) %>%
+  group_by(model, time_points, missingness) %>%
   summarize(list_var=list(Hmisc::smean.cl.boot(sign_rotation))) %>% 
   ungroup %>% 
   mutate(mean_est=sapply(list_var, function(x) x['Mean']),
@@ -487,25 +546,27 @@ ggsave("plots/time_elapsed_n_items.png",plot=p6a)
 # S Errors
 
 s_err_data <- sim_draws %>% 
-  mutate(time_elapsed=as.numeric(time_elapsed)/60) %>% 
   mutate(missingness=factor(missingness,labels=c("Ignorable","Non-ignorable")),
          time_process=factor(time_process, levels=c("AR","GP","random","splines"),
                          labels=c("AR(1)","Gaussian Process","Random Walk","Spline"))) %>% 
-  distinct(model, time_sd, missingness, time_process, n_items,
-           time_points,sign_rotation,sim,est_coef,true_est_coef,true_coef,est_coef_pval,sim) %>% 
-  filter(time_process=="Random Walk") %>% 
-  group_by(model) %>% 
-  mutate(s_errors=ifelse(sign_rotation,
+  distinct(sign_rotation, model, time_process, iter, sim,
+           est_coef_pval, est_coef, true_coef, true_est_coef) %>% 
+         mutate(s_errors=ifelse(sign_rotation,
                          est_coef_pval<0.05 & sign(est_coef) == sign(true_est_coef),
                          est_coef_pval<0.05 & sign(est_coef) != sign(true_est_coef)),
          s_errors_true=ifelse(sign_rotation,
-                              NA_real_,
+                              est_coef_pval<0.05 & sign(est_coef) == sign(true_coef),
                               est_coef_pval<0.05 & sign(est_coef) != sign(true_coef))) %>% 
-  summarize(list_var=list(Hmisc::smean.cl.boot(s_errors))) %>%
+  group_by(model, time_process) %>% 
+  summarize(list_var=list(Hmisc::smean.cl.boot(s_errors)),
+            list_var2=list(Hmisc::smean.cl.boot(s_errors_true))) %>%
   ungroup %>%
   mutate(mean_est=sapply(list_var, function(x) x['Mean']),
          low_ci=sapply(list_var, function(x) x['Lower']),
-         high_ci=sapply(list_var, function(x) x['Upper']))
+         high_ci=sapply(list_var, function(x) x['Upper']),
+         mean_est2=sapply(list_var2, function(x) x['Mean']),
+         low_ci2=sapply(list_var2, function(x) x['Lower']),
+         high_ci2=sapply(list_var2, function(x) x['Upper']))
   
 
 
@@ -515,7 +576,7 @@ s_err_data <- sim_draws %>%
   geom_pointrange(aes(ymin=low_ci, ymax=high_ci)) +
   #geom_text(aes(label=time_label),nudge_y=4) +
   scale_x_discrete(guide = guide_axis(n.dodge = 2)) +
-  #facet_wrap(~time_process) +
+  facet_wrap(~time_process) +
   labs(y="Proportion of S Errors",
        x="") +
   ggthemes::theme_clean()
@@ -523,3 +584,52 @@ s_err_data <- sim_draws %>%
 saveRDS(p7,"data/s_errors.rds")
 
 ggsave("plots/s_errors.png",plot=p7)
+
+p7a <- s_err_data %>% 
+  ggplot(aes(y=mean_est2,
+             x=reorder(model, mean_est2))) +
+  geom_pointrange(aes(ymin=low_ci2, ymax=high_ci2)) +
+  #geom_text(aes(label=time_label),nudge_y=4) +
+  scale_x_discrete(guide = guide_axis(n.dodge = 2)) +
+  #facet_wrap(~time_process) +
+  labs(y="Proportion of S Errors",
+       x="") +
+  ggthemes::theme_clean()
+
+saveRDS(p7a,"data/s_errors_true.rds")
+
+ggsave("plots/s_errors_true.png",plot=p7)
+
+# Power
+
+power_data <- sim_draws %>% 
+  mutate(missingness=factor(missingness,labels=c("Ignorable","Non-ignorable")),
+         time_process=factor(time_process, levels=c("AR","GP","random","splines"),
+                             labels=c("AR(1)","Gaussian Process","Random Walk","Spline"))) %>% 
+  distinct(sign_rotation, model, time_process, iter, sim,
+           est_coef_pval, est_coef, true_coef, true_est_coef) %>% 
+  group_by(model, time_process) %>% 
+  summarize(list_var=list(Hmisc::smean.cl.boot(est_coef_pval<0.05)),
+            list_var2=list(Hmisc::smean.cl.boot(est_coef_pval<0.05))) %>%
+  ungroup %>%
+  mutate(mean_est=sapply(list_var, function(x) x['Mean']),
+         low_ci=sapply(list_var, function(x) x['Lower']),
+         high_ci=sapply(list_var, function(x) x['Upper']),
+         mean_est2=sapply(list_var2, function(x) x['Mean']),
+         low_ci2=sapply(list_var2, function(x) x['Lower']),
+         high_ci2=sapply(list_var2, function(x) x['Upper']))
+
+p8 <- power_data %>% 
+  ggplot(aes(y=mean_est,
+             x=reorder(model, mean_est))) +
+  geom_pointrange(aes(ymin=low_ci, ymax=high_ci)) +
+  #geom_text(aes(label=time_label),nudge_y=4) +
+  scale_x_discrete(guide = guide_axis(n.dodge = 2)) +
+  facet_wrap(~time_process) +
+  labs(y="Proportion of S Errors",
+       x="") +
+  ggthemes::theme_clean()
+
+saveRDS(p8,"data/power.rds")
+
+ggsave("plots/power.png",plot=p8)
