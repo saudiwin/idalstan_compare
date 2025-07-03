@@ -83,7 +83,7 @@ simulate_task <- function(task_id) {
                          time_sd=time_sd,
                          ideal_pts_sd=1,inflate = missingness,
                          time_process=time_process,
-                         absence_diff_mean = 2,spline_basis_sd = 1,
+                         spline_basis_sd = 1,
                          #absence_discrim_sd = .5,
                          gp_rho=.5,
                          gp_alpha=case_when(time_process=="GP" & time_sd==1 ~ .2,
