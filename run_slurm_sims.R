@@ -9,7 +9,7 @@ library(purrr)
 # ------------------------------------------------------------------------------
 # Create a tibble where each row represents one simulation's parameters.
 # ------------------------------------------------------------------------------
-simulations <- expand_grid(nsims=25,
+simulations <- expand_grid(nsims=20,
                                      ntimes=1:3,
                            true_coef=0.025,
                            n_persons=c(60),

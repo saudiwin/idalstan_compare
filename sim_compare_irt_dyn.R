@@ -36,12 +36,14 @@ sim_iter <- Sys.getenv("ITER")
 # n_items <- 200
 # time_sd <- .4
 # true_coef <- .1 # size of coefficient in latent regression
-# time_process <- "AR" # type of time process being simulated
+# time_process <- "splines" # type of time process being simulated
 # missingness <- FALSE
 
 print(paste0("NSIMS is: ", n_sims))
 print(paste0("TIMEPROC is: ", time_process))
 print(paste0("MISSING is: ", missingness))
+
+# sim_iter <- 1
 
 # Define parallelization parameters
 cores_per_task <- 4  # Number of cores per task
@@ -81,9 +83,8 @@ simulate_task <- function(task_id) {
                          time_sd=time_sd,
                          ideal_pts_sd=1,inflate = missingness,
                          time_process=time_process,
-                         absence_diff_mean = 2,
+                         absence_diff_mean = 2,spline_basis_sd = 1,
                          #absence_discrim_sd = .5,
-                         diff_sd=.5,
                          gp_rho=.5,
                          gp_alpha=case_when(time_process=="GP" & time_sd==1 ~ .2,
                                             TRUE ~ .5),
@@ -137,15 +138,19 @@ simulate_task <- function(task_id) {
   
   # generate covariate model ------------------------------------------------
   
+  covar <- rnorm(n=nrow(true_ideal),
+                mean = 1 + 0.5 * true_ideal$true_ideal_point)
+    
   outcome <- rnorm(n=nrow(true_ideal),
-                   mean=-2 + true_coef * true_ideal$true_ideal_point)
+                   mean=-2 + -1*true_ideal$true_ideal_point + true_coef * true_ideal$true_ideal_point * covar + 3*covar)
   
   true_ideal$true_coef <- true_coef
   true_ideal$outcome <- outcome
+  true_ideal$covar <- covar
   
-  c1 <- lm(outcome ~ true_ideal_point, data=true_ideal)
+  c1 <- lm(outcome ~ true_ideal_point*covar, data=true_ideal)
   
-  true_ideal$true_est_coef <- c1$coefficients[2]
+  true_ideal$true_est_coef <- c1$coefficients[4]
   
   
   # mcmc pack ---------------------------------------------------------------
@@ -277,7 +282,7 @@ simulate_task <- function(task_id) {
                 restrict_N_high = high_ids$shape,
                 restrict_sd_low = low_ids$shape,
                 restrict_sd_high = high_ids$scale,
-                restrict_N_low = low_ids$scale,
+                restrict_N_low = low_ids$scale,diff_reg_sd = .5,
                 fixtype='prefix',const_type="items",
                 seed=this_seed)
   
@@ -847,8 +852,6 @@ simulate_task <- function(task_id) {
   #loop over models, run regression with scores
   # use sample of full data
   
-  this_sample <- sample(1:nrow(idealstan_id_pts),200)
-  
   over_regs <- split(combined_ideal_points, 
                      combined_ideal_points$model) %>%
     lapply(function(this_data) ({
@@ -859,12 +862,12 @@ simulate_task <- function(task_id) {
         
         # select 200 data points at random
         
-        c2 <- lm(outcome ~ ideal_point, 
-                 data=slice(ungroup(this_data), this_sample))
+        c2 <- lm(outcome ~ ideal_point*covar, 
+                 data=this_data)
         c3 <- summary(c2)
         
-        tibble(est_coef=c2$coefficients[2],
-               est_coef_pval=c3$coefficients[2,4],
+        tibble(est_coef=c2$coefficients[4],
+               est_coef_pval=c3$coefficients[4,4],
                model=this_data$model[1])
         
       } else {
