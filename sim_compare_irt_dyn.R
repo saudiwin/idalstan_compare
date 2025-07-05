@@ -36,7 +36,7 @@ sim_iter <- Sys.getenv("ITER")
 # n_items <- 200
 # time_sd <- .4
 # true_coef <- .1 # size of coefficient in latent regression
-# time_process <- "splines" # type of time process being simulated
+# time_process <- "random_walk" # type of time process being simulated
 # missingness <- FALSE
 
 print(paste0("NSIMS is: ", n_sims))
@@ -270,10 +270,10 @@ simulate_task <- function(task_id) {
                              .default=time_process)
   
   idealstan_fit <- sim_data %>% 
-    id_estimate(model_type=model_type,
+    id_estimate(model_type=model_type,time_var=1/time_sd,
                 vary_ideal_pts=time_process_ideal,
-                nchains=1,ar1_down = -1,time_var = 1,
-                niter=1000,warmup=500,ncores=cores_per_task,
+                nchains=1,ar1_down = -1,
+                niter=1000,warmup=500,ncores=cores_per_task,person_sd = 1,
                 spline_degree =  spline_degree,
                 gp_alpha=case_when(time_process=="GP" & time_sd==1 ~ .2,
                                    TRUE ~ .5),
@@ -282,7 +282,7 @@ simulate_task <- function(task_id) {
                 restrict_N_high = high_ids$shape,
                 restrict_sd_low = low_ids$shape,
                 restrict_sd_high = high_ids$scale,
-                restrict_N_low = low_ids$scale,diff_reg_sd = .5,
+                restrict_N_low = low_ids$scale,
                 fixtype='prefix',const_type="items",
                 seed=this_seed)
   
@@ -300,10 +300,10 @@ simulate_task <- function(task_id) {
   start_time <- Sys.time()
   
   idealstan_pathfinder_fit <- sim_data %>% 
-    id_estimate(model_type=model_type,
+    id_estimate(model_type=model_type,time_var=1/time_sd,
                 vary_ideal_pts=time_process_ideal,
-                nchains=1,use_method = "pathfinder",time_var = 1,
-                niter=1000,warmup=500,ncores=cores_per_task,
+                nchains=1,use_method = "pathfinder",
+                niter=1000,warmup=500,ncores=cores_per_task,person_sd = 1,
                 spline_degree =  spline_degree,ar1_down = -1,
                 gp_alpha=case_when(time_process=="GP" & time_sd==1 ~ .2,
                                    TRUE ~ .5),
@@ -328,12 +328,12 @@ simulate_task <- function(task_id) {
   start_time <- Sys.time()
   
   idealstan_laplace_fit <- sim_data %>% 
-    id_estimate(model_type=model_type,
+    id_estimate(model_type=model_type,time_var=1/time_sd,
                 vary_ideal_pts=time_process_ideal,
-                nchains=1,
+                nchains=1,person_sd=1,
                 use_method="laplace",
                 niter=1000,ar1_down = -1,
-                warmup=500,ncores=cores_per_task,time_var = 1,
+                warmup=500,ncores=cores_per_task,
                 spline_degree = spline_degree,
                 gp_alpha=case_when(time_process=="GP" & time_sd==1 ~ .2,
                                    TRUE ~ .5),
@@ -843,7 +843,7 @@ simulate_task <- function(task_id) {
   
   combined_ideal_points <- combined_ideal_points %>% 
     mutate(in_interval=as.numeric((true_ideal_point > ideal_point_low) & (true_ideal_point < ideal_point_high)),
-           rmse = sqrt((true_ideal_point - ideal_point)^2),
+           rmse = sqrt((true_ideal_point - ideal_point)^2),rmse2=sqrt((true_ideal_point_raw - ideal_point)^2),
            sim=task_id)
   
   
