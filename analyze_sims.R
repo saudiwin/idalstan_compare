@@ -73,7 +73,7 @@ rse <- function(col1,col2) {
 
 sim_draws <- ungroup(sim_draws) %>% 
   group_by(model,sim,iter) %>% 
-  mutate(sign_rotation=ifelse(mean(rse(ideal_point,true_ideal_point),na.rm=T)>mean((rse(-1*ideal_point,
+  mutate(sign_rotation=ifelse(sum(rse(ideal_point,true_ideal_point),na.rm=T)>sum((1*rse(-1*ideal_point,
                                                                       true_ideal_point)),na.rm=T),
                               1,0)) %>% 
   ungroup %>% 
