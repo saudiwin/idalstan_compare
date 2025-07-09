@@ -73,7 +73,7 @@ rse <- function(col1,col2) {
 
 sim_draws <- ungroup(sim_draws) %>% 
   group_by(model,sim,iter) %>% 
-  mutate(sign_rotation=ifelse(sum(rse(ideal_point,true_ideal_point),na.rm=T)>sum((1*rse(-1*ideal_point,
+  mutate(sign_rotation=ifelse(sum(rse(ideal_point,true_ideal_point),na.rm=T)>sum((1.2*rse(-1*ideal_point,
                                                                       true_ideal_point)),na.rm=T),
                               1,0)) %>% 
   ungroup %>% 
@@ -83,9 +83,9 @@ sim_draws <- ungroup(sim_draws) %>%
                                    true_ideal_point),
                                rse(ideal_point,true_ideal_point)),
          coef_rmse_corrected=ifelse(sign_rotation,
-                                    rse(-1*as.numeric(true_coef),
+                                    rse(-1*as.numeric(true_est_coef),
                                         as.numeric(est_coef)),
-                                    rse(as.numeric(true_coef),as.numeric(est_coef))),
+                                    rse(as.numeric(true_est_coef),as.numeric(est_coef))),
          coverage_correct=ifelse(sign_rotation,
                                  as.numeric(-1 * true_ideal_point > ideal_point_low & -1*true_ideal_point < ideal_point_high),
                                  as.numeric((true_ideal_point > ideal_point_low) & (true_ideal_point < ideal_point_high))))
@@ -98,8 +98,8 @@ calc_sum <- group_by(sim_draws, model, time_sd, missingness, time_process, n_ite
             cov_ideal=mean(in_interval[!sign_rotation], na.rm=T),
             s_error=mean(est_coef_pval[!sign_rotation]<0.05 & sign(est_coef[!sign_rotation]) != sign(true_est_coef[!sign_rotation]),
                          na.rm=T),
-            m_error=mean(ifelse(est_coef_pval[!sign_rotation]<0.05,
-                                abs(est_coef[!sign_rotation]) / abs(true_est_coef[!sign_rotation]),
+            m_error=mean(ifelse(est_coef_pval<0.05,
+                                abs(est_coef) / abs(true_est_coef),
                                 NA_real_), na.rm=T),
             missing_CIs=mean(is.na(ideal_point_low)),
             missing_est=mean(is.na(ideal_point)),
@@ -193,7 +193,7 @@ out_kendall <- sim_draws %>%
            missingness) %>% 
   summarize(kendall_tau=ifelse(any(is.na(ideal_point)),
                                NA_real_,
-                               pcaPP::cor.fk(ideal_point, true_ideal_point)),
+                               ifelse(!sign_rotation,pcaPP::cor.fk(ideal_point, true_ideal_point),pcaPP::cor.fk(-1*ideal_point, true_ideal_point))),
          kendall_tau2=ifelse(any(is.na(ideal_point)),
                              NA_real_,
                              pcaPP::cor.fk(ideal_point, true_ideal_point_raw))) %>% 
@@ -323,8 +323,8 @@ out_m_err <- sim_draws %>%
   distinct(model,missingness, time_process, sign_rotation, est_coef_pval,
            true_est_coef,true_coef,est_coef) %>% 
   group_by(model,missingness) %>% 
-  summarize(list_var=list(Hmisc::smean.cl.normal(ifelse(est_coef_pval<0.05,
-                                                        abs(est_coef) / abs(true_est_coef * (ifelse(sign_rotation,-1,1))),
+  summarize(list_var=list(Hmisc::smean.cl.boot(ifelse(est_coef_pval<0.05,
+                                                        abs(est_coef) / abs(true_est_coef),
                                                         NA_real_)))) %>% 
   ungroup %>% 
   mutate(mean_est=sapply(list_var, function(x) x['Mean']),
@@ -546,10 +546,13 @@ ggsave("plots/time_elapsed_n_items.png",plot=p6a)
 # S Errors
 
 s_err_data <- sim_draws %>% 
-  mutate(missingness=factor(missingness,labels=c("Ignorable","Non-ignorable")),
-         time_process=factor(time_process, levels=c("AR","GP","random","splines"),
+  mutate(missingness=factor(missingness,
+                            labels=c("Ignorable","Non-ignorable")),
+         time_process=factor(time_process, 
+                             levels=c("AR","GP","random","splines"),
                          labels=c("AR(1)","Gaussian Process","Random Walk","Spline"))) %>% 
   distinct(sign_rotation, model, time_process, iter, sim,
+           missingness,
            est_coef_pval, est_coef, true_coef, true_est_coef) %>% 
          mutate(s_errors=ifelse(sign_rotation,
                          est_coef_pval<0.05 & sign(est_coef) == sign(true_est_coef),
@@ -557,7 +560,7 @@ s_err_data <- sim_draws %>%
          s_errors_true=ifelse(sign_rotation,
                               est_coef_pval<0.05 & sign(est_coef) == sign(true_coef),
                               est_coef_pval<0.05 & sign(est_coef) != sign(true_coef))) %>% 
-  group_by(model, time_process) %>% 
+  group_by(model, time_process,missingness) %>% 
   summarize(list_var=list(Hmisc::smean.cl.boot(s_errors)),
             list_var2=list(Hmisc::smean.cl.boot(s_errors_true))) %>%
   ungroup %>%
@@ -573,7 +576,8 @@ s_err_data <- sim_draws %>%
  p7 <- s_err_data %>% 
   ggplot(aes(y=mean_est,
              x=reorder(model, mean_est))) +
-  geom_pointrange(aes(ymin=low_ci, ymax=high_ci)) +
+  geom_pointrange(aes(ymin=low_ci, ymax=high_ci,
+                      colour=missingness),position = position_dodge(width=.5)) +
   #geom_text(aes(label=time_label),nudge_y=4) +
   scale_x_discrete(guide = guide_axis(n.dodge = 2)) +
   facet_wrap(~time_process) +
@@ -633,3 +637,7 @@ p8 <- power_data %>%
 saveRDS(p8,"data/power.rds")
 
 ggsave("plots/power.png",plot=p8)
+
+# let's fit a model to predict S errors
+
+
