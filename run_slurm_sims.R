@@ -21,6 +21,13 @@ simulations <- expand_grid(nsims=20,
                            missingness=c(0,1)) %>% 
   mutate(iter=1:n())
 
+# filter out ones already completed
+
+miss_sims <- readRDS("miss_sims.rds")
+
+simulations <- filter(simulations, 
+                      iter %in% miss_sims$iter)
+
 # For debugging: print the tibble of simulation parameters
 print(simulations)
 

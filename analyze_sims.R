@@ -6,7 +6,7 @@ library(lubridate)
 
 # get simulation key
 
-simulations <- expand_grid(nsims=25,
+simulations <- expand_grid(nsims=20,
                            ntimes=1:3,
                            true_coef=0.025,
                            n_persons=c(60),
@@ -20,6 +20,13 @@ simulations <- expand_grid(nsims=25,
 
 all_sims <- list.files("data/",pattern="sim\\_models\\_iter",
                        full.names = T)
+
+# figure out which are missing
+
+miss_sims <- filter(simulations, 
+                    !(iter %in% as.numeric(stringr::str_extract(all_sims, "[0-9]+"))))
+
+saveRDS(miss_sims, "miss_sims.rds")
 
 # convert to data 
 
