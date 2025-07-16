@@ -1,0 +1,501 @@
+---
+title: "Supplementary Information for Generalized Ideal Point Models"
+format:
+  pdf:
+    number-sections: true
+toc: true
+execute: 
+  cache: true
+  echo: false
+  warning: false
+  error: false
+bibliography: references.bib
+---
+
+```{r setup}
+#| include: false
+
+# load libraries
+
+library(rkriging)
+library(ggplot2)
+library(tidyverse)
+library(idealstan)
+library(patchwork)
+library(marginaleffects)
+library(tinytable)
+library(modelsummary)
+
+rollcalls <- readRDS('data/rollcalls.rds')
+```
+
+# Additional Model Details
+
+In this section I provide a more complete derivation of additional distributions available in the idealstan package.
+
+## Ordinal Derivations: Rating Scale and Graded Response
+
+There are two possible ordinal models that can be implemented in the ideal point framework. The first is known as a rating-scale model in the IRT framework and is structurally similar to the ordered logit model. @imaiFastEstimationIdeal2016 were the first to implement this model for ideal points using an EM algorithm.
+
+Following the notation I introduced, a rating-scale model for $k \in K$ outcomes can be modeled as follows for observed data:
+
+$$
+    L(Y_{ijtk}|\alpha_{it},\gamma_j,\beta_j) =  \prod_{i-1}^{I} \prod_{j=1}^{J} \prod_{t=1}^{T}
+    \begin{cases} 
+    1 -  \zeta(\gamma_j \alpha_i - \beta_j - c_1) & \text{if } K = 0 \\
+    \zeta(\gamma_j \alpha_i - \beta_j - c_{k-1}) - \zeta(\gamma_j \alpha_i - \beta_j - c_{k})       & \text{if } 0 < k < K, \text{ and} \\
+    \zeta(\gamma_j \alpha_i - \beta_j - c_{k-1}) - 0 & \text{if } k=K
+    \end{cases}
+$$
+
+where again $\zeta(\cdot)$ represents the logit function. In this version, each ordinal category $k$ less one is assigned a cutpoint $c_k$. In ideal point terms, these cutpoints divide the ideal point space across categories. A direct application is to Likert scales such as those commonly found in survey data. Importantly, because `idealstan` allows for mixed outcomes at the observation level, the number of ordinal categories $K$ can likewise vary across items.
+
+A different parameterization is known as the graded response model in IRT. This model allows the cutpoints $c_k$ to vary by item. As a result, instead of including separate cutpoints, we can change the model by indexing each item-specific intercept for each category $k$:
+
+$$
+    L(Y_{ijtk}|\alpha_{it},\gamma_j,\beta_j) =  \prod_{i-1}^{I} \prod_{j=1}^{J} \prod_{t=1}^{T}
+    \begin{cases} 
+    1 -  \zeta(\gamma_j \alpha_i - \beta_{jk-1}) & \text{if } K = 0 \\
+    \zeta(\gamma_j \alpha_i - \beta_{jk-1}) - \zeta(\gamma_j \alpha_i - \beta_{jk-1})       & \text{if } 0 < k < K, \text{ and} \\
+    \zeta(\gamma_j \alpha_i - \beta_{jk-1}) - 0 & \text{if } k=K
+    \end{cases}
+$$
+
+Though not employed in political science to any great extent, this alternative formulation to ordered logit permits more flexible inference on the cutpoints. Allowing cutpoints to vary by item will enable much more accurate prediction of categories with fewer numbers of observations. It also increases information about the items/bills, though of course at a cost of including $K$ additional parameters per item. My intention in including it here is not to suggest that it is a superior model to the standard rating-scale approach, but rather as an alternative that may be useful in some situations.
+
+## Poisson Distribution
+
+The Poisson distribution has a considerable history as a latent variable model for word counts [@slapinScalingModelEstimating2008], though it can be more broadly applied to any unbounded positive discrete variable. For `idealstan`, the Poisson parameterization is as follows:
+
+\begin{align}
+P(Y_{ijtk} \mid \lambda_{ijtk}) &= \frac{\lambda_{ijtk}^{Y_{ijtk}} e^{-\lambda_{ijtk}}}{Y_{ijtk}!}\\
+\lambda_{ijtk} &= e^{\gamma_j \alpha_i - \beta_j}
+\end{align}
+
+where $\lambda_{ijtk}$ is the mean count and contains the IRT linear model with the exponential link function.
+
+## Normal and Log-Normal Distributions
+
+The next two distributions have not been widely used in the ideal point literature but have been commonly deployed in continuous latent variable methods like principal components and factor analysis: the Normal distribution for continuous and the log-normal distribution for positive-continuous outcomes. While employed @kropkoMeasuringDynamicsPolitical2013 employed the Normal distribution in a traditional IRT framework, no one has yet used the log-Normal distribution.
+
+For a normal distribution, the ideal point model is used to predict the mean of $Y_{ijt}$ given item-specific residual standard deviation $\sigma_j$:
+
+$$
+  L(Y_{ijt}|\alpha_{it},\gamma_j,\beta_j, \sigma_j) =  \prod_{i-1}^{I} \prod_{j=1}^{J} \prod_{t=1}^{T} \frac{1}{ \sqrt{2\pi \sigma_j^2 }} e^{-\frac{(Y_{ijt}-(\gamma_j\alpha_{it}-\beta_j)^2}{2\sigma_j^2}}
+$$
+
+The log-normal distribution is the same distribution except that the domain of the distribution is on $log(Y_{ijt})$:
+
+$$
+  L(Y_{ijt}|\alpha_{it},\gamma_j,\beta_j,\sigma_j) =  \prod_{i-1}^{I} \prod_{j=1}^{J} \prod_{t=1}^{T} \frac{1}{ \sqrt{2\pi \sigma_j^2 }} e^{-\frac{(log(Y_{ijt})-(\gamma_j\alpha_{it}-\beta_j)^2}{2\sigma_j^2}}
+$$
+
+which naturally imposes the condition that $Y_{ijt}>0$.
+
+The Log-Normal parameterization is useful for continuous variables that are only defined on positive real numbers. For variables with substantial skew, such as income, this parameterization has a more useful interpretation than the more general Normal distribution. With both of these distributions, most continuous distributions can be modeled with reasonable accuracy.
+
+The residual standard deviation $\sigma_j$ is given a weakly informative exponential prior:
+
+$$
+\sigma_j \sim E(1)
+$$
+
+Practically speaking, unbounded continuous items should be standardized (mean 0 with an SD of 1) so that the range of the outcome remains reasonably close to zero. Because MCMC algorithms are geometric, variables with wide variation can diminish sampling efficiency. Furthermore, if other items are included with different scales, the nature of a shared linear model across items can increase model misfit substantially.
+
+## Ordered Beta Distribution
+
+The ordered beta distribution is a robust model for dependent variables that are in the contained $[0,1]$ interval [@kubinecOrderedBetaRegression2022]. Examples of these distributions in social science data include percentages, proportions, and sliders (such as those used in divide-the-pie experiments). The ordered beta distribution is implemented instead of the simpler beta distribution in order to allow for responses at the bounds; i.e., observations of 0 (or 0%) and 1 (or 100%). Such observations are quite common in social science data and the ordered beta distribution only needs two additional parameters (ordered cutpoints) to model the full outcome. Without observations at the bounds of the scale, the ordered beta distribution effectively collapses to the beta distribution on the open interval $(0,1)$.
+
+The `idealstan` parameterization is as follows: $$
+f(Y_{ijt} \mid \Omega, \Delta, \mu_j, \phi_j) =
+\begin{cases} 
+\Omega & \text{if } Y_{ijt} = 0 \\
+(1 - \Omega)\Delta & \text{if } Y_{ijt} = 1 \\
+(1 - \Omega)(1 - \Delta)\text{Beta}(\mu_j, \phi_j) & \text{if } Y_{ijt} \in (0, 1)
+\end{cases}
+$$
+
+The quantities $\Omega$ and $\Gamma$ are the probabilities of the lower endpoint 0 and the probability of a response in the open interval $(0,1)$. These probabilities are parameterized by ordered cutpoints $k \in \{1,2\}: k_1 > k_2$. In other words, in the first stage of the model, either a continuous $(0,1)$ or a discrete (0 or 1) outcome is selected, and then if the outcome is continuous, then it is also modeled with the Beta distribution.
+
+The Beta distribution is further defined as follows:
+
+$$
+f(Y_{ijt}, \omega_j, \tau_j) = \frac{\Gamma(\omega_j + \tau_j)}{\Gamma(\omega_j)\Gamma(\tau_j)}y_i^{\omega_j - 1}(1 - Y_{ijt})^{\tau_j - 1}
+$$
+
+This Beta distribution is further reparameterized to allow for a linear model to predict the expected value ($\mu$) while $\phi$ is the dispersion of the distribution. To do so, we must substitute for the shape parameters $\omega$ and $\tau$:
+
+$$
+\mu_j = \frac{\omega_j}{\omega_j + \tau_j}
+$$
+
+$$
+\phi = \omega + \tau
+$$
+
+Finally, to model $E[Y_{ijt}]$, we use the same IRT linear model as above:
+
+$$
+\mu_j = g(\gamma_j\alpha_{it}-\beta_j)
+$$ where $g(\cdot)$ is the inverse logit function.
+
+For further definition of this model, see @kubinecOrderedBetaRegression2022.
+
+# Model Convergence Diagnostics
+
+In Figure @fig-rhat I show the convergence diagnostics for all of the time-varying ideal point models of the 115th Congress. These convergence diagnostics employ the split-Rhat metric, which measures the ratio of variance of a Markov chain to itself over time and to other chains run independently. For this estimation, three chains were run with 500 post-warmup draws each, providing a difficult test for convergence. All of the models have almost all of their Rhat values below 1.1 with the exception of the Gaussian process model, which has a few parameters larger than 1.1. This more limited convergence indicates that the Gaussian process' much more demanding time-series function requires more draws than the other models to ensure a fully-explored posterior. However, even with 500 draws per chain, there is clear evidence of convergence for most parameters and inferences should be stable.
+
+```{r plotrhats}
+#| label: fig-rhat
+#| fig-cap: "Comparison of Convergence Diagnostics Across Specifications"
+#| message: false
+#| warning: false
+#| fig-height: 5
+#| fig-width: 6
+
+rhats1 <- readRDS("data/rhats1.rds")
+rhats2 <- readRDS("data/rhats2.rds")
+rhats3 <- readRDS("data/rhats3.rds")
+rhatsgp <- readRDS("data/rhatgp.rds")
+rhatsar<- readRDS("data/rhatar.rds")
+rhatsrw <- readRDS("data/rhatrw.rds")
+
+rhats1 + rhats2 + rhats3 + rhatsgp + rhatsar + rhatsrw +
+  plot_layout(guides="collect",nrow=2) + 
+  plot_annotation(tag_levels="A",caption="Plots show split-Rhat values from three independent\nHamiltonian Markov Chain Monte Carlo chains with 500 post-warmup iterations per chain.") & theme(plot.title=element_text(size=10))
+
+```
+
+\newpage
+
+# Parallelization Speed-up Simulation
+
+In this section I report on simulations that examined the speed improvements with the use of multiple cores for within-chain parallelization of HMC gradient calculations. @fig-static shows how estimation decreases for a given number of cores used for within-chain parallelization. The results for each core are the average across 2,000 Monte Carlo simulations of a binary/Bernoulli `idealstan` model with no missing data adjustment. For each draw, a number of persons between 10 and 200 and a number of items between 10 and 200 was selected so that the simulation includes substantial heterogeneity. Each time estimate in @fig-static is an average across this heterogeneity and as such should be a reasonably robust estimate.
+
+```{r fig-static}
+#| fig-cap: "Estimation Time for Idealstan Models by No. of Cores"
+
+over_static_sims <- readRDS("data/over_static_sims.rds")
+
+over_static_sims %>% 
+  mutate(data_size=num_bills * num_person,
+         ellapsed_time=(ellapsed_time/60)) %>% 
+  ggplot(aes(y=ellapsed_time,x=data_size)) +
+  stat_smooth(aes(colour=num_cores,group=num_cores),se = F) +
+  scale_color_viridis_c(name="No. Cores") +
+  scale_y_continuous(breaks=c(0,1,5,10,20)) +
+  ggthemes::theme_clean() +
+  geom_hline(yintercept=1,linetype=2) +
+  labs(y="Estimation Time (Minutes)",
+       x="Data Size (Persons X Items)",
+       caption="Stan HMC sampler run with 1 chain and\n500 warmup/500 sampling iterations for 2,000 simulation draws.")
+
+```
+
+As can be seen in @fig-static, the most dramatic speedups are for moving from a single core to 2 to 4 cores. Above that number of cores, estimation time continues to decrease but at a decreasing rate (i.e. the second derivative is less than 0). This is a known behavior of parallel processing, especially when there is computational overhead from running multiple processes. For Markov Chain Monte Carlo, it is not possible to run embarrassingly parallel processes in which there is a low fixed cost to using multiple cores. Rather, the process is partially parallelized via the computations required to calculate the gradients necessary for Hamiltonian Markov Chain Monte Carlo, i.e., where the algorithm should "jump" next.
+
+The `idealstan` package attempts to minimize this overhead by using Stan's map-reduce functionality to estimate the likelihood over subsets of data defined either by persons or items. For time-varying models, map-reduce must be performed over persons because the value of the person ideal point in time $t$ depends on the prior value $t-1$, and as a consequence, attempting to estimate the likelihood for each item separately would yield biased results. However, using map-reduce over time-varying trajectories is often optimal in any case as the time-varying parameters for each person are calculated separately in each process, permitting less computational overhead.
+
+For static models, the user can choose to parallelize over either items or persons. There is no clear guideline for which may be faster, and in general the most important criterion may be the number of items or persons relative to cores. For example, if there are 5 persons and 100 items in the data but only 5 cores, it would make the most sense to use persons as that would yield an efficient parallelization scheme.
+
+# Absences in the U.S. Congress
+
+As described in the main text, @fig-absence and @fig-olsabs show rates of absences over time and within each session in the U.S. House. 
+
+```{r absence}
+#| fig-cap: "Time-varying Absence Rates in the U.S. House"
+#| label: fig-absence
+
+# need vertical lines for beginning of sessions
+
+p1 <- rollcalls %>% 
+  arrange(congress, date) %>% 
+  group_by(congress) %>%      
+  mutate(session_day_counter = ifelse(row_number()==n(),date_month,NA_Date_)) %>% 
+  ungroup() %>% 
+  filter(party_code %in% c("R","D")) %>% 
+  group_by(party_code,date_month,session_day_counter) %>% 
+  summarise(`Absences`=mean(cast_code=="Abstention"),
+            session_day_counter=session_day_counter[1]) %>% 
+  ggplot(aes(y=Absences,x=date_month)) +
+  geom_line(aes(colour=party_code,linetype=party_code)) +
+  stat_smooth(aes(linetype=party_code,colour=party_code),method="lm") +
+  scale_y_continuous(labels=scales::percent,limits = c(0,0.27)) +
+  labs(y="% Absent per Vote",x="",
+       caption="Dotted lines indicate Congressional sessions.") +
+  scale_color_manual(guide="legend",name="Party",
+                     values=c("D"="blue",
+                              "R"="red")) +
+  guides(linetype=guide_legend(title="Party")) +
+  geom_vline(aes(xintercept=session_day_counter),linetype=3) +
+  ggthemes::theme_clean()
+
+p2 <- p1 +
+  ggtitle("Absence Rates by Party per Legislative Vote",
+          subtitle = "Data from U.S. House from 1990 to 2018")
+
+ggsave("absent_votes.jpg",plot = p2)
+
+p1
+
+```
+
+```{r olsabs}
+#| fig-cap: "Ordinary Least Squares Polynomial Regression of Days in Session on Absence Rates in the U.S. House"
+#| label: fig-olsabs
+
+rollcalls_abs <- rollcalls %>% 
+  arrange(congress, date) %>% 
+  group_by(congress) %>%      
+  mutate(session_day_counter = as.numeric(date) - min(as.numeric(date)) + 1) %>% 
+  ungroup() %>% 
+  filter(party_code %in% c("R","D")) %>% 
+  group_by(party_code,date_month,congress) %>% 
+  summarise(`Absences`=mean(cast_code=="Abstention"),
+            session_day_counter=max(session_day_counter))
+
+c1 <- lm(Absences ~ session_day_counter + 
+             I(session_day_counter^2) + 
+           I(session_day_counter^3) +
+             factor(congress),data=rollcalls_abs)
+
+p1 <- plot_predictions(c1,condition = "session_day_counter") +
+  ggthemes::theme_clean() + 
+  scale_y_continuous(labels=scales::percent) +
+  labs(y="% Absent by Vote",
+       x="Days in Session",
+       caption="Plot shows fitted line from OLS polynomial regression on absent rates\n by number of days into a Congressional session.")
+
+p2 <- p1 + ggtitle("Prediction from Regression of Absence Rates\non Number of Days in Session",subtitle = "Data from U.S. House from 1990 to 2018")
+
+ggsave("session_days.jpg",plot=p2)
+
+p1
+
+```
+
+
+# Additional Simulation Results
+
+We show the average coverage of true ideal points by different models in @fig-plotcov and the average number of sign rotations in @fig-plotsignrot. By sign rotation, we mean the number of times when the RMSE of the inverse estimates was lower than the RMSE of the estimates, in which case we would multiply the estimates by -1 to account for the model converging to the wrong mode. 
+
+@fig-plotcov shows that no one model has perfect coverage, as might be expected given that coverage is calculated from standardized ideal points, which can induce bias. However, `idealstan` with HMC comes quite close except for the Gaussian process model. Generally speaking, the Laplace approximation and `emIRT` have the best coverage for non-Monte Carlo methods, though coverage is better for simpler models and when there is no missing data.
+
+The average number of sign rotations in @fig-plotsignrot reveals that more complex models have higher number of sign rotations on average. Gaussian process models with `idealstan` have higher sign rotation rates than splines or random walk models, while models that incorporate missing data also have higher sign rotation rates. While it is important to keep these metrics in mind, these models are designed to be employed for specific measurement problems where scholars have ample expertise to identify multiple items or persons to constrain for identification. At the same time, as discussed in the empirical section of the main paper, there are cases where a simpler model like splines can yield fewer sign rotations even without additional identifying information for the model.
+
+```{r plotcov}
+#| label: fig-plotcov
+#| fig-cap: Average 5% to 95% Coverage of True Ideal Points by Model and Time Series Process
+#| fig-height: 4.5
+
+p1 <- readRDS("data/plot_coverage_corrected.rds")
+
+p1
+
+```
+
+```{r plotsignrot}
+#| label: fig-plotsignrot
+#| fig-cap: Average Proportion of Sign Rotations By Model and Time Series Process
+#| fig-height: 4.5
+
+p2 <- readRDS("data/plot_sign_rotate.rds")
+
+p2
+
+```
+
+
+<!-- # China Import Tariff Model -->
+
+<!-- With the Chinese import shock data, we might surmise that polarization will increase among legislators in districts where Chinese import exposure per worker is very high. This kind of polarization could arise either by increasing divergence on trade-related legislation [@hall2015] or via increased foreign policy hostility to China [@kuk2017]. -->
+
+<!-- > H2: When monthly unemployment rates rise in districts with a higher exposure to Chinese import competition, legislators in each party become more polarized. -->
+
+<!-- This hypothesis expresses a conditional relationship that runs in the opposite direction of the first hypothesis. It would seem that, as existing literature has shown, exposure to Chinese import shocks shifts legislators' ideal points on trade policy and increases polarization, that there should be a strongly interactive relationshp between district-level unemployment and Chinese import exposure. When both are high, we would have a strong prior that legislators will polarize away from each other. This hypothesis can be tested with a three-way interaction of party ID, unemployment rates and Chinese shock exposure at the district level. -->
+
+<!-- Here I examine to the results of the Chinese import exposure model. The ideal point marginal effects for this model are shown in Figure @ref(fig:chinapl). Unfortunately, it is not possible to read off the interactive relationship as the main effect is a continuous by continuous by binary variable interaction. The only way to interpret this relationship is by calculating the effect of the interaction for different values of Chinese import exposure per worker and party ID. This plot for the mean posterior values is shown in Figure @ref(fig:chinaint). There is a strongly non-linear relationship between Chinese import exposure and unemployment. At low rates of Chinese import exposure, unemployment appears to have a weak effect on legislators in either party. At higher levels of import exposure, however, there is a much stronger relationship. In this case, it would appear that the relationship is strongly de-polarizing. Democrats with in districts with high unemployment and high import exposure tend to vote more conservative, while Republicans in similar districts tend to vote more liberal than other members of their party. This suggests that Chinese import exposure is indeed a strong moderating influence on the relationship between unemployment and voting behavior. Unfortunately, it is not possible to do a straightforward nested model comparison between the two-way and three-way interaction models, though further probing of the relationship could yield further insights into why these findings seem to run in opposite directions. -->
+
+<!-- ```{r chinaint,fig.cap="Effect of Unemployment Conditional on Chinese Import Exposure per Worker, 1990-2010",eval=FALSE} -->
+
+<!-- # need to extract the values of the covariates -->
+
+<!-- china_fit_mod <- readRDS("data/") -->
+
+<!-- # let's separate out the different values of the covariates -->
+
+<!-- unemp_rate <- legis_x[,2] -->
+
+<!-- import <- legis_x[,3] -->
+
+<!-- rep_unemp <- legis_x[,4] -->
+
+<!-- unemp_import <- legis_x[,6] -->
+
+<!-- rep_import <- legis_x[,7] -->
+
+<!-- rep_import_unemp <- legis_x[,9] -->
+
+<!-- # now we need make a grid of all values in the data -->
+
+<!-- import_range <- seq(min(china_fit@score_data@score_matrix$x,na.rm=T), -->
+
+<!--                    max(china_fit@score_data@score_matrix$x,na.rm=T), -->
+
+<!--                    by=0.1) -->
+
+<!-- # iterate over data and calculate average values of response -->
+
+<!-- # conditional for discrimination of different types -->
+
+<!-- china_pars <- rstan::extract(china_fit@stan_samples) -->
+
+<!-- all_plot_vals_rep <- lapply(import_range, function(i) { -->
+
+<!--   # returns a data frame of all posterior draws for this particular  -->
+
+<!--   # data combination -->
+
+<!--   # iterate over discrimination vectors -->
+
+<!--   this_est <- lapply(1:nrow(china_pars$L_free), function(d) { -->
+
+<!--     all_discrim <- china_pars$sigma_reg_free[d,] -->
+
+<!--     pos_discrim <- all_discrim[all_discrim>0] -->
+
+<!--     neg_discrim <- all_discrim[all_discrim<0] -->
+
+<!--     pos <- tibble(y_pred_mean=mean(plogis((unemp_rate[d] + rep_unemp[d] + -->
+
+<!--                                       unemp_import[d]*i + -->
+
+<!--            rep_import_unemp[d]*i)*pos_discrim) -->
+
+<!--            - 0.5), -->
+
+<!--                      import=i, -->
+
+<!--                      type="Pr(Yes|Conservative)") -->
+
+<!--     neg <- tibble(y_pred_mean=mean(plogis((unemp_rate[d] + rep_unemp[d] + -->
+
+<!--                                       unemp_import[d]*i + -->
+
+<!--            rep_import_unemp[d]*i)*neg_discrim) -->
+
+<!--            - 0.5), -->
+
+<!--                      import=i, -->
+
+<!--                      type="Pr(Yes|Liberal)") -->
+
+<!--     combined <- bind_rows(pos,neg) -->
+
+<!--     combined$iter <- d -->
+
+<!--     combined$party <- "R" -->
+
+<!--     combined -->
+
+<!--   }) %>% bind_rows -->
+
+<!--   this_est -->
+
+<!-- }) %>% bind_rows -->
+
+<!-- all_plot_vals_dem <- lapply(import_range, function(i) { -->
+
+<!--   this_est <- lapply(1:nrow(china_pars$L_free), function(d) { -->
+
+<!--     all_discrim <- china_pars$sigma_reg_free[d,] -->
+
+<!--     pos_discrim <- all_discrim[all_discrim>0] -->
+
+<!--     neg_discrim <- all_discrim[all_discrim<0] -->
+
+<!--     pos <- tibble(y_pred_mean=mean(plogis((unemp_rate[d] +  -->
+
+<!--                                       unemp_import[d]*i)*pos_discrim)-0.5), -->
+
+<!--                      import=i, -->
+
+<!--                      type="Pr(Yes|Conservative)") -->
+
+<!--     neg <- tibble(y_pred_mean=mean(plogis((unemp_rate[d] +  -->
+
+<!--                                       unemp_import[d]*i)*neg_discrim)-0.5), -->
+
+<!--                      import=i, -->
+
+<!--                      type="Pr(Yes|Liberal)") -->
+
+<!--     combined <- bind_rows(pos,neg) -->
+
+<!--     combined$iter <- d -->
+
+<!--     combined$party <- "D" -->
+
+<!--     combined -->
+
+<!--   }) %>% bind_rows -->
+
+<!--   this_est -->
+
+<!-- }) %>% bind_rows -->
+
+<!-- # combine dems and reps -->
+
+<!-- combined_all <- bind_rows(all_plot_vals_rep,all_plot_vals_dem) -->
+
+<!-- # plot the bugger -->
+
+<!-- combined_all %>% -->
+
+<!--   group_by(party,import,type) %>%  -->
+
+<!--   summarize(y_pred_mean_mean=mean(y_pred_mean), -->
+
+<!--             y_pred_low=quantile(y_pred_mean,.05), -->
+
+<!--             y_pred_high=quantile(y_pred_mean,.95)) %>%  -->
+
+<!--   ungroup %>%  -->
+
+<!--   ggplot(aes(y=y_pred_mean_mean,x=import)) + -->
+
+<!--   geom_errorbar(aes(ymin=y_pred_low, -->
+
+<!--                      ymax=y_pred_high, -->
+
+<!--                      color=party)) + -->
+
+<!--   theme(panel.grid = element_blank(), -->
+
+<!--         panel.background = element_blank(), -->
+
+<!--         strip.background = element_blank(), -->
+
+<!--         strip.text = element_text(face="bold")) + -->
+
+<!--   facet_wrap(~type,scales="free") + -->
+
+<!--   xlab("Import Exposure per Worker") + -->
+
+<!--   ylab("Marginal Effect of Unemployment") + -->
+
+<!--   scale_colour_manual(values=c("D"="blue", -->
+
+<!--                                "R"="red")) + -->
+
+<!--   scale_y_continuous(labels=scales::percent) -->
+
+<!-- #    -->
+
+<!-- ggsave("china_int_plot.png") -->
+
+<!-- ``` -->
+
+\newpage
+
+# References
