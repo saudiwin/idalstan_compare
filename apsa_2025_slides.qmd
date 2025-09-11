@@ -1,0 +1,302 @@
+---
+title: "Generalized Ideal Point Models for Noisy Dynamic Measures in the Social Science"
+subtitle: "American Political Science Association"
+date: 2025-09-13
+date-format: long
+incremental: true
+format:
+  revealjs: 
+    theme: dark
+    incremental: true
+    embed-resources: true
+    slideNumber: false
+    self-contained: false
+#    mermaid-format: svg
+    mermaid:
+      theme: dark
+author: 
+  - name: Robert Kubinec
+    affiliation: University of South Carolina
+    corresponding: true
+indent: true
+editor: visual
+bibliography: references.bib
+css: custom.css
+---
+
+```{r setup}
+#| include: false
+
+library(patchwork)
+library(tidyverse)
+library(ggplot2)
+
+
+```
+
+## Measurement Error Is Everywhere
+
+![](measurement_meme.jpg)
+
+## Some People Believe Otherwise
+
+![](rabois.png)
+
+## `idealstan` Is a General Purpose Measurement Tool
+
+Main features:
+
+1.  Diverse time series processes.
+2.  Non-ignorable missing data.
+3.  Mixed discrete & continuous data.
+4.  Map-reduce for big data.
+5.  Ideal point marginal effects.
+
+## Model Specification
+
+For each person $i$ and indicator/item $j$,
+
+$$
+\Large \class{fragment}{\underset{\text{Data}}{Y_{ij}}} = g\left(\class{fragment}{\overset{\text{Latent Trait}}{\alpha_i}}\class{fragment}{\underset{\text{Discrimination}}{\gamma_j}} - \class{fragment}{\overset{\text{Difficulty}}{\beta_j}}\right)
+$$
+
+## Model Specification
+
+$$
+\Large \underset{\text{Data}}{Y_{ij}} = g\left(\overset{\text{Latent Trait}}{\alpha_i}\underset{\color{red}{Discrimination}}{\color{red}{\gamma_j}} - \overset{\text{Difficulty}}{\beta_j}\right)
+$$
+
+1.  If [discrimination]{style="color: red;"} is positive, latent trait *positively* predicts the indicator/item.
+2.  If [discrimination]{style="color: red;"} is negative, latent trait *negatively* predicts the indicator/item.
+
+## Priors
+
+For a given item $j$ and person $i$,
+
+\begin{align}
+\alpha_i &\sim \text{Normal}(0,3)\\
+\gamma_j &\sim \text{GeneralizedBeta}(2,2)\\
+\beta_j &\sim \text{Normal}(0,3)
+\end{align}\label{eq-genprior}
+
+## Missing Data Formulation
+
+For an item $j$, person $i$, and missingness indicator $r$,
+
+$$
+    \prod^{I}_{i=1} \prod^{J}_{j=1}
+    \begin{cases}
+    \zeta(\alpha_{i}'\nu_j - \omega_j ) & \text{if } r=0, \text{ and} \\
+    (1-\zeta({\alpha_{i}'\nu_j - \omega_j}))L(Y_{ijr}|\alpha_i,\gamma_j,\beta_j) & \text{if } r=1
+    \end{cases}
+$$ {#eq-inflate2}
+
+## Time Series: Random Walk
+
+For a given person $i$ and time point $t$,
+
+$$
+\alpha_{it} \sim N(\delta_i+ \alpha_{it-1},\sigma_i)
+$$ {#eq-rwc}
+
+## Time Series: AR(1)
+
+For a given person $i$ and time point $t$,
+
+$$
+\alpha_{it} = \delta_i + \psi_i\alpha_{it-1} + \sigma_i\epsilon_{it}
+$$ {#eq-ar}
+
+## Time Series: Gaussian Process
+
+For a given person $i$ and time point $t$,
+
+$$
+f(x_t) \sim N(\mu(f(x_t)),\Sigma(f(x_t)))
+$$ {#eq-gp1}
+
+## Time Series: Spline
+
+For a given person $i$ and time point $t$,
+
+$$
+S_{q,d}(t) = B_{s,d}(t)A_i
+$$ {#eq-splinefunc}
+
+## Parallelization
+
+1.  Markov Chains can't be parallelized.
+2.  Gradient calculations for Hamiltonians can.
+3.  `idealstan` allows for within-memory within-chain parallelization by items/persons.
+
+## Variational Inference
+
+`idealstan` contains 2 variational algorithms:
+
+1.  Pathfinder
+2.  Laplace approximation
+
+## Simulation
+
+1.  Compare `idealstan` to other dynamic packages (`emIRT`, `mcmcPACK`, `dwnominate`).
+2.  Measure fidelity to "true" ideal points and ability to capture downstream regression.
+3.  Vary missing data & time series process.
+
+## Results: True Ideal Point Correlation
+
+```{r}
+kendall_plot <- readRDS("data/kendall_tau.rds")
+
+kendall_plot + theme(text=element_text(size=14),
+                  axis.text=element_text(size=14))
+```
+
+## Results: S Error Rates
+
+```{r}
+
+s_err_plot <- readRDS("data/s_errors.rds")
+
+s_err_plot + theme(text=element_text(size=14),
+                  axis.text=element_text(size=14))
+
+```
+
+## Results: Parallelization with Multiple Cores
+
+```{r}
+
+time_plot <- readRDS("data/plot_time_elapsed_n_items.rds")
+
+time_plot + theme(text=element_text(size=14),
+                  axis.text=element_text(size=14))
+
+```
+
+## Empirical: Justin Amash in the 115th Congress
+
+```{r}
+
+un1_a <- readRDS("data/un1_a.rds")
+  un2_a <- readRDS("data/un2_a.rds")
+  un3_a <- readRDS("data/un3_a.rds")
+  gp_a <- readRDS("data/gp_a.rds")
+  rw_a <- readRDS("data/rw_a.rds")
+  ar_a <- readRDS("data/ar_a.rds")
+
+un1_a + un2_a + un3_a + ar_a + gp_a + rw_a + plot_layout(nrow=2,
+                                             guides="collect") + 
+  plot_annotation(caption="Posterior average values shown for 115th Congress legislator ideal points.\nItem discrimination for Republican party-line votes was constrained to be positive.") & theme(legend.position = "top",
+                                                                                                                                                                                                    plot.title=element_text(size=14)) + theme(strip.text = element_text(size=14))
+
+```
+
+## Empirical: Tim Walz 4th Quarter Blitz
+
+```{r}
+
+  un1_tw <- readRDS("data/un1_tw.rds")
+  un2_tw <- readRDS("data/un2_tw.rds")
+  un3_tw <- readRDS("data/un3_tw.rds")
+  gp_tw <- readRDS("data/gp_tw.rds")
+  rw_tw <- readRDS("data/rw_tw.rds")
+  ar_tw <- readRDS("data/ar_tw.rds")
+
+un1_tw + un2_tw + un3_tw + ar_tw + gp_tw + rw_tw + plot_layout(nrow=2,
+                                             guides="collect") + 
+  plot_annotation(caption="Posterior average values shown for 115th Congress legislator ideal points.\nItem discrimination for Republican party-line votes was constrained to be positive.") & theme(legend.position = "top",
+                                                                                                                                                                                                    plot.title=element_text(size=14))
+
+```
+
+## Empirical: 1990 - 2018 Monthly Congressional Ideal Points
+
+```{r}
+
+# load all these distributions, plot them 
+
+all_group_big <- lapply(list.files("data/","idealpts",full.names = T), 
+                        readRDS) %>% 
+  bind_rows(.id="model") %>% 
+  mutate(Spline=case_match(as.character(model),
+                          c("1","2")~"2°",
+                          c("3","4")~"3°",
+                          c("5","6")~"4°"),
+         Type=case_match(model,
+                          c("2","4","6")~"With Abstentions",
+                          c("1","3","5")~"Only Observed\nVotes"))
+
+# make labels 
+
+annotations <- tibble(x=rep(c(ymd("1993-01-01"),ymd("1993-01-01")),2),
+           y=rep(c(-7,7),2),
+           label=rep(c("Democrats","Republicans"),2),
+           Type=rep(unique(all_group_big$Type),each=2))
+
+all_group_big %>% 
+  ggplot(aes(y=mean_est,x=Time_Point)) +
+  geom_line(aes(linetype=Spline,colour=Group)) +
+  facet_wrap(~Type,nrow=2) + 
+  ggthemes::theme_clean() +
+  scale_color_manual(values=c(R="red",
+                              D="blue"),na.translate=F,name="") + 
+  guides(color="none",
+         linetype=guide_legend(override.aes = list(color = "black"))) + 
+  scale_y_continuous(labels=c("More\nLiberal","-5","0","5","More\nConservative"),breaks=c(-10,-5,0,5,10)) +
+  geom_text(data=annotations,aes(label=label,x=x,y=y),colour="black") +
+  labs(y="Ideal Point",x="",
+       caption=stringr::str_wrap("Plot shows party-average monthly ideal points for the U.S. House from 1990 to 2018 that are aggregated from individual legislator trajectories. Ideal point is derived from a Bayesian IRT model fit with idealstan. Missing-data models account for strategic abstention while observed models only use recorded votes. Each line is an estimate from a different type of spline model in terms of degrees with knots for each presidential administration. Discrete jumps in the time series show periods when new legislators entered."))  + theme(text=element_text(size=14),
+                  axis.text=element_text(size=14))
+
+
+```
+
+# Appendix
+
+## LLM Performance
+
+![](images/upset_plot-06.png)
+
+## Retweet Counts from Tunisia and Egypt in 2013 {style="font-size: 0.8em;"}
+
+![](retweets_counts_white.png)
+
+## Latent Scales: Secularism vs. Islamism {style="font-size: 0.8em;"}
+
+![](d1_plot_white.png)
+
+## One-way Censoring Among Islamist Tweeters {style="font-size: 0.8em;"}
+
+![](d1_discrim_white.png)
+
+## What Does HMC Look Like
+
+<https://chi-feng.github.io/mcmc-demo/app.html?algorithm=HamiltonianMC&target=banana>
+
+## Big Online Polls Over-estimated COVID-19 Vaccine Uptake
+
+![](images/covid.png){fig-align="center" width="1000px"}
+
+## The Science of Measurement
+
+![](mycity_screwup.png)
+
+## Asahi-Todai Survey Estimates
+
+![](images/dark_mode_asahi_plot-01.png)
+
+## Missingness Discrimination
+
+![](images/missingness_discrim_dark.png)
+
+## Ideal Point Marginal Effects
+
+For each item $j$, person $i$, and external covariate $x$,
+
+$$
+\frac{\partial Y_{ijtm}}{\partial x} \left( L_m(\gamma_j(\alpha_{it} + \phi x) - \beta_j) \right) = \phi \gamma_j L_m'(\gamma_j(\alpha_{it} + \phi x) - \beta_j)
+$$ {#eq-deriv}
+
+## Marginal Effect of Unemployment on U.S. Congress Vote
+
+![](images/idealpt_marg_eff_dark-02.png)
