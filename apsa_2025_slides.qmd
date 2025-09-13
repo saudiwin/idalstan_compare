@@ -147,7 +147,7 @@ $$ {#eq-splinefunc}
 ```{r}
 kendall_plot <- readRDS("data/kendall_tau.rds")
 
-kendall_plot + theme(text=element_text(size=14),
+kendall_plot + labs(y="Correlation") + theme(text=element_text(size=14),
                   axis.text=element_text(size=14))
 ```
 
@@ -195,14 +195,14 @@ un1_a + un2_a + un3_a + ar_a + gp_a + rw_a + plot_layout(nrow=2,
 
 ```{r}
 
-  un1_tw <- readRDS("data/un1_tw.rds")
-  un2_tw <- readRDS("data/un2_tw.rds")
-  un3_tw <- readRDS("data/un3_tw.rds")
-  gp_tw <- readRDS("data/gp_tw.rds")
-  rw_tw <- readRDS("data/rw_tw.rds")
-  ar_tw <- readRDS("data/ar_tw.rds")
+  un1_twm <- readRDS("data/un1_twm.rds")
+  un2_twm <- readRDS("data/un2_twm.rds")
+  un3_twm <- readRDS("data/un3_twm.rds")
+  gp_twm <- readRDS("data/gp_twm.rds")
+  rw_twm <- readRDS("data/rw_twm.rds")
+  ar_twm <- readRDS("data/ar_twm.rds")
 
-un1_tw + un2_tw + un3_tw + ar_tw + gp_tw + rw_tw + plot_layout(nrow=2,
+un1_twm + un2_twm + un3_twm + ar_twm + gp_twm + rw_twm + plot_layout(nrow=2,
                                              guides="collect") + 
   plot_annotation(caption="Posterior average values shown for 115th Congress legislator ideal points.\nItem discrimination for Republican party-line votes was constrained to be positive.") & theme(legend.position = "top",
                                                                                                                                                                                                     plot.title=element_text(size=14))
