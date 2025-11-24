@@ -9,7 +9,7 @@ execute:
   echo: false
   warning: false
   error: false
-bibliography: references.bib
+bibliography: "BibTexDatabase.bib"
 ---
 
 ```{r setup}
@@ -495,6 +495,69 @@ p2
 <!-- ggsave("china_int_plot.png") -->
 
 <!-- ``` -->
+
+# Priors, Identification, and Starting Values
+
+## Model Priors
+
+Identification for models with time-varying $\alpha_{it}$ is a challenging endeavor that lacks a comprehensive discussion in the literature, often leaving practitioners to spend considerable time guessing what settings might produce an identified latent variable. @quinn2002 addressed this issue for random-walk models by restricting the variance $\sigma_i$ to values strictly between 0 and 0.1. This hard-coded constraint forced the time series to change little over time, though it also limits inference as the time series can only differ so much from each other.
+
+By contrast, I impose generally diffuse priors, or priors strong enough to impose some scaling identifiability, without forcing hard constraints on variance or other parameters. Rather than employ priors that try to fix the ideal point estimation, I argue that an appropriately theoretical model structure should allow for relatively weak priors, which should only be constrained to include relevant empirical information like the known ideological position of actors or items. When the data are both sparse and noisy, and time-varying estimation becomes non-trivial, then the model should employ a time series function like a 3rd-degree spline to remove the possibility of theoretically impossible shifts in ideal points over time. I discuss this approach in more detail in the empirical application and in the simulation results.
+
+I define the priors in terms of the distributions assigned to each parameter in $\theta$:
+
+\begin{align}
+\alpha_i &\sim \text{Normal}(0,3)\\
+\gamma_j &\sim \text{GeneralizedBeta}(2,2)\\
+\beta_j &\sim \text{Normal}(0,3)
+\end{align}\label{eq-genprior}
+
+The ideal points $\alpha_i$ and the discrimination parameters $\beta_j$ are given a loose $N(0,3)$ prior that is weakly informative for most scales and is only needed to make the posterior proper. Identification of the posterior, which is an important issue as these types of measurement models can have multiple possible solutions with equal likelihood [@bafumiPracticalIssuesImplementing2005], happens via a Generalized Beta prior on the discrimination parameters $\gamma_j$:
+
+$$
+f(x; \alpha, \beta, a, b) = \frac{(x - a)^{\alpha - 1} (b - x)^{\beta - 1}}{(b - a)^{\alpha + \beta - 1} B(\alpha, \beta)}
+$$ {#eq-genbeta}
+
+where:
+
+\begin{itemize}
+    \item $\alpha > 0$ and $\beta > 0$ are the shape and scale parameters, analogous to the prior sample size,
+    \item $a = -1$ and $b = 1$ define the support of the distribution,
+    \item $B(\alpha, \beta) = \int_0^1 t^{\alpha - 1} (1 - t)^{\beta - 1} \, dt$ is the Beta function.
+\end{itemize}
+
+The reason I use the Generalized Beta distribution for the items is to resolve two problems at once. First, the restrictions on the range of the $\gamma_j$ parameters solve the problem of identifying a scale for the latent variable because the item discrimination parameters must stay within this range. The Generalized Beta distribution further allows this range to be both positive and negative, which is required for the ideal point model to estimate latent variables with bi-polarity (such as both conservative and liberal ideology). To identify the rotation of the ideal points, specific items can be given a very tight prior, such as:
+
+$$
+\gamma_{j=k} \sim \text{GeneralizedBeta}(10,1000)
+$$ for a parameter with the majority its support around the point -0.98 and
+
+$$
+\gamma_{j=k'} \sim \text{GeneralizedBeta}(1000,10)
+$$
+
+for a parameter with the majority of its support around the point +0.98. The shape and scale parameters of the Generalized Beta have an intuitive interpretation as they represent the prior observed negative and positive observations for a given proportion. As a result, increasing both the scale and shape proportionally will preserve the sample expected value but reduce uncertainty around the expected value of the distribution. With larger datasets, increasing both the shape and scale to larger values, such as $(20000, 200)$, is necessary as the strength of the prior is relative to the size of the data as in @eq-Bayes. To fit a traditional IRT model, on the other hand, all this is necessary is to modify the lower bound ($a$) of the Generalized Beta distribution to 0 rather than -1.
+
+Constraining the discrimination parameters builds on work that shows that identification of the items (i.e., votes) in an ideal point model has superior theoretical properties as it allows for the ideal points to float freely [@morucciMeasurementThatMatches2024]. In addition, constraining item parameters is helpful for dynamic ideal point estimation as items may occur at different points in the time series, whereas constraining dynamic ideal points is limited to fixing the starting positions of time series. With increasing time points, the starting positions of the actors become less influential, making identification more difficult to achieve.
+
+I assign weakly informative values of +2 to each of the distribution's parameters (scale and shape) so that values of 0, or the midpoint of the distribution, are weakly preferred over the end points. With this prior, no further work is necessary to fix a scale and all other parameters can have weakly informative priors. In fact, if there is enough data, the discrimination parameters can have the uninformative Generalized Beta prior of +1, +1 so that all unconstrained discrimination parameters $\gamma_j$ are equally likely in the $(-1, 1)$ interval–which is much less informative than the Normal prior that is commonly used.
+
+If the missing data is modeled directly as described in the main text, the model does not generally require more identifying information than previously stipulated (i.e., at least some observed item discriminations $\gamma_j$ pinned to high and low values). However, the missingness space does raise model complexity, it can require more computation and can in some cases require additional pinned item discrimination parameters. However, the missingness parameters themselves can have similar weakly informative Generalized Beta priors without causing any serious problems with identification:
+
+\begin{align}
+\nu_j &\sim \text{GeneralizedBeta}(2,2)\\
+\omega_j &\sim \text{Normal}(0,3)
+\end{align}\label{eq-missprior}
+
+## Starting Values
+
+Identifying a single mode (or estimate) of time-varying latent variables given noisy data can be very difficult to achieve. As mentioned previously, @quinn2002 used a very restrictive bound on over-time variance to identify their estimates of Supreme Court justices. In order to estimate DW-NOMINATE using optimization methods, Poole and Rosenthal had to undergo a laborious process of choosing starting values for legislator ideal points, estimating dynamic scores, and then reviewing the scores to see if they resembled their theoretical priors [@carrollMeasuringBiasUncertainty2009]. Similarly, @barbera2015 scores were only possible to derive by using starting values for HMC with Stan that accorded with theoretical expectations about ideal point distributions.
+
+While identifying the sign and rotation of ideal points with pinned discrimination parameters is sufficient for static models, high-dimensional time-varying latent variable model posteriors can be difficult for HMC to adequately explore even though it is the most robust and stable MCMC algorithm available [@CarpenterGelmanHoffmanEtAl2017]. For high-dimensional models, such as latent variables with hundreds of time points, HMC can end up in lower-probability modes that may have the opposite polarity of what the identification restrictions require. Specifying starting values that are closer to the posterior mode can help HMC converge and explore the posterior for very difficult problems [@barbera2015]. However, specifying starting values a priori can either be extremely tedious as the DW-NOMINATE procedure mentioned previously or it can result in latent variables that depend on arbitrarily chosen starting values that can mask convergence issues with HMC and result in fragile inferences.
+
+To address this problem, `idealstan` implements a novel method for identifying starting values for high-dimensional HMC using what is known as the Pathfinder algorithm [@zhangPathfinderParallelQuasiNewton2021]. The Pathfinder algorithm is a form of variational inference [@goplerudMultinomialFrameworkIdeal2019; @Grimmer2011] that approximates the joint posterior by minimizing the Kullback-Leibler divergence with a form of Newton optimization. While this approximation is unlikely to capture the exactly correct form of the joint posterior distribution, it is remarkably robust considering its relative simplicity [@zhangPathfinderParallelQuasiNewton2021]. Importantly, Pathfinder integrates with the Stan framework so that Pathfinder can first be used to identify starting values for the HMC algorithm, which is particularly important for high-dimensional time-varying models. These starting values are optimal in the sense that they should be reasonably close to the posterior mode, and they also do not reflect researcher discretion, which makes them a more robust choice for measurement exercises as they are in principle replicable.
+
+<!--# This method of "mode-finding" works so well that in fact it can even be used in place of the identification restrictions on item parameters mentioned previously, but it should be noted that by doing so, the ideal point model is no longer a confirmatory method and instead should be used in an exploratory context in which the derived latent variable may or may not have any clear empirical meaning. For all the empirical examples shown later, Pathfinder was used to ensure convergence of the HMC chains to the optimal mode conditional on informative identification conditions.  -->
 
 \newpage
 
