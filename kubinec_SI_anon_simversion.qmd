@@ -3,6 +3,8 @@ title: "Supplementary Information for Generalized Ideal Point Models"
 format:
   pdf:
     number-sections: true
+    fig-height: 5
+    fig-width: 6.5
 toc: true
 execute: 
   cache: true
@@ -29,9 +31,19 @@ library(modelsummary)
 rollcalls <- readRDS('data/rollcalls.rds')
 ```
 
-# Additional Model Details
+# Additional Likelihood Details
 
-In this section I provide a more complete derivation of additional distributions available in the idealstan package.
+In the main text I have followed convention in assuming that the observed data $Y_{ijt}$ is a binary outcome (Bernoulli distribution). However, this is a limitation which unnecessarily restricts dynamic ideal point models to binary data. There are a number of implementations of mixed outcomes for static ideal point models, such as the Poisson "Wordfish" model [@slapin2008], the ordinal model in @imaiFastEstimationIdeal2016, and the multinomial model in @goplerudMultinomialFrameworkIdeal2019. The restriction of dynamic models to binary outcomes requires either dichotomization of the observed indicators or for scholars to employ a static model that obscures over-time variation.
+
+Within the Bayesian framework I have proposed, and combined with the extraordinary flexibility of Stan's HMC engine, virtually any distribution for $Y_{ijt}$ is possible and it is even possible to let the distribution for $Y_{ijt}$ to vary at the item level, i.e., to include items of binary, ordinal, or even continuous distributions for the same latent variable [@kropko2013]. These types of mixed outcomes are especially important for survey data in which questions could have binary, ordinal, proportions, counts or continuous response distributions.
+
+To use a different distribution, the likelihood function $L(\cdot)$ in main text Equation 2 can be modified with any probability density or mass function that properly integrates or sums to 1 where $m$ is an index for all $M$ distributions used for the mixed outcome $Y_{ijtm}$:
+
+$$
+  L(Y_{ijtm}|\alpha_{it},\gamma_j,\beta_j) =  \prod_{i-1}^{I} \prod_{j=1}^{J} \prod_{t=1}^{T} \prod_{m=1}^{M} L_m(\gamma_j\alpha_{it}-\beta_j)
+$$ {#eq-likem}
+
+where $L_m$ represents the likelihood function for the $m$th distribution. All of these models can also be estimated marginal of missing data $r$. Below I provide more details about the different possible likelihoods in `idealstan`.
 
 ## Ordinal Derivations: Rating Scale and Graded Response
 
@@ -305,6 +317,39 @@ p2
 
 ```
 
+```{r fig-rmse}
+#| fig-cap: "RMSE of Estimated to True Ideal Points by Model"
+#| label: fig-rmse
+#| cache: false
+
+rmse_plot <- readRDS("data/plot_rmse_all_corrected.rds")
+
+rmse_plot
+
+```
+
+```{r serrs}
+#| fig-cap: "S Error Rates for Downstream Regression of Estimated Ideal Points by Model"
+#| cache: false
+#| label: fig-serrs
+
+s_err_plot <- readRDS("data/s_errors.rds")
+
+s_err_plot
+
+```
+
+```{r merrs}
+#| fig-cap: "M Error Rates for Downstream Regression of Estimated Ideal Points by Model"
+#| cache: false
+#| label: fig-merrs
+
+m_err_plot <- readRDS("data/plot_m_errors.rds")
+
+m_err_plot
+
+```
+
 
 <!-- # China Import Tariff Model -->
 
@@ -558,6 +603,151 @@ While identifying the sign and rotation of ideal points with pinned discriminati
 To address this problem, `idealstan` implements a novel method for identifying starting values for high-dimensional HMC using what is known as the Pathfinder algorithm [@zhangPathfinderParallelQuasiNewton2021]. The Pathfinder algorithm is a form of variational inference [@goplerudMultinomialFrameworkIdeal2019; @Grimmer2011] that approximates the joint posterior by minimizing the Kullback-Leibler divergence with a form of Newton optimization. While this approximation is unlikely to capture the exactly correct form of the joint posterior distribution, it is remarkably robust considering its relative simplicity [@zhangPathfinderParallelQuasiNewton2021]. Importantly, Pathfinder integrates with the Stan framework so that Pathfinder can first be used to identify starting values for the HMC algorithm, which is particularly important for high-dimensional time-varying models. These starting values are optimal in the sense that they should be reasonably close to the posterior mode, and they also do not reflect researcher discretion, which makes them a more robust choice for measurement exercises as they are in principle replicable.
 
 <!--# This method of "mode-finding" works so well that in fact it can even be used in place of the identification restrictions on item parameters mentioned previously, but it should be noted that by doing so, the ideal point model is no longer a confirmatory method and instead should be used in an exploratory context in which the derived latent variable may or may not have any clear empirical meaning. For all the empirical examples shown later, Pathfinder was used to ensure convergence of the HMC chains to the optimal mode conditional on informative identification conditions.  -->
+
+# Additional Figures
+
+Please see below for additional figures related to the estimation of ideal points in the U.S. House as presented in the main text.
+
+```{r dists}
+#| label: fig-alldist
+#| fig-cap: "Comparison of Time-varying Ideal Point Methods for the 115th Congress with Observed Votes"
+#| message: false
+#| warning: false
+
+  un1 <- readRDS("data/un1.rds")
+  un2 <- readRDS("data/un2.rds")
+  un3 <- readRDS("data/un3.rds")
+  rw <- readRDS("data/rw.rds")
+  ar <- readRDS("data/ar.rds")
+  gp <- readRDS("data/gp.rds")
+
+un1 + un2 + un3 + ar + gp + rw + plot_layout(nrow=2,
+                                             guides="collect") + 
+  plot_annotation(caption="Posterior average values shown for 115th Congress legislator ideal points.\nItem discrimination for Republican party-line votes was constrained to be positive.") & theme(legend.position = "top",
+                                                                                                                                                                                                    plot.title=element_text(size=9))
+
+
+```
+
+
+```{r distscompwalz}
+#| include: false
+
+
+  un1_tw <- readRDS("data/un1_tw.rds")
+  un2_tw <- readRDS("data/un2_tw.rds")
+  un3_tw <- readRDS("data/un3_tw.rds")
+  gp_tw <- readRDS("data/gp_tw.rds")
+  rw_tw <- readRDS("data/rw_tw.rds")
+  ar_tw <- readRDS("data/ar_tw.rds")
+
+
+
+```
+
+```{r distsamash2}
+#| label: fig-amashdist1
+#| fig-cap: "Comparison of Justin Amash Time-varying Ideal Points for the 115th Congress with Missing Votes"
+#| message: false
+#| warning: false
+#| include: false
+
+  un1_am <- readRDS("data/un1_am.rds")
+  un2_am <- readRDS("data/un2_am.rds")
+  un3_am <- readRDS("data/un3_am.rds")
+  gp_am <- readRDS("data/gp_am.rds")
+  rw_am <- readRDS("data/rw_am.rds")
+  ar_am <- readRDS("data/ar_am.rds")
+
+un1_am + un2_am + un3_am + ar_am + gp_am + rw_am + plot_layout(nrow=2,
+                                             guides="collect") + 
+  plot_annotation(caption="Posterior average values shown for 115th Congress legislator ideal points.\nItem discrimination for Republican party-line votes was constrained to be positive.") & theme(legend.position = "top",
+                                                                                                                                                                                                    plot.title=element_text(size=9))
+```
+
+```{r distswalz1}
+#| label: fig-walzdist1
+#| fig-cap: "Comparison of Tim Walz Time-varying Ideal Points for the 115th Congress with Observed Votes"
+#| message: false
+#| warning: false
+
+  un1_tw <- readRDS("data/un1_tw.rds")
+  un2_tw <- readRDS("data/un2_tw.rds")
+  un3_tw <- readRDS("data/un3_tw.rds")
+  gp_tw <- readRDS("data/gp_tw.rds")
+  rw_tw <- readRDS("data/rw_tw.rds")
+  ar_tw <- readRDS("data/ar_tw.rds")
+
+un1_tw + un2_tw + un3_tw + ar_tw + gp_tw + rw_tw + plot_layout(nrow=2,
+                                             guides="collect") + 
+  plot_annotation(caption="Posterior average values shown for 115th Congress legislator ideal points.\nItem discrimination for Republican party-line votes was constrained to be positive.") & theme(legend.position = "top",
+                                                                                                                                                                                                    plot.title=element_text(size=9))
+
+```
+
+
+```{r}
+#| fig-cap: Monthly Party-level Ideal Points for the U.S. House
+#| label: fig-sumbigdist
+
+# load all these distributions, plot them 
+
+all_group_big <- lapply(list.files("data/","idealpts",full.names = T), 
+                        readRDS) %>% 
+  bind_rows(.id="model") %>% 
+  mutate(Spline=case_match(as.character(model),
+                          c("1","2")~"2°",
+                          c("3","4")~"3°",
+                          c("5","6")~"4°"),
+         Type=case_match(model,
+                          c("2","4","6")~"With Abstentions",
+                          c("1","3","5")~"Only Observed\nVotes"))
+
+# make labels 
+
+annotations <- tibble(x=rep(c(ymd("1993-01-01"),ymd("1993-01-01")),2),
+           y=rep(c(-7,7),2),
+           label=rep(c("Democrats","Republicans"),2),
+           Type=rep(unique(all_group_big$Type),each=2))
+
+all_group_big %>% 
+  ggplot(aes(y=mean_est,x=Time_Point)) +
+  geom_line(aes(linetype=Spline,colour=Group)) +
+  facet_wrap(~Type,nrow=2) + 
+  ggthemes::theme_clean() +
+  scale_color_manual(values=c(R="red",
+                              D="blue"),na.translate=F,name="") + 
+  guides(color="none",
+         linetype=guide_legend(override.aes = list(color = "black"))) + 
+  scale_y_continuous(labels=c("More\nLiberal","-5","0","5","More\nConservative"),breaks=c(-10,-5,0,5,10)) +
+  geom_text(data=annotations,aes(label=label,x=x,y=y),colour="black") +
+  labs(y="Ideal Point",x="",
+       caption=stringr::str_wrap("Plot shows party-average monthly ideal points for the U.S. House from 1990 to 2018 that are aggregated from individual legislator trajectories. Ideal point is derived from a Bayesian IRT model fit with idealstan. Missing-data models account for strategic abstention while observed models only use recorded votes. Each line is an estimate from a different type of spline model in terms of degrees with knots for each presidential administration. Discrete jumps in the time series show periods when new legislators entered.")) 
+
+```
+
+```{r dists2}
+#| label: fig-alldist2
+#| fig-cap: "Comparison of Time-varying Ideal Point Methods for the 115th Congress with Missing Votes"
+#| message: false
+#| warning: false
+
+  un1m <- readRDS("data/un1m.rds")
+  un2m <- readRDS("data/un2m.rds")
+  un3m <- readRDS("data/un3m.rds")
+  rwm <- readRDS("data/rwm.rds")
+  arm <- readRDS("data/arm.rds")
+  gpm <- readRDS("data/gpm.rds")
+
+un1m + un2m + un3m + arm + gpm + rwm + plot_layout(nrow=2,
+                                             guides="collect") + 
+  plot_annotation(caption="Posterior average values shown for 115th Congress legislator ideal points.\nItem discrimination for Republican party-line votes was constrained to be positive.") & theme(legend.position = "top",
+                                                                                                                                                                                                    plot.title=element_text(size=9))
+
+```
+
+
+
 
 \newpage
 
