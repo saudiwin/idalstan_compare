@@ -35,7 +35,7 @@ rollcalls <- readRDS('data/rollcalls.rds')
 
 In the main text I have followed convention in assuming that the observed data $Y_{ijt}$ is a binary outcome (Bernoulli distribution). However, this is a limitation which unnecessarily restricts dynamic ideal point models to binary data. There are a number of implementations of mixed outcomes for static ideal point models, such as the Poisson "Wordfish" model [@slapin2008], the ordinal model in @imaiFastEstimationIdeal2016, and the multinomial model in @goplerudMultinomialFrameworkIdeal2019. The restriction of dynamic models to binary outcomes requires either dichotomization of the observed indicators or for scholars to employ a static model that obscures over-time variation.
 
-Within the Bayesian framework I have proposed, and combined with the extraordinary flexibility of Stan's HMC engine, virtually any distribution for $Y_{ijt}$ is possible and it is even possible to let the distribution for $Y_{ijt}$ to vary at the item level, i.e., to include items of binary, ordinal, or even continuous distributions for the same latent variable [@kropko2013]. These types of mixed outcomes are especially important for survey data in which questions could have binary, ordinal, proportions, counts or continuous response distributions.
+Within the Bayesian framework I have proposed, and combined with the extraordinary flexibility of Stan's HMC engine, virtually any distribution for $Y_{ijt}$ is possible and it is even possible to let the distribution for $Y_{ijt}$ to vary at the item level, i.e., to include items of binary, ordinal, or even continuous distributions for the same latent variable. These types of mixed outcomes are especially important for survey data in which questions could have binary, ordinal, proportions, counts or continuous response distributions.
 
 To use a different distribution, the likelihood function $L(\cdot)$ in main text Equation 2 can be modified with any probability density or mass function that properly integrates or sums to 1 where $m$ is an index for all $M$ distributions used for the mixed outcome $Y_{ijtm}$:
 
@@ -77,7 +77,7 @@ Though not employed in political science to any great extent, this alternative f
 
 ## Poisson Distribution
 
-The Poisson distribution has a considerable history as a latent variable model for word counts [@slapinScalingModelEstimating2008], though it can be more broadly applied to any unbounded positive discrete variable. For `idealstan`, the Poisson parameterization is as follows:
+The Poisson distribution has a considerable history as a latent variable model for word counts [@slapin2008], though it can be more broadly applied to any unbounded positive discrete variable. For `idealstan`, the Poisson parameterization is as follows:
 
 \begin{align}
 P(Y_{ijtk} \mid \lambda_{ijtk}) &= \frac{\lambda_{ijtk}^{Y_{ijtk}} e^{-\lambda_{ijtk}}}{Y_{ijtk}!}\\
@@ -88,7 +88,7 @@ where $\lambda_{ijtk}$ is the mean count and contains the IRT linear model with 
 
 ## Normal and Log-Normal Distributions
 
-The next two distributions have not been widely used in the ideal point literature but have been commonly deployed in continuous latent variable methods like principal components and factor analysis: the Normal distribution for continuous and the log-normal distribution for positive-continuous outcomes. While employed @kropkoMeasuringDynamicsPolitical2013 employed the Normal distribution in a traditional IRT framework, no one has yet used the log-Normal distribution.
+The next two distributions have not been widely used in the ideal point literature but have been commonly deployed in continuous latent variable methods like principal components and factor analysis: the Normal distribution for continuous and the log-normal distribution for positive-continuous outcomes. While employed @kropko2013 employed the Normal distribution in a traditional IRT framework, no one has yet used the log-Normal distribution.
 
 For a normal distribution, the ideal point model is used to predict the mean of $Y_{ijt}$ given item-specific residual standard deviation $\sigma_j$:
 
@@ -314,39 +314,6 @@ p1
 p2 <- readRDS("data/plot_sign_rotate.rds")
 
 p2
-
-```
-
-```{r fig-rmse}
-#| fig-cap: "RMSE of Estimated to True Ideal Points by Model"
-#| label: fig-rmse
-#| cache: false
-
-rmse_plot <- readRDS("data/plot_rmse_all_corrected.rds")
-
-rmse_plot
-
-```
-
-```{r serrs}
-#| fig-cap: "S Error Rates for Downstream Regression of Estimated Ideal Points by Model"
-#| cache: false
-#| label: fig-serrs
-
-s_err_plot <- readRDS("data/s_errors.rds")
-
-s_err_plot
-
-```
-
-```{r merrs}
-#| fig-cap: "M Error Rates for Downstream Regression of Estimated Ideal Points by Model"
-#| cache: false
-#| label: fig-merrs
-
-m_err_plot <- readRDS("data/plot_m_errors.rds")
-
-m_err_plot
 
 ```
 
@@ -581,7 +548,7 @@ $$
 \gamma_{j=k'} \sim \text{GeneralizedBeta}(1000,10)
 $$
 
-for a parameter with the majority of its support around the point +0.98. The shape and scale parameters of the Generalized Beta have an intuitive interpretation as they represent the prior observed negative and positive observations for a given proportion. As a result, increasing both the scale and shape proportionally will preserve the sample expected value but reduce uncertainty around the expected value of the distribution. With larger datasets, increasing both the shape and scale to larger values, such as $(20000, 200)$, is necessary as the strength of the prior is relative to the size of the data as in @eq-Bayes. To fit a traditional IRT model, on the other hand, all this is necessary is to modify the lower bound ($a$) of the Generalized Beta distribution to 0 rather than -1.
+for a parameter with the majority of its support around the point +0.98. The shape and scale parameters of the Generalized Beta have an intuitive interpretation as they represent the prior observed negative and positive observations for a given proportion. As a result, increasing both the scale and shape proportionally will preserve the sample expected value but reduce uncertainty around the expected value of the distribution. With larger datasets, increasing both the shape and scale to larger values, such as $(20000, 200)$, is necessary as the strength of the prior is relative to the size of the data as in main text Equation 1. To fit a traditional IRT model, on the other hand, all this is necessary is to modify the lower bound ($a$) of the Generalized Beta distribution to 0 rather than -1.
 
 Constraining the discrimination parameters builds on work that shows that identification of the items (i.e., votes) in an ideal point model has superior theoretical properties as it allows for the ideal points to float freely [@morucciMeasurementThatMatches2024]. In addition, constraining item parameters is helpful for dynamic ideal point estimation as items may occur at different points in the time series, whereas constraining dynamic ideal points is limited to fixing the starting positions of time series. With increasing time points, the starting positions of the actors become less influential, making identification more difficult to achieve.
 
@@ -607,27 +574,6 @@ To address this problem, `idealstan` implements a novel method for identifying s
 # Additional Figures
 
 Please see below for additional figures related to the estimation of ideal points in the U.S. House as presented in the main text.
-
-```{r dists}
-#| label: fig-alldist
-#| fig-cap: "Comparison of Time-varying Ideal Point Methods for the 115th Congress with Observed Votes"
-#| message: false
-#| warning: false
-
-  un1 <- readRDS("data/un1.rds")
-  un2 <- readRDS("data/un2.rds")
-  un3 <- readRDS("data/un3.rds")
-  rw <- readRDS("data/rw.rds")
-  ar <- readRDS("data/ar.rds")
-  gp <- readRDS("data/gp.rds")
-
-un1 + un2 + un3 + ar + gp + rw + plot_layout(nrow=2,
-                                             guides="collect") + 
-  plot_annotation(caption="Posterior average values shown for 115th Congress legislator ideal points.\nItem discrimination for Republican party-line votes was constrained to be positive.") & theme(legend.position = "top",
-                                                                                                                                                                                                    plot.title=element_text(size=9))
-
-
-```
 
 
 ```{r distscompwalz}
@@ -726,22 +672,22 @@ all_group_big %>%
 
 ```
 
-```{r dists2}
-#| label: fig-alldist2
-#| fig-cap: "Comparison of Time-varying Ideal Point Methods for the 115th Congress with Missing Votes"
+```{r distswalz2}
+#| label: fig-walzdist2
+#| fig-cap: "Comparison of Tim Walz Time-varying Ideal Points for the 115th Congress with Missing Votes"
 #| message: false
 #| warning: false
 
-  un1m <- readRDS("data/un1m.rds")
-  un2m <- readRDS("data/un2m.rds")
-  un3m <- readRDS("data/un3m.rds")
-  rwm <- readRDS("data/rwm.rds")
-  arm <- readRDS("data/arm.rds")
-  gpm <- readRDS("data/gpm.rds")
+  un1_twm <- readRDS("data/un1_twm.rds")
+  un2_twm <- readRDS("data/un2_twm.rds")
+  un3_twm <- readRDS("data/un3_twm.rds")
+  gp_twm <- readRDS("data/gp_twm.rds")
+  rw_twm <- readRDS("data/rw_twm.rds")
+  ar_twm <- readRDS("data/ar_twm.rds")
 
-un1m + un2m + un3m + arm + gpm + rwm + plot_layout(nrow=2,
+un1_twm + un2_twm + un3_twm + ar_twm + gp_twm + rw_twm + plot_layout(nrow=2,
                                              guides="collect") + 
-  plot_annotation(caption="Posterior average values shown for 115th Congress legislator ideal points.\nItem discrimination for Republican party-line votes was constrained to be positive.") & theme(legend.position = "top",
+  plot_annotation(caption="Posterior average values shown for 115th Congress legislator ideal points.\nItem discrimination for Republican party-line votes was constrained to be positive.") & theme(legend.position = "none",
                                                                                                                                                                                                     plot.title=element_text(size=9))
 
 ```

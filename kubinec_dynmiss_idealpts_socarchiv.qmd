@@ -15,8 +15,12 @@ date-format: long
 format:
   wordcount-pdf: 
     wordcount-banner: true
+    header-includes: |
+      \usepackage[margin=1in]{geometry}
+    fig-height: 3.5
+    fig-width: 6.5
 linestretch: 1.5
-abstract: "This paper presents `idealstan`, a measurement framework that provides a robust solution to tricky problems in statistical inference with sparse and noisy data. To do so, the model employs novel features in Stan, a probabilistic programming language for Bayesian inference, along with computational advances with Hamiltonian Markov Chain Monte Carlo to permit inference on large and difficult posterior geometries. The model is compared to existing dynamic ideal point models using Monte Carlo simulations to show that `idealstan` can handle more complex time series processes, is robust to a serious form of missing data, and is much faster than existing Bayesian models. To illustrate the model's application, idealstan is then applied to the challenge of estimating monthly trajectories from 1990 to 2018 for Congresspersons' ideal points while accounting for selection into votes and ambiguity about the correct time series process. The supplementary information for this article can be accessed from [this link.](https://github.com/saudiwin/idalstan_compare/blob/master/kubinec_SI_anon_simversion.pdf)^[I thank attendees of the 2019 Political Methodology Conference for valuable feedback. I thank the New York University Abu Dhabi High Performance Computing Center, the Ookami Center at Stony Brook University, and the University of South Carolina High Performance Computing Cluster for providing computational resources. At present, the R package idealstan is available via a Github repository at <https://github.com/saudiwin/idealstan>. A reproducible version of this paper, kubinec_generalized_idealpts.qmd, is available at a Github repository at <https://github.com/saudiwin/idalstan_compare>. Complete monthly ideal point scores for U.S. legislators in the House are available at [this link](https://www.dropbox.com/scl/fo/04zptnyt1fbvax22mim2e/ADWliFrLKQUFxeEP9PiRZUI?rlkey=bpcjzmrsyzdxb4h9n2z93zmeb&st=kpd2lpmf&dl=0).] WORD COUNT: {{< words-sum body-note >}}"
+abstract: "This paper argues that robustly estimating dynamic latent traits requires flexible specifications that match theoretical priors to the constraints of noisy data. To address these issues, this paper presents a novel measurement framework using Stan, a probabilistic programming language for Bayesian inference, that employs computational advances to extend dynamic measurement modeling. The proposed specification is compared to existing dynamic ideal point models using Monte Carlo simulations to show that the model is much less prone to errors arising from mis-specification error and missing data. Furthermore, due to parallelization, the model is up to several orders of magnitude faster than existing Bayesian models, which extends the domain of full Bayesian inference to much larger datasets. To illustrate the model's application, the model is used to estimate monthly trajectories from 1990 to 2018 for all U.S. House Congresspeople while accounting for selection into votes and ambiguity about the correct time series process. The supplementary information for this article can be accessed from [this link.](https://github.com/saudiwin/idalstan_compare/blob/master/kubinec_SI_anon_simversion.pdf)^[I thank attendees of the 2019 Political Methodology Conference, the 2024 MENA-Asia Political Methodology Conference, and the 2025 American Annual Political Science Association Conference for valuable feedback. I thank the New York University Abu Dhabi High Performance Computing Center, the Ookami Center at Stony Brook University, and the University of South Carolina High Performance Computing Cluster for providing computational resources. At present, the R package idealstan is available via a Github repository at <https://github.com/saudiwin/idealstan>. A reproducible version of this paper, kubinec_generalized_idealpts.qmd, is available at a Github repository at <https://github.com/saudiwin/idalstan_compare>. Complete monthly ideal point scores for U.S. legislators in the House are available at [this link](https://www.dropbox.com/scl/fo/04zptnyt1fbvax22mim2e/ADWliFrLKQUFxeEP9PiRZUI?rlkey=bpcjzmrsyzdxb4h9n2z93zmeb&st=kpd2lpmf&dl=0).] WORD COUNT: {{< words-sum body-note >}}"
 bibliography: "BibTexDatabase.bib"
 fig-cap-location: top
 csl: apsr.csl
@@ -88,46 +92,54 @@ num_days <- distinct(unemp1,bioname,date_month) %>%
 
 \newpage
 
-This paper resolves long-standing issues in dynamic ideal point modeling within a novel Bayesian modeling framework. The goal is to make the ideal point model a robust tool for measuring complex latent traits, applicable to data from social media, surveys, legislatures, bureaucracies, or social networks. Implemented in Stan [@CarpenterGelmanHoffmanEtAl2017], a probabilistic programming language for Bayesian inference, this framework allows for flexible time-series processes, diverse data distributions, and novel missing data adjustments. The `idealstan` R package implements these models with advances in Bayesian computation to handle larger datasets than was previously feasible with Markov Chain Monte Carlo methods.
+This paper shows why measurement models need to become more robust and flexible in order to handle the difficult inference challenges of contemporary social science scholarship with noisy dynamic data. To accomplish this task, I define a novel parameterization of the ideal point model that is implemented in Stan [@CarpenterGelmanHoffmanEtAl2017], a probabilistic programming language for Bayesian inference. This new framework enables the researcher to select a parameterization for measurement estimation that most closely matches the theoretical nature of the construct of interest while enabling direct comparisons to alternative parameterizations of the latent trait. In addition, the `idealstan` R package implements these new methods with advances in Bayesian computation to handle datasets that are several orders of magnitude larger than was previously feasible with exact Bayesian inference while also adjusting for non-ignorable missing data.
 
-Initially designed for measuring U.S. Congressional ideology, the ideal point model has proven valuable for various social science measurement challenges, including Twitter data [@barbera2015; @kubinec2018], the UN Security Council [@baileyEstimatingDynamicState2017], state capacity [@hansonLeviathansLatentDimensions2021], and the level of democracy [@coppedgeMethodologyVarietiesDemocracy2019; @pemsteinDemocraticCompromiseLatent2017], to name only a few. Its utility lies in measuring latent traits where data are imperfect proxies of theoretically defined concepts. However, while social scientists increasingly have access to granular time-varying data--and often with considerable measurement error--dynamic ideal point modeling remains difficult to apply to big, noisy datasets, especially in the presence of non-ignorable missing data, sparse measures, and mixed outcomes.
+Initially designed for measuring U.S. Congressional ideology, the ideal point model has proven valuable for various social science measurement challenges, including Twitter data [@barbera2015; @kubinecWhenGroupsFall2021; @eadyNewsSharingSocial2025], state capacity [@hansonLeviathansLatentDimensions2021], judiciaries [@ovádek2021], lobbying [@kim2017], the level of democracy [@coppedgeMethodologyVarietiesDemocracy2019; @pemsteinDemocraticCompromiseLatent2017; @grumbachLaboratoriesDemocracyHow2022], and large language model output [@burnham], to name only a few. Its utility lies in measuring latent traits where data are imperfect proxies of theoretically defined concepts. However, while social scientists increasingly have access to granular time-varying data, dynamic ideal point modeling is limited to measures of binary outcomes, very specific time-series processes, fully observed data, and depending on the estimation framework, datasets of small to medium size. As a result, scholars often must choose a measurement model with assumptions that are inappropriate for the measurement problem at hand, which can perversely lead to new measurement error via model mis-specification. On the other hand, if scholars choose to ignore measurement estimation altogether, they can end up with fragile inferences that depend on arbitrary measurement artifacts [@ranehillAssessingRobustnessPower2015; @jerzak2024].
 
-This paper's main contributions are three-fold: 1) implementing and evaluating robust time-series specifications for dynamic ideal point estimation, 2) extending dynamic ideal point models to a range of statistical distributions, and 3) addressing estimation challenges with big and sparse datasets. The main advantage of this framework is that it permits nuanced identification of time-varying latent traits, permitting researchers to overcome vexing measurement challenges and avoid downstream inferential errors. The approach further democratizes advanced measurement models, making them accessible to applied researchers without advanced training in Bayesian methods [@claassen2020].
+<!-- The new measurement framework proposed in this paper offers scholars latent variable estimation that avoids these problems by advancing new methods for complex dynamic processes, non-ignorable missingness, and large datasets. The main advantage of this framework is that it enables researchers to overcome vexing measurement challenges and avoid downstream inferential errors.  -->
 
-I first show with Monte Carlo simulations how the `idealstan` method compares to existing approaches. As I show, `idealstan` is notably faster than existing Bayesian implementations but also shows improved identification of latent traits in terms of RMSE and downstream inference of estimated scores as a covariate in regression modeling. Furthermore, `idealstan`'s implementation of novel time series specifications like Gaussian processes helps it to identify latent traits that existing methods lack the flexibility to estimate. Finally, `idealstan` is robust to the inclusion of a general form of non-ignorable missing data (i.e., selection bias), and this adjustment can be estimated with all of the available time series specifications.
+To show how `idealstan` advances our understanding of measurement models, I engage in both simulations and empirical applications. I first analyze Monte Carlo simulations of the `idealstan` method compared to existing approaches. As I show, `idealstan` is notably faster than existing Bayesian implementations but also avoids consequential inferential errors due to a lack of comparable time series processes in existing work. In addition, I show that non-ignorable missingness has profound consequences for latent variable estimation in dynamic settings.
 
-To show how `idealstan` can identify much more granular latent traits than previous models, I estimate *monthly* ideal points for all legislators in the U.S. House from 1990 to 2018. This type of estimation is impossible with existing methods because sparsity undermines models' ability to converge. As I show, properly estimating latent traits involves carefully selecting a time-series specification that is theoretically-motivated and also employing a statistical methodology that can maximally extract latent signals from the data.
+Second, I show how `idealstan` can identify much more granular and theoretically-precise latent traits than previous models. To that end, I estimate *monthly* ideal points for all legislators in the U.S. House from 1990 to 2018. This type of estimation is impossible with existing methods because a lack of appropriate time series methods and computational robustness undermines models' ability to converge. As I show, properly estimating latent traits involves comparing across multiple time-series specification in order to identify a specification that most closely matches the theoretical nature of the construct of interest. Furthermore, the missing data adjustment reveals how legislators strategically adjust their ideological positioning depending on electoral and other pressures.
 
 By combining missing data adjustments, time-varying inference, and scalable computation, `idealstan` provides a robust method for addressing next-generation dynamic measurement challenges across the social sciences.
 
-# The Importance of Measuring Over Time
+# Statistical Measurement in the Social Sciences
 
-<!-- > "There is nothing more deceptive than an obvious fact." -->
+In the social sciences, measurement error is almost always non-trivial. For example, voting records, which are one of the most directly observable forms of political data, are nonetheless riddled with inaccurate records and duplicates [@kimEvaluatingQualityChanges2019]. Measurement error is more commonly recognized with higher-level concepts like democracy that have led to ongoing scholarly debates [@littleMeasuringDemocraticBacksliding2024; @millerHowLittleMengs2024; @knutsenConceptualMeasurementIssues2024]. However, virtually all social science variables have at least some measurement error because collecting data on humans, who have agency that allows them to hide or misreport information, is never a trivial matter. While many scholars recognize these structural limitations, and measurement models have a long history in statistics [@flake2019], it can be relatively difficult to apply measurement models to real-world datasets, especially when the tool needs to be able to incorporate relevant theoretical priors about the latent trait.
 
-<!-- > -- Sherlock Holmes -->
-
-<!-- The teaching of applied statistics generally presents models as estimating unbiased quantities given a recipe list of datasets. Of course, the datasets that social scientists produce rarely fit these clean molds, which leads to numerous statistical fixes to correct for poorly-fitting models, such as zero-inflated Poisson models in the case of counts [@lambertZeroinflatedPoissonRegression1992] and other more generic fixes like clustered standard errors [@abadieWhenShouldYou2023]. What all of these approaches have in common is a focus on adjusting for measurement issues in the dependent variable, while the data are assumed to represent known facts. -->
-
-<!-- Measurement models flip this perspective on its head. Rather than assuming that only the outcome needs a statistical distribution, a measurement model implements a statistical distribution *for the data*. Making this mental switch enables us to think of the data as only one set of observed indicators generated by a latent, unseen construct. Using a single indicator—as is often done in applied analyses—amounts to the very strong assumption that an indicator is a perfect stand-in for concept to be measured; i.e., that measurement error is zero. -->
+Building a theoretically-valid measurement model can be a very useful contribution to our ability to analyze concepts, such as the influential work on legislative ideology in the United States [@poole1997], but deriving an appropriate model can involve extensive technical work to incorporate theoretical priors [@caugheyDynamicEstimationLatent2015]--if it is even possible at all. The model I present in this paper, which I shall refer to as `idealstan` as that is the name of the associated software package, aims to contribute a general purpose measurement model that offers more flexibility and robustness in capturing latent concepts. I argue that this type of flexibility is very important for latent variables because model assumptions about the nature of latent traits can have important consequences for downstream inference. Ideally, a parametric measurement model should fit as close as possible to researcher priors while incorporating as much data as possible to reduce measurement error. Given the increasingly widespread availability of time-varying data in the social sciences, the focus in this paper is on the unique challenges that arise with *dynamic* measurement modeling—an area in which there are relatively few options for scholars to work with.
 
 <!-- In the social sciences, measurement error is almost always non-trivial. For example, voting records, which are one of the most directly observable forms of political data, are nonetheless riddled with inaccurate records and duplicates [@ansolabehereQualityVoterRegistration2010]. Measurement error is more commonly recognized with higher-level concepts like democracy that have led to ongoing scholarly debates [@littleMeasuringDemocraticBacksliding2024; @millerHowLittleMengs2024; @knutsenConceptualMeasurementIssues2024]. However, virtually all social science variables have at least some measurement error because collecting data on humans, who have agency that allows them to hide or misreport information, is never a trivial matter. While many scholars recognize these structural limitations, and measurement models have a long history in statistics [@flake2019], it can be relatively difficult to apply measurement models to real-world datasets, especially when the tool needs to be able to incorporate relevant theoretical priors about the latent trait. Building a theoretically-valid measurement model can be a very useful contribution to our ability to analyze concepts, such as the influential work on legislative ideology in the United States [@poole1997; @jackman2004], but deriving an appropriate model can involve extensive technical work to incorporate theoretical priors [@caugheyDynamicEstimationLatent2015]. The model I present in this paper, which I shall refer to as `idealstan` as that is the name of the associated software package, aims to contribute a general purpose measurement model that applies to diverse datasets and problems while also permitting the incorporation of theory into measurement choices. By doing so, I hope to mainstream relatively complex Bayesian measurement models that have often taken months or years to derive and permit them to be rapidly deployed to diverse phenomena. -->
 
-Ideal point models have a long history in political science, and time-varying ideal point models have been available for almost as long. Latent measurements derived from these models, including DW-NOMINATE scores for the U.S. Congress [@poole1997; @poole2005; @carrollMeasuringBiasUncertainty2009a] and comparable measures for the U.N. General Assembly, democracy, state capacity, and human rights compliance [@fariss2014; @baileyEstimatingDynamicState2017; @poole1997; @shor2022; @hansonLeviathansLatentDimensions2021; @coppedgeMethodologyVarietiesDemocracy2019], have made an outsize impact on research in the discipline. These uni-dimensional estimates of hard-to-measure traits permit researchers to test hypotheses with over-time variation to explore the factors behind evolutionary changes. While over-time variation is no substitute for a causally-identified experiment, it can help rule out important inference issues like reverse causality and is necessary for dynamic causal inference methods like difference-in-differences.
+The specific parameterization adopted in this paper is based on the ideal point model because I argue that ideal point models contain a nuanced balance of exploratory (or unsupervised) and confirmatory (or supervised) aspects. As a result, ideal point models can be repurposed to a wide variety of measurement domains where researchers have at least some theoretical priors about the latent concept of interest. Ideal point models have a long history in political science, and time-varying ideal point models have been available for almost as long. Latent measurements derived from these models, including DW-NOMINATE scores for the U.S. Congress [@poole1997; @poole2005] and comparable measures for the U.N. General Assembly, democracy, state capacity, and human rights compliance [@mesquita2022; @gauthier2025; @hansonLeviathansLatentDimensions2021; @coppedgeMethodologyVarietiesDemocracy2019; @ari2025; @gaughan2024], have made an outsize impact on research in the discipline. These uni-dimensional estimates of hard-to-measure traits permit researchers to test hypotheses with over-time variation to explore the factors behind evolutionary changes. While over-time variation is no substitute for a causally-identified experiment, it can help rule out important inference issues like reverse causality and is necessary for dynamic causal inference methods like difference-in-differences.
 
-For these reasons, the growth of the availability of big datasets with over-time variation, such as datasets derived from social media, digitized historical documents, or long-running surveys, offer important new areas of application of the ideal point model. However, it can be difficult to repurpose ideal point models to new time-varying domains as over-time variation poses significant hurdles when trying to identify a noisy latent trait. Many advances in ideal point modeling remain limited to static models, such as missing-data adjustment [@rosas2015] and diverse outcomes [@hare2018; @goplerudMultinomialFrameworkIdeal2019], while available dynamic models offer a limited range of time-series processes that may not apply well to diverse phenomena [@reunig2019].
+For these reasons, the growth of the availability of big datasets with over-time variation, such as datasets derived from social media, digitized historical documents, or long-running surveys, offer important new areas of application of the ideal point model. However, it can be difficult to repurpose ideal point models to new time-varying domains as over-time variation poses significant hurdles when trying to identify a noisy latent trait. Many advances in ideal point modeling remain limited to static models, such as missing-data adjustment [@rosas2015] and non-binary outcomes [@hare2018; @goplerudMultinomialFrameworkIdeal2019], while available dynamic models offer a limited range of time-series processes that may not apply well to diverse phenomena [@martin2002]. These limitations are particularly unfortunate for measurement models because the aim is to remove measurement error from available data; if the measurement model imposes additional unrealistic assumptions about the nature of the latent concept, it may result in worsening measurement error via mis-specification.
 
-The aim of this paper is to derive novel parameterizations of ideal point models to address these long-standing issues. I argue that a useful time-varying ideal point model should be able to handle diverse types of data, adjust for non-ignorable missing data (i.e., selection bias), allow for diverse time series processes, and be robust to both computational complexity and high-dimensional inference. These are considerable challenges, but the model presented here makes progress on all of these fronts.
+I argue that scholars should first define their latent construct theoretically, and then choose a parametric specification that matches these theoretical priors as close as possible. For this reason, the aim of this paper is to derive novel parameterizations of ideal point models that extend the framework to novel forms of latent variables and related measures. The types of data that social scientists increasingly use require diverse statistical distributions, endogenous adjustments for non-ignorable missing data (i.e., selection bias), a wide variety of possible time series processes, and robustness to both computational complexity and high-dimensional inference–requirements that are not trivial even with recent advances in statistical computation.
 
-Before beginning the model definition, I first note that I will only consider the case of a 1-dimensional latent variable. The reasons for this focus is largely practical; analyzing multiple-dimensional latent variables would complicate the syntax without adding any useful new features as multi-dimensional ideal point analysis has already been extensively explored [@poole2005; @armstrong2014]. Furthermore, in social science settings, the dimensionality of latent variables is usually quite low and adding in additional dimensions can lead to overly-complex models that are difficult to interpret [@morucciModelComplexitySupervised2024], especially in the case of time-varying latent variables. In any case, all of the analyses that I present below can be straightforwardly modified to accommodate additional noncompensatory dimensions, and for that reason I leave that extension for future research.
+Before beginning the model definition, I first note that I will only consider the case of a 1-dimensional dynamic latent variable. The reasons for this focus is largely practical; in the dynamic setting, multi-dimensionality is a less important feature to consider as a time-varying latent variable is already two-dimensional by definition (i.e., time is the second dimension). Furthermore, in social science settings, the dimensionality of latent variables is usually quite low and adding in additional dimensions can lead to overly-complex models that are difficult to interpret [@morucciModelComplexitySupervised2024], especially in the case of time-varying latent variables. In any case, all of the analyses that I present below can be straightforwardly modified to accommodate additional noncompensatory dimensions.
 
-In this paper I employ a Bayesian interpretation of this model [@jackman2004] that I estimate using Hamiltonian Markov Chain Monte Carlo (HMC) with Stan [@CarpenterGelmanHoffmanEtAl2017]. The two main advantages of using Stan and HMC is that HMC is an algorithm that is remarkably robust for high-dimensional inference of highly correlated parameters—as often occurs in dynamic latent variable modeling—and Stan's use of auto-differentiation permits it to incorporate a wide array of statistical distributions, whether for likelihoods or priors. This combination of robustness and flexibility is what underpins the advances described in this paper. A third and not-insignificant feature, as I explain later, is the ability to parallelize computations, which can dramatically reduce one of the biggest barriers to Bayesian modeling—computational overhead.
+## The Modular Approach of `idealstan`
 
-I am interested in posterior inference on a set of unobserved parameters $\{\alpha_{it},\gamma_j,\beta_j\} \in \theta$ that is conditional on the observed data $Y_{ij}$, or $Pr(\theta|Y_{ij})$. To do so, I define independent priors on $\theta$, $Pr(\theta)$, which is multiplied by the likelihood $L(\cdot)$ that is defined by @eq-Bayes:[^1]
+The `idealstan` model achieves a higher level of flexibility and robustness by fully exploiting computational and statistical advances in Bayesian modeling. `idealstan` is built on top of Stan, which is a powerful sampler for Bayesian inference using Hamiltonian Markov Chain Monte Carlo (HMC) [@betancourt2013]. Relative to existing Bayesian frameworks, such as Metropolis Hastings or Gibbs samplers, HMC is designed for high-dimensional inference (i.e., lots of correlated parameters), and with an auto-differentiation library, can incorporate most statistical distributions for parameters without requiring conjugacy (i.e., mathematical tractability of the posterior distribution). As a consequence, at least in theory, Stan can fit virtually any joint posterior distribution for parameters that is a proper statistical distribution.
+
+For these reasons, Stan-based measurement models have already made a significant impact in the discipline [@barbera2015; @caugheyDynamicEstimationLatent2015; @coppedgeMethodologyVarietiesDemocracy2019]. The main limitation of existing work is that tweaking any of these existing Stan-based models results in a new model, which must be thoroughly tested for convergence. For these reasons, the approach taken in this paper is to fully exploit Stan's flexibility by designing a meta-measurement model that can capture a wide variety of latent traits, which enables scholars to choose the most theoretically-appropriate specification instead of shoehorning their data into a specification designed for a different concept.
+
+<!--# By contrast, applications of Stan's facilities to a broader set of statistical problems, such as with the groundbreaking `brms` package [@burknerBrmsPackageBayesian2017], can radically increase possibilities for Bayesian model estimation and the development of robust statistical models. Furthermore, Stan employs a probabilistic programming language, which allows for models to be symbolically defined in mathematical notation [@CarpenterGelmanHoffmanEtAl2017]. While the difference from conventional programming may appear trivial, this formalization of statistical programming along with the flexibility of Stan's HMC engine means that it is possible to fit a far greater variety of models within the same mathematical framework. So far, political scientists have employed Stan to create novel methods that address difficult topics in measurement . Yet even these impressive contributions have only scratched the surface of Stan's capabilities because they have resulted in bespoke models for the relevant application. -->
+
+In this paper, and in the definitions that follow, I focus on those contributions of `idealstan` that advance the research agenda of dynamic measurement design. However, it is important to note that `idealstan`'s modular architecture, built on top of Stan's state-of-the-art Bayesian sampling system [@CarpenterGelmanHoffmanEtAl2017], can be further applied to statistical measurement problems beyond those discussed in this paper, some of which is discussed in the supplementary information.
+
+## Model Definition
+
+We can begin with the common situation in which a researcher is interested in measuring a time-varying latent concept like democracy, ideology, or state capacity. We can denote this latent concept as $\alpha_{it}$ for each unit $i$ and time point $t$, which by convention we can call an ideal point, although the trait does not need to represent political ideology. While we cannot directly observe $\alpha_{it}$, we do have a set of measurements $Y_{ijt}$ for a given set of items $j \in J$, or attributes, that represent the visible manifestation of the latent trait. We consider each item $j$ to have its own position in this latent space, which we can measure via a discrimination parameter $\gamma_j$ and difficulty parameter $\beta_j$. Items with higher discrimination $\gamma_j$ should, on average, contain more information about the latent trait $\alpha_{it}$. It should be noted that only the latent trait varies over time; an item may have repeated measures at different time points but its discrimination and difficulty parameters remain constant.
+
+We then need obtain posterior inference on this set of unobserved parameters $\{\alpha_{it},\gamma_j,\beta_j\} \in \theta$ that is conditional on the observed measurements $Y_{ijt}$, or $Pr(\theta|Y_{ijt})$. To do so, I define independent priors on the set of parameters $\theta$, $Pr(\theta)$, which is multiplied by an appropriate likelihood $L(\cdot)$ for the measures $Y_{ijt}$ as shown in @eq-Bayes:[^1]
 
 [^1]: I use the proportional symbol $\propto$ to reflect the fact that the term in the denominator representing the probability of the data $Pr(Y_{ij})$ is normally omitted in computational Bayesian analysis as it is fixed with respect to the parameters [@gelman2013].
 
 $$
-Pr(\theta|Y_{ij}) \propto Pr(\theta)L(Y_{ij}|\theta)
+Pr(\theta|Y_{ijt}) \propto Pr(\theta)L(Y_{ijt}|\theta)
 $$ {#eq-Bayes}
 
 Given the standard definition of an ideal point model as a form of an item-response theory specification [@bafumiPracticalIssuesImplementing2005], we can estimate the time-varying ideal points $\alpha_{it}$, discrimination parameters $\gamma_j$, and difficulty parameters $\beta_j$ given our observations $Y_{ijt}$ for each person $i$, time point $t$, and indicator $j$ with the following likelihood $L(\cdot)$:
@@ -136,23 +148,25 @@ $$
 L(Y_{ijt}=1) = \prod^{I}_{i=1}\prod^{T}_{t=1} \prod^{J}_{j=1} logit^{-1}(\gamma_j \alpha_{it} - \beta_j)
 $$ {#eq-basic}
 
-We begin with the assumption that $Y_{ijt}$ is distributed Bernoulli and requires a logit link function as is customary in the literature; later on we will relax this restriction.
+We begin with the assumption that $Y_{ijt}$ is distributed Bernoulli and requires a logit link function as is customary in the literature.
 
-Given that @eq-basic has no data on the right-hand side, we must impose some restrictions or priors to identify the parameters [@bafumiPracticalIssuesImplementing2005]. In a Bayesian context, we assign informative prior distributions to identify the scale and rotation of the latent traits/ideal points $\alpha_{it}$. To implement a time-series process for $\alpha_{it}$, we can incorporate the time-series process in the prior for $\alpha_{it}$ [@martin2002], as I show in the next section.
+Given that @eq-basic has no data on the right-hand side, we must impose some restrictions or priors to identify the parameters [@bafumiPracticalIssuesImplementing2005]. In a Bayesian context, we assign informative prior distributions to identify the scale and rotation of the latent traits/ideal points $\alpha_{it}$. The model presented in this paper employs an informative prior distribution over items to make it easier to identify time-varying latent traits; this method is discussed in SI section 6.
+
+It should be noted that `idealstan` also implements likelihoods for the Normal distribution, the log-Normal distribution, the Poisson distribution, ordinal outcomes for both rating scale and graded response formulations, and the Ordered Beta distribution for bounded continuous responses like percentages and proportions [@kubinecOrderedBetaRegression2022]. Furthermore, because of the modular nature of Stan's probabilistic program engine, these distributions can be mixed at the item level and can be jointly estimated with all of the time series processes and missing-data adjustments discussed previously. For reasons of brevity, I refer the reader to SI Section 1 for the full derivation of these additional likelihoods.
 
 ## Time-varying Inference
 
-In this section, I show how the dynamic ideal point model can be defined for several different time-series processes for a set of latent dynamic ideal points $\alpha_{it}$.
+While there is ample discussion of the interpretation of ideal point models in the canonical static context, there is much more ambiguity about the way that dynamic ideal points should be modeled. What is the correct specification to employ if a latent trait, $\alpha_{it}$, varies over time? The answer provided in this paper is that there is no single such time process; different time processes are more or less useful depending on the particular nature of the theoretical construct. In particular, the scholar needs to consider how the theoretical construct is expected to change over time (slowly, quicky, with stable patterns, etc.) in order to select an appropriate time series specification. As a consequence, the modeling approach presented in this section focuses on implementing a wide array of time series methods from the simple to the complex in order to permit maximum comparability and compatibility with theoretical requirements.
 
-There are two main specifications that have been employed in modeling approaches to date, both of which I will implement. The first method, polynomials or splines, were first used by the DW-NOMINATE model [@rosenthal2007; @armstrong2014; @Caughey2016], which employs a linear time trend to allow for over-time variation at the legislator level across Congressional sessions. The DW-NOMINATE method allows for up to a 3rd-order polynomial trend, but these have not been implemented in DW-NOMINATE scores to date. @bailey2007 later employed a 4th-order polynomial to provide common space scores for the American judiciary, which he argues, "represents a trade-off between flexibility and computation" given the sparseness of judicial decisions.
+I include in this section two time series specifications that have been employed in modeling approaches to date, though rarely together in the same model. The first method, polynomials or splines, were used by the DW-NOMINATE model [@rosenthal2007; @armstrong2014; @Caughey2016], which has a linear time trend to allow for over-time variation at the legislator level across Congressional sessions. The DW-NOMINATE method allows for up to a 3rd-order polynomial trend, but these have not been implemented in DW-NOMINATE scores to date. @bailey2007 later employed a 4th-order polynomial to provide common space scores for the American judiciary, which he argues, "represents a trade-off between flexibility and computation" given the sparseness of judicial decisions.
 
-The other widely-used approach is the random walk model of @quinn2002 in which ideal points in time $t$ are equal to ideal points in $t-1$ plus a Normally-distributed random jump. This much more flexible model—at the cost of estimating one latent trait per person per time point—is quite helpful at determining the probable trend in ideal points over time because it imposes virtually no structure on the time-series trends, although as I discuss below, it adds a considerable greater demand in terms of finding a unique identified solution. While the random walk prior has been widely applied in empirical settings, @reuning2019 note that it may have difficulty capturing rapid shifts in time trends.
+The other widely-used approach is the random walk model of @quinn2002 in which ideal points in time $t$ are equal to ideal points in $t-1$ plus a Normally-distributed random jump. This much more flexible model—at the cost of estimating one latent trait per person per time point—is quite helpful at determining the probable trend in ideal points over time because it imposes virtually no structure on the time-series trends, although as I discuss below, it adds a considerable greater demand in terms of finding a unique identified solution.
 
-While I implement both of the methods above—including a generalized parameterization for polynomial splines—I also implement two new methods, the autoregressive equation of order 1 (AR(1)) and the Gaussian process. These two time-series specifications have not been employed to date in the dynamic ideal point literature, and I incorprorate them because they may be relevant to specific measurement challenges. An AR(1) time-series variable will always return to an over-time mean, i.e, it is "stationary." By contrast, a Gaussian process is one of the most flexible kinds of time-series processes, permitting dramatic shifts from one time point to the next—at the cost of considerably more computational complexity than the random-walk parameterization.
+While I implement both of the methods above—including a generalized parameterization for polynomial splines—I also implement two entirely new specifications for latent measures, the autoregressive equation of order 1 (AR(1)) and the Gaussian process. These two time-series specifications have not been employed to date in the dynamic ideal point literature, and I incorprorate them because they increase by a considerable margin the possibilities for the type of dynamic latent construct that can be estimated. An AR(1) time-series variable will always return to an over-time mean, i.e, it is "stationary." By contrast, a Gaussian process is one of the most flexible kinds of time-series processes, permitting dramatic shifts from one time point to the next—at the cost of considerably more computational complexity than the random-walk parameterization.
 
-It is not my intention in this paper to determine which of these time-series specifications is superior. Rather, I aim to show how these different processes can solve different measurement challenges given costs and trade-offs in terms of the availability of prior information, the nature of the latent trait, and computational feasibility.
+I do not argue in this paper that one of these time-series specifications is superior across all contexts. Rather, I aim to show how these different processes can solve different measurement challenges given costs and trade-offs in terms of the availability of prior information and, most importantly, the known nature of the latent trait.
 
-I begin by defining the random walk by stipulating a relationship in the prior between $\alpha_{it}$ and $\alpha_{it-1}$:
+I begin by defining the random walk as a relationship in the prior between $\alpha_{it}$ and $\alpha_{it-1}$:
 
 $$
 \alpha_{it} \sim N(\delta_i+ \alpha_{it-1},\sigma_i)
@@ -280,86 +294,11 @@ This model is also general enough to allow for the possibility that data is actu
 
 While this missingness model is readily applicable to a legislative context where legislators may not want to show up on votes depending on what the vote would reveal about their ideal points, it is also useful for other non-ignorable missingness patterns. Twitter data is an excellent example. It is well-established that estimating a latent trait like political polarization will be vastly over-stated if the tendency of Twitter (now known as X) users to select who they choose to follow is not taken into account [@Barbera2015]. The two-stage selection model can be used to estimate the people's propensity to retweet ideological content net of their self-selection into whom they follow on social media [@kubinecWhenGroupsFall2021]. For survey data, the two-stage model will take into account that respondents with high or low values on the latent trait could be more or less likely to provide an answer on a given question, and then backwards infer their true ideal point given those varying missingness rates by question.
 
-## Identification of Time-Varying Latent Variables
-
-As I have mentioned, identification for models with time-varying $\alpha_{it}$ is a challenging endeavor that lacks a comprehensive discussion in the literature, often leaving practitioners to spend considerable time guessing what settings might produce an identified latent variable. @quinn2002 addressed this issue for random-walk models by restricting the variance $\sigma_i$ to values strictly between 0 and 0.1. This hard-coded constraint forced the time series to change little over time, though it also limits inference as the time series can only differ so much from each other.
-
-By contrast, I impose generally diffuse priors, or priors strong enough to impose some scaling identifiability, without forcing hard constraints on variance or other parameters. Rather than employ priors that try to fix the ideal point estimation, I argue that an appropriately theoretical model structure should allow for relatively weak priors, which should only be constrained to include relevant empirical information like the known ideological position of actors or items. When the data are both sparse and noisy, and time-varying estimation becomes non-trivial, then the model should employ a time series function like a 3rd-degree spline to remove the possibility of theoretically impossible shifts in ideal points over time. I discuss this approach in more detail in the empirical application and in the simulation results.
-
-I define the priors in terms of the distributions assigned to each parameter in $\theta$:
-
-\begin{align}
-\alpha_i &\sim \text{Normal}(0,3)\\
-\gamma_j &\sim \text{GeneralizedBeta}(2,2)\\
-\beta_j &\sim \text{Normal}(0,3)
-\end{align}\label{eq-genprior}
-
-The ideal points $\alpha_i$ and the discrimination parameters $\beta_j$ are given a loose $N(0,3)$ prior that is weakly informative for most scales and is only needed to make the posterior proper. Identification of the posterior, which is an important issue as these types of measurement models can have multiple possible solutions with equal likelihood [@bafumiPracticalIssuesImplementing2005], happens via a Generalized Beta prior on the discrimination parameters $\gamma_j$:
-
-$$
-f(x; \alpha, \beta, a, b) = \frac{(x - a)^{\alpha - 1} (b - x)^{\beta - 1}}{(b - a)^{\alpha + \beta - 1} B(\alpha, \beta)}
-$$ {#eq-genbeta}
-
-where:
-
-\begin{itemize}
-    \item $\alpha > 0$ and $\beta > 0$ are the shape and scale parameters, analogous to the prior sample size,
-    \item $a = -1$ and $b = 1$ define the support of the distribution,
-    \item $B(\alpha, \beta) = \int_0^1 t^{\alpha - 1} (1 - t)^{\beta - 1} \, dt$ is the Beta function.
-\end{itemize}
-
-The reason I use the Generalized Beta distribution for the items is to resolve two problems at once. First, the restrictions on the range of the $\gamma_j$ parameters solve the problem of identifying a scale for the latent variable because the item discrimination parameters must stay within this range. The Generalized Beta distribution further allows this range to be both positive and negative, which is required for the ideal point model to estimate latent variables with bi-polarity (such as both conservative and liberal ideology). To identify the rotation of the ideal points, specific items can be given a very tight prior, such as:
-
-$$
-\gamma_{j=k} \sim \text{GeneralizedBeta}(10,1000)
-$$ for a parameter with the majority its support around the point -0.98 and
-
-$$
-\gamma_{j=k'} \sim \text{GeneralizedBeta}(1000,10)
-$$
-
-for a parameter with the majority of its support around the point +0.98. The shape and scale parameters of the Generalized Beta have an intuitive interpretation as they represent the prior observed negative and positive observations for a given proportion. As a result, increasing both the scale and shape proportionally will preserve the sample expected value but reduce uncertainty around the expected value of the distribution. With larger datasets, increasing both the shape and scale to larger values, such as $(20000, 200)$, is necessary as the strength of the prior is relative to the size of the data as in @eq-Bayes. To fit a traditional IRT model, on the other hand, all this is necessary is to modify the lower bound ($a$) of the Generalized Beta distribution to 0 rather than -1.
-
-Constraining the discrimination parameters builds on work that shows that identification of the items (i.e., votes) in an ideal point model has superior theoretical properties as it allows for the ideal points to float freely [@morucciMeasurementThatMatches2024]. In addition, constraining item parameters is helpful for dynamic ideal point estimation as items may occur at different points in the time series, whereas constraining dynamic ideal points is limited to fixing the starting positions of time series. With increasing time points, the starting positions of the actors become less influential, making identification more difficult to achieve.
-
-I assign weakly informative values of +2 to each of the distribution's parameters (scale and shape) so that values of 0, or the midpoint of the distribution, are weakly preferred over the end points. With this prior, no further work is necessary to fix a scale and all other parameters can have weakly informative priors. In fact, if there is enough data, the discrimination parameters can have the uninformative Generalized Beta prior of +1, +1 so that all unconstrained discrimination parameters $\gamma_j$ are equally likely in the $(-1, 1)$ interval–which is much less informative than the Normal prior that is commonly used.
-
-If the missing data is modeled directly as described previously, the model does not generally require more identifying information than previously stipulated (i.e., at least some observed item discriminations $\gamma_j$ pinned to high and low values). However, the missingness space does raise model complexity, it can require more computation and can in some cases require additional pinned item discrimination parameters. However, the missingness parameters themselves can have similar weakly informative Generalized Beta priors without causing any serious problems with identification:
-
-\begin{align}
-\nu_j &\sim \text{GeneralizedBeta}(2,2)\\
-\omega_j &\sim \text{Normal}(0,3)
-\end{align}\label{eq-missprior}
-
-## Diverse Distributions
-
-Up to this point, I have followed convention in assuming that the observed data $Y_{ijt}$ is a binary outcome (Bernoulli distribution). However, this is a limitation which unnecessarily restricts dynamic ideal point models to binary data. There are a number of implementations of mixed outcomes for static ideal point models, such as the Poisson "Wordfish" model [@slapin2008], the ordinal model in @imaiFastEstimationIdeal2016, and the multinomial model in @goplerudMultinomialFrameworkIdeal2019. The restriction of dynamic models to binary outcomes requires either dichotomization of the observed indicators or for scholars to employ a static model that obscures over-time variation.
-
-Within the Bayesian framework I have proposed, and combined with the extraordinary flexibility of Stan's HMC engine, virtually any distribution for $Y_{ijt}$ is possible and it is even possible to let the distribution for $Y_{ijt}$ to vary at the item level, i.e., to include items of binary, ordinal, or even continuous distributions for the same latent variable [@kropko2013]. These types of mixed outcomes are especially important for survey data in which questions could have binary, ordinal, proportions, counts or continuous response distributions.
-
-To use a different distribution, the likelihood function $L(\cdot)$ in @eq-inflate2 can be modified with any probability density or mass function that properly integrates or sums to 1 where $m$ is an index for all $M$ distributions used for the mixed outcome $Y_{ijtm}$:
-
-$$
-  L(Y_{ijtm}|\alpha_{it},\gamma_j,\beta_j) =  \prod_{i-1}^{I} \prod_{j=1}^{J} \prod_{t=1}^{T} \prod_{m=1}^{M} L_m(\gamma_j\alpha_{it}-\beta_j)
-$$ {#eq-likem}
-
-where $L_m$ represents the likelihood function for the $m$th distribution. All of these models can also be estimated marginal of missing data $r$.
-
-`idealstan` implements such likelihoods for the Normal distribution, the log-Normal distribution, the Poisson distribution, ordinal outcomes for both rating scale and graded response formulations, and the Ordered Beta distribution for bounded continuous responses like percentages and proportions [@kubinecOrderedBetaRegression2022]. Furthermore, because of the modular nature of Stan's probabilistic program engine, these distributions can be mixed at the item level and can be jointly estimated with all of the time series processes and missing-data adjustments discussed previously. For reasons of brevity, I refer the reader to the first section of the supplementary information for the full derivation of these additional likelihoods.
-
-## Identification and Starting Values
-
-Identifying a single mode (or estimate) of time-varying latent variables given noisy data can be very difficult to achieve. As mentioned previously, @quinn2002 used a very restrictive bound on over-time variance to identify their estimates of Supreme Court justices. In order to estimate DW-NOMINATE using optimization methods, Poole and Rosenthal had to undergo a laborious process of choosing starting values for legislator ideal points, estimating dynamic scores, and then reviewing the scores to see if they resembled their theoretical priors [@carrollMeasuringBiasUncertainty2009]. Similarly, @barbera2015 scores were only possible to derive by using starting values for HMC with Stan that accorded with theoretical expectations about ideal point distributions.
-
-While identifying the sign and rotation of ideal points with pinned discrimination parameters is sufficient for static models, high-dimensional time-varying latent variable model posteriors can be difficult for HMC to adequately explore even though it is the most robust and stable MCMC algorithm available [@CarpenterGelmanHoffmanEtAl2017]. For high-dimensional models, such as latent variables with hundreds of time points, HMC can end up in lower-probability modes that may have the opposite polarity of what the identification restrictions require. Specifying starting values that are closer to the posterior mode can help HMC converge and explore the posterior for very difficult problems [@barbera2015]. However, specifying starting values a priori can either be extremely tedious as the DW-NOMINATE procedure mentioned previously or it can result in latent variables that depend on arbitrarily chosen starting values that can mask convergence issues with HMC and result in fragile inferences.
-
-To address this problem, `idealstan` implements a novel method for identifying starting values for high-dimensional HMC using what is known as the Pathfinder algorithm [@zhangPathfinderParallelQuasiNewton2021]. The Pathfinder algorithm is a form of variational inference [@goplerudMultinomialFrameworkIdeal2019; @Grimmer2011] that approximates the joint posterior by minimizing the Kullback-Leibler divergence with a form of Newton optimization. While this approximation is unlikely to capture the exactly correct form of the joint posterior distribution, it is remarkably robust considering its relative simplicity [@zhangPathfinderParallelQuasiNewton2021]. Importantly, Pathfinder integrates with the Stan framework so that Pathfinder can first be used to identify starting values for the HMC algorithm, which is particularly important for high-dimensional time-varying models. These starting values are optimal in the sense that they should be reasonably close to the posterior mode, and they also do not reflect researcher discretion, which makes them a more robust choice for measurement exercises as they are in principle replicable.
-
-<!--# This method of "mode-finding" works so well that in fact it can even be used in place of the identification restrictions on item parameters mentioned previously, but it should be noted that by doing so, the ideal point model is no longer a confirmatory method and instead should be used in an exploratory context in which the derived latent variable may or may not have any clear empirical meaning. For all the empirical examples shown later, Pathfinder was used to ensure convergence of the HMC chains to the optimal mode conditional on informative identification conditions.  -->
-
 ## Big Data Inference
 
-The Achilles heel of Bayesian inference is generalizing to large data sets. Markov chains, which form the core of the estimation engine, cannot be easily parallelized as each iteration depends on the value of the previous iteration. However, recently the Stan team has implemented a way to parallelize the *posterior gradient* computation within a Markov chain, which are necessary and very expensive to calculate the iteration trajectories of Hamiltonian MCMC. Any model likelihood can be parallelized in terms of its gradient calculations so long as the parameters are conditionally independent within discrete subsets or "shards" of the data. For a static ideal point model, this means that the likelihood can be parallelized across subsets of persons or items. For a dynamic model, parallelization can be performed across persons as the ideal point for a given person at time $t$ depends on the value of the ideal point in $t-1$, which would break conditional independence of parameters if the data were subset by item.
+The Achilles heel of Bayesian inference is generalizing to large data sets. Markov chains, which form the core of the estimation engine, cannot be easily parallelized as each iteration depends on the value of the previous iteration. However, recently the Stan team has implemented a way to parallelize the *posterior gradient* computation within a Markov chain, which are necessary and very expensive to calculate the iteration trajectories of Hamiltonian MCMC. Any model likelihood can be parallelized in terms of its gradient calculations so long as the parameters are conditionally independent within discrete subsets or "shards" of the data. 
+
+The `idealstan` model solves the independence problem by calculating likelihoods within discrete subsets of parameters. For a static ideal point model, this constraint means that the likelihood is parallelized across subsets of persons or items. For a dynamic model, parallelization is performed across persons as the ideal point for a given person at time $t$ depends on the value of the ideal point in $t-1$, which would break conditional independence of parameters if the data were subset by item.
 
 This type of parallelization of the gradient calculations is implemented for all of the models previously described. This allows for the computation of Bayesian ideal points for datasets that were previously intractable due to the length of time required. However, it should be noted that this type of parallelization does have significant overhead as not all of the computations of the Markov Chain are parallelizable, and as a result significant information must be shared across parallel threads.
 
@@ -373,15 +312,11 @@ Both of these methods are implemented in `idealstan` as both approximations may 
 
 ## Monte Carlo Simulation
 
-Using the specifications described previously, I generated simulated data with a Bernoulli (binary) outcome for dynamic ideal points $\alpha_{it}$ with each of the time series processes (splines, GPs, random walk, and AR(1)). I fix the number of persons in the model at 30 and vary the number of items from 100 to 400. I also vary whether non-ignorable missing data is present or absent, and the number of time points from 10 to 20. The data are generated using the same priors described previously except that I use an informative $\text{Normal}(0,1)$ prior on the initial time period ideal points to match existing specifications. I do not consider other outcome distributions as there are no comparable models for dynamic ideal points with non-binary distributions at present.[^2]
+Using the specifications described previously, I generated simulated data with a Bernoulli (binary) outcome for dynamic ideal points $\alpha_{it}$ with each of the time series processes (splines, GPs, random walk, and AR(1)). I fix the number of persons in the model at 30 and vary the number of items from 100 to 400. I also vary whether non-ignorable missing data is present or absent, and the number of time points from 10 to 20. The data are generated using the same priors described previously except that I use an informative $\text{Normal}(0,1)$ prior on the initial time period ideal points to match existing specifications. I do not consider other outcome distributions as there are no comparable models for dynamic ideal points with non-binary distributions at present.
 
-[^2]: The primary exception is the work of @caugheyDynamicEstimationLatent2015 who model public opinion with the Binomial distribution. However, I do not include this specification as it is a traditional IRT formulation (the discrimination parameters are constrained to be positive) and because the model has a more specific purpose in estimating latent public opinion.
-
-I ran the simulation using `R` as `R` contains the best coverage of ideal point models. Alternative specifications that I tested included `mcmcPACK` [@quinn2002], `emIRT` [@imaiCausalInferenceDifferential2010], and DW-NOMINATE [@carrollMeasuringBiasUncertainty2009a].[^3] Output from these models was standardized using the posterior draws in the case of `mcmcPACK` and using parametric bootstrap draws in the case of `emIRT` and DW-NOMINATE. I also include the Pathfinder and Laplace approximation methods in addition to Hamiltonian Markov Chain Monte Carlo in `idealstan` as separate estimates. `idealstan`'s HMC method is allowed to use 4 cores to speed up estimation, which is also provided to `emIRT`.[^4]
+I ran the simulation using `R` as `R` contains the best coverage of ideal point models. Alternative specifications that I tested included `mcmcPACK` [@quinn2002], `emIRT` [@imaiCausalInferenceDifferential2010], and DW-NOMINATE [@carrollMeasuringBiasUncertainty2009a].[^3] Output from these models was standardized using the posterior draws in the case of `mcmcPACK` and using parametric bootstrap draws in the case of `emIRT` and DW-NOMINATE. I also include the Pathfinder and Laplace approximation methods in addition to Hamiltonian Markov Chain Monte Carlo in `idealstan` as separate estimates. `idealstan`'s HMC method is allowed to use 4 cores to speed up estimation, which is also provided to `emIRT`. I used default settings for estimation, and for `idealstan` and `mcmcPACK`, I ran their respective samplers for 1,000 and 60,000 iterations (HMC samplers require fewer iterations than Gibbs samplers). I also set priors where available to match `idealstan` priors, i.e. such as tight $N(0,1)$ priors on ideal point intercepts.
 
 [^3]: For DW-NOMINATE I employed the R package `dwnominate` , which is a front-end to the original FORTRAN code. See <https://github.com/wmay/dwnominate>.
-
-[^4]: Though the `emIRT` documentation says it uses multiple cores to speed up estimation, this does not seem to apply to its dynamic ideal point methods. Speed is essentially the same with or without multiple cores.
 
 I also generate an additional observed outcome $Y$ using simulated ideal points $\alpha_{it}$ via the following specification:
 
@@ -394,7 +329,7 @@ where $\beta_S$ is the coefficient of interest for recovery and fixed at +0.025.
 
 The aim of the simulation is to compare the different models by how well they can estimate the true (standardized) ideal points, measured with RMSE and Kendall's tau rank coefficient for rank order, along with inference on downstream quantities ($\beta_S$). I measure downstream inference performance using the S error and M error statistics in which an S error occurs when an estimate of $\beta_S$ is statistically significant at the 0.05 level but of the wrong sign and an M error is the relative inflation of statistically significant estimates to the true values (i.e., the absolute value of the ratio) [@gelman2014types]. I employ these measures, as opposed to predictive measures of model fit, as they correspond more closely to the goals scholars aim to achieve with ideal point models: measuring the latent trait accurately for a set of persons or institutions and using estimated scores as covariates in downstream analyses.[^5]
 
-[^5]: Some scholars have been employing the method of composition to propagate measurement errors in downstream models [@jerzakAttenuationBiasWhen2024], but lately this method has come under criticism for lacking a clear statistical basis. For these reasons I do not perform this additional adjustment as error propagation is not particularly important for the task of comparing across models.
+[^5]: Some scholars have been employing the method of composition to propagate measurement errors in downstream models [@jerzak2024], but lately this method has come under criticism for lacking a clear statistical basis. For these reasons I do not perform this additional adjustment as error propagation is not particularly important for the task of comparing across models.
 
 Because estimation of these models can be quite lengthy—especially for Markov Chain Monte Carlo methods like `mcmcPACK`--I have to limit the number of draws of the simulation. Employing a high-performance cluster [@calderOokamiA64FXComputing2024], I was able to produce 5,760 simulation draws across 288 separate conditions. Because each simulation had a large number of ideal point parameters, some statistics like RMSE, which are defined relative to the full set of generated ideal points, are estimated more precisely than others that only varied across simulation draws like M and S errors of downstream regressions.
 
@@ -406,25 +341,12 @@ In this section I first discuss model comparison with the simulation results and
 
 ## Simulation
 
-The simulation results are shown in @fig-rmse, @fig-kendall, @fig-serrs, @fig-merrs, and @fig-time, with additional results in SI section 5. @fig-rmse and @fig-kendall show the performance of each method in terms of capturing each individual ideal point relative to true estimates. @fig-rmse shows that `idealstan` (with HMC) had lower RMSE and a higher Kendall tau coefficient across time processes, as would be expected given that `idealstan` is the "true" model. Furthermore, the missing data adjustment has almost no penalty on these metrics, showing that `idealstan` with the HMC estimation method is able to fully endogenize this missingness and return accurate measures of ideal points.
-
-```{r fig-rmse}
-#| fig-cap: "RMSE of Estimated to True Ideal Points by Model"
-#| label: fig-rmse
-#| cache: false
-#| fig-height: 4.5
-
-rmse_plot <- readRDS("data/plot_rmse_all_corrected.rds")
-
-rmse_plot
-
-```
+The simulation results are shown in  @fig-kendall and @fig-time, with supplementary results in SI Figures 7 (RMSE), 8 (S-errors), and 9 (M-errors) (see SI Section 5). @fig-kendall and SI Figure 7 show the performance of each method in terms of capturing each individual ideal point relative to true estimates. @fig-kendall shows that `idealstan` (with HMC) had a higher Kendall tau coefficient (correlation) across time processes, as would be expected given that `idealstan` is the "true" model. Furthermore, the missing data adjustment has almost no penalty on these metrics, showing that `idealstan` with the HMC estimation method is able to fully endogenize this missingness and return accurate measures of ideal points. As can be seen, there are considerable penalties for estimation accuracy when either the time process is mis-specified, missing data is ignored, or both in combination.
 
 ```{r kendall}
 #| fig-cap: "Kendall Tau Rank Coefficient of Estimated Ideal Points by Model"
 #| label: fig-kendall
 #| cache: false
-#| fig-height: 4.5
 
 kendall_plot <- readRDS("data/kendall_tau.rds")
 
@@ -432,45 +354,22 @@ kendall_plot
 
 ```
 
-While this result was expected given that `idealstan` is the true model, it is more interesting to compare the performance of the approximation methods along with the other models. `emIRT` and `mcmcPACK` show significant declines in performance when missing data is included in both RMSE (@fig-rmse) and Kendall tau coefficients (@fig-kendall), though the difference is more noticeable in the Kendall tau coefficients. The approximation methods Laplace and Pathfinder were more robust than the methods without missing data adjustments, although they performed better in simpler time series processes like splines and random walks. On the other hand, a noticeable gap exists for these metrics for approximations versus true HMC in the Gaussian process results.
+While this result was expected given that `idealstan` is the true model, it is more interesting to compare the performance of the approximation methods along with the other models. `emIRT` and `mcmcPACK` show significant declines in performance when missing data is included in both RMSE (SI Figure 7) and Kendall tau coefficients (@fig-kendall), though the difference is more noticeable in the Kendall tau coefficients. The approximation methods Laplace and Pathfinder were more robust than the methods without missing data adjustments, although they performed better in simpler time series processes like splines and random walks. On the other hand, a noticeable gap exists for these metrics for approximations versus true HMC in the Gaussian process results.
 
 `mcmcPACK`, which is the other Bayesian method under consideration, performed best in the random walk specification, which would be expected as that is the same time series process it employs. `mcmcPACK` performed as well as `emIRT` on the Gaussian process and AR(1) specifications, but performed much more poorly on the spline method. In fact, `emIRT` performed quite well on the spline process, with its RMSE score better than the Pathfinder and Laplace approximation methods even though it employs a random walk time series method. This exceptional performance might be a side effect of the variational method in `emIRT` that simplifies the random walk process into a lower-dimensional space [@imaiFastEstimationIdeal2016] and potentially fits a spline function better.
 
-```{r serrs}
-#| fig-cap: "S Error Rates for Downstream Regression of Estimated Ideal Points by Model"
-#| cache: false
-#| label: fig-serrs
-#| fig-height: 4.5
+The results for the downstream regression of estimated ideal point scores show similar trends with some noticeable differences. SI Figure 8 reveals that the difference between models is more modest for the S error metric, although `idealstan` with the HMC method is still superior. There remains a noticeable difference between estimations with missing and non-missing data for the random walk, AR(1), and Gaussian process specifications, with methods like `mcmcPACK` resulting in S error rates that are about 50% greater on average than with observed data.
 
-s_err_plot <- readRDS("data/s_errors.rds")
+The M error plot in SI Figure 9, which aggregates across time series methods, shows that there is indeed a substantial penalty for alternative methods in terms of time series and missing data mis-specification. Interestingly, while the approximation methods Laplace and Pathfinder perform better on average than `emIRT` and `mcmcPACK`, they show high M error rates with missing data adjustment, while the `idealstan` method with HMC does not. As can be seen, the approximation methods seem to perform better with simpler ideal point specifications, though they can still out-perform a robust method like MCMC with the wrong model.
 
-s_err_plot
+Finally, @fig-time shows that `emIRT` remains the fastest estimation method as a function of the number of items included in the simulation, followed by `idealstan` with the Pathfinder and Laplace approximations. `idealstan` with HMC and `mcmcPACK` are close to each other in estimation time when the number of items is small (100), but diverge significantly as the number of items increases. Estimation time for `idealstan` with parallelization of 4 cores is approximately linear in the number of items $N$ ($O(N)$) while `mcmcPACK` and its Gibbs sampler is approximately quadratic in the number of items ($O(N^2)$), which makes larger datasets intractable for `mcmcPACK`.
 
-```
-
-```{r merrs}
-#| fig-cap: "M Error Rates for Downstream Regression of Estimated Ideal Points by Model"
-#| cache: false
-#| label: fig-merrs
-#| fig-height: 4.5
-
-m_err_plot <- readRDS("data/plot_m_errors.rds")
-
-m_err_plot
-
-```
-
-The results for the downstream regression of estimated ideal point scores show similar trends with some noticeable differences. @fig-serrs reveals that the difference between models is more modest for the S error metric, although `idealstan` with the HMC method is still superior. There remains a noticeable difference between estimations with missing and non-missing data for the random walk, AR(1), and Gaussian process specifications, with methods like `mcmcPACK` resulting in S error rates that are about 50% greater on average than with observed data.
-
-The M error plot in @fig-merrs, which aggregates across time series methods, shows that there is indeed a substantial penalty for alternative methods in terms of time series and missing data mis-specification. Interestingly, while the approximation methods Laplace and Pathfinder perform better on average than `emIRT` and `mcmcPACK`, they show high M error rates with missing data adjustment, while the `idealstan` method with HMC does not. As can be seen, the approximation methods seem to perform better with simpler ideal point specifications, though they can still out-perform a robust method like MCMC with the wrong model.
-
-Finally, @fig-time shows that `emIRT` remains the fastest estimation method as a function of the number of items included in the simulation, followed by Pathfinder and then the Laplace approximation. `idealstan` and `mcmcPACK` are close in estimation time with a smaller number of items (100), but diverge significantly as the number of items increases. `idealstan` HMC with parallelization of 4 cores is approximately $O(N)$ while `mcmcPACK` and its Gibbs sampler is approximately $O(N^2)$, which makes larger models intractable. As the data size increases, the parallel overhead remains constant, which makes the `idealstan` within-chain parallelization scheme more efficient. In addition, speed can be improved for `idealstan` by increasing the number of cores up to the number of persons in the data. The level of speed enhancement for an increasing number of cores up to 48 and fixed data with `idelastan` is shown in the SI in Figure 2.
+The reason for the superior performance of `idealstan` with a larger number of items is that the parallel overhead remains relatively constant, which makes the `idealstan` within-chain parallelization scheme more efficient as datasets increase in size. In addition, speed can be improved for `idealstan` by increasing the number of cores up to the number of persons in the data. The level of speed enhancement for an increasing number of cores up to 48 and fixed data with `idelastan` is shown in SI Figure 2.
 
 ```{r time}
 #| fig-cap: "Estimation Time by Model and Number of Items"
 #| cache: false
 #| label: fig-time
-#| fig-height: 4.5
 
 time_plot <- readRDS("data/plot_time_elapsed_n_items.rds")
 
@@ -480,11 +379,13 @@ time_plot
 
 ## Empirical Application
 
-In this section, I combine the missing-data adjustment along with the new time-series methods in `idealstan` to show how to connect modeling approaches to theories. To do so, I fit time-varying ideal point models to estimate monthly legislator ideal points for Congresspeople in the U.S. House–a much finer resolution than the yearly dynamic ideal points that have been used for some time [@poole1997]. While my total dataset encompasses the period 1990 to 2018, I focus first on the 115th Congress (2016 to 2018) as it permits easier comparison of the different time series methods.
+In this section, I combine the missing-data adjustment along with the new time-series methods in `idealstan` to show how to connect modeling approaches to theories. Unlike existing methods, I do not simply adopt a single time series process, but rather explore the posterior trajectory of different time series processes to determine which process most closely fits the latent concept of interest, which is in this case the canonical application of legislator ideology.
+
+To do so, I fit time-varying ideal point models to estimate monthly legislator ideal points for Congresspeople in the U.S. House–a much finer resolution than the yearly dynamic ideal points that have been used for some time [@poole1997]. While my total dataset encompasses the period 1990 to 2018, I focus first on the 115th Congress (2016 to 2018) as it permits easier comparison of the different time series methods.
 
 I estimate time-varying Congressperson ideal points using all four time series specifications discussed so far: random walk, AR(1), Gaussian process, and splines. For the spline specifications, I consider splines of degrees 2, 3 and 4 while using only one knot (i.e., one polynomial function for the whole time period). As I show later, when modeling multiple Congressional sessions, using knots for presidential administrations allows for period effects in the time series. With only one Congressional session, however, a single polynomial function is sufficient as it would not be expected for a member of Congress to switch their ideological position in a noticeable way more than once or perhaps twice per term.
 
-To preview the findings, I show that the simpler time series models, i.e. the splines, are the best option for higher resolution ideal points for this type of legislative behavior. The other more complicated time-series models are only identified because of the use of Pathfinder to identify starting values in a single mode. While this is a valid form of measurement inference, as I show below, these more flexible models are clearly not appropriate for a dataset with many sparse time points as they permit too much over-time variation. The issue is not technical but rather theoretical: these models allow more over-time change in ideal points than the theoretical construct (ideology) permits.
+To preview the findings, I show that the simpler time series models, i.e. the splines, are the best option for higher resolution ideal points for this type of legislative behavior. The other more complicated time-series models are only identified because of the use of Pathfinder to identify starting values in a single mode. While this is a valid form of measurement inference, as I show below, these more flexible models are clearly not appropriate for a theoretical construct that varies only slowly at the monthly level. The issue is not technical but rather theoretical: time-series specifications with large numbers of parameters per legislator allow more over-time change in ideal points than the theoretical construct (ideology) permits.
 
 ```{r loadmodels,include=FALSE}
 
@@ -808,38 +709,13 @@ rm(list=ls()[grepl(x=ls(),pattern = "unemp")])
 
 ```
 
-I first examine the overall distributions of the ideal point scores over time for each model in @fig-alldist when employing only observed votes (i.e., ignoring absences and abstentions). To help with plotting these distributions, uncertainty intervals are removed and instead I plot the average of posterior draws for each legislator ideal point $\alpha_i$ separately by party. As can be seen, the different methods have differing interpretations of ideal point trajectories, although all models in general show relative stability over the monthly periods of the 115th Congress. The main difference is that the more complex models, including the AR(1), random walk, and GP, show much higher levels of over-time variation for some legislators. Based on the short time period of the 115th Congress, and the fact that we are attempting to study legislator ideology, we should be skeptical of these rapid trajectories as reflecting either noise in the data or other aspects of legislative behavior (such as the scheduling of votes) that are polluting our estimate of the latent trait. The spline-based models, by contrast, show change over time for some legislators but change is relatively smooth, i.e., ideology does not change rapidly from to rollcall to rollcall as we would expect.
-
-```{r dists}
-#| label: fig-alldist
-#| fig-cap: "Comparison of Time-varying Ideal Point Methods for the 115th Congress with Observed Votes"
-#| message: false
-#| warning: false
-#| fig-height: 6
-#| fig-width: 6
-
-  un1 <- readRDS("data/un1.rds")
-  un2 <- readRDS("data/un2.rds")
-  un3 <- readRDS("data/un3.rds")
-  rw <- readRDS("data/rw.rds")
-  ar <- readRDS("data/ar.rds")
-  gp <- readRDS("data/gp.rds")
-
-un1 + un2 + un3 + ar + gp + rw + plot_layout(nrow=2,
-                                             guides="collect") + 
-  plot_annotation(caption="Posterior average values shown for 115th Congress legislator ideal points.\nItem discrimination for Republican party-line votes was constrained to be positive.") & theme(legend.position = "top",
-                                                                                                                                                                                                    plot.title=element_text(size=9))
-
-
-```
+The expected posterior distributions of the ideal point scores over time for each model are shown in SI Figure 10 when employing only observed votes (i.e., ignoring absences and abstentions). As can be seen, the different methods have differing interpretations of ideal point trajectories, although all models in general show relative stability over the monthly periods of the 115th Congress. The main difference is that the more complex models, including the AR(1), random walk, and GP, show much higher levels of over-time variation for some legislators. Based on the short time period of the 115th Congress, and the fact that we are attempting to study legislator ideology, we should be skeptical of these rapid trajectories as reflecting either noise in the data or other aspects of legislative behavior (such as the scheduling of votes) that are polluting our estimate of the latent trait. The spline-based models, by contrast, show change over time for some legislators but change is relatively smooth, i.e., ideology does not change rapidly from to rollcall to rollcall as we would expect.
 
 ```{r distsamash1}
 #| label: fig-amashdist
 #| fig-cap: "Comparison of Justin Amash Time-varying Ideal Points for the 115th Congress with Observed Votes"
 #| message: false
 #| warning: false
-#| fig-height: 6
-#| fig-width: 6
 
   un1_a <- readRDS("data/un1_a.rds")
   un2_a <- readRDS("data/un2_a.rds")
@@ -850,110 +726,27 @@ un1 + un2 + un3 + ar + gp + rw + plot_layout(nrow=2,
 
 un1_a + un2_a + un3_a + ar_a + gp_a + rw_a + plot_layout(nrow=2,
                                              guides="collect") + 
-  plot_annotation(caption="Posterior average values shown for 115th Congress legislator ideal points.\nItem discrimination for Republican party-line votes was constrained to be positive.") & theme(legend.position = "top",
+  plot_annotation(caption="Posterior average values shown for 115th Congress legislator ideal points.\nItem discrimination for Republican party-line votes was constrained to be positive.") & theme(legend.position = "none",
                                                                                                                                                                                                     plot.title=element_text(size=9))
 
 ```
 
-Even with the relative stability in @fig-alldist, there are some legislators whose ideal points do change over time. In @fig-amashdist, I plot the monthly ideal point trajectory for Justin Amash, a Republican Congressman who famously became embroiled in disputes with then-President Donald Trump over foreign policy. As @fig-amashdist shows, Justin Amash shows strong movement in a positive or conservative direction in the middle of the Congressional session. This seems to correspond with his increasing disputes with the Trump White House over foreign policy in particular. Amash's criticism escalated after Trump had a closed door meeting with Russian president Vladimir Putin on July 16, 2016.[^6] Per the plots in @fig-amashdist, this event coincided with noticeable movement in a conservative direction. All of the models show this movement, while the more complex time series like GPs show a more sudden jump. The splines, despite being much simpler, are able to capture the approximate same trajectory while using fewer parameters.
+Even with the relative stability in SI Figure 10, there are some legislators whose ideal points do change over time. In @fig-amashdist, I plot the monthly ideal point trajectory for Justin Amash, a Republican Congressman who famously became embroiled in disputes with then-President Donald Trump over foreign policy. As @fig-amashdist shows, Justin Amash shows strong movement in a positive or conservative direction in the middle of the Congressional session. This seems to correspond with his increasing disputes with the Trump White House over foreign policy in particular. Amash's criticism escalated after Trump had a closed door meeting with Russian president Vladimir Putin on July 16, 2016.[^6] Per the plots in @fig-amashdist, this event coincided with noticeable movement in a conservative direction. All of the models show this movement, while the more complex time series like GPs show a more sudden jump. The splines, despite being much simpler, are able to capture the approximate same trajectory while using fewer parameters.
 
 [^6]: For more information, see \url{https://thehill.com/homenews/house/397787-gop-lawmaker-trump-went-out-of-his-way-to-appear-subordinate-at-putin-press/}.
 
-```{r distscompwalz}
-#| include: false
-
-
-  un1_tw <- readRDS("data/un1_tw.rds")
-  un2_tw <- readRDS("data/un2_tw.rds")
-  un3_tw <- readRDS("data/un3_tw.rds")
-  gp_tw <- readRDS("data/gp_tw.rds")
-  rw_tw <- readRDS("data/rw_tw.rds")
-  ar_tw <- readRDS("data/ar_tw.rds")
-
-
-
-```
-
-```{r distsamash2}
-#| label: fig-amashdist1
-#| fig-cap: "Comparison of Justin Amash Time-varying Ideal Points for the 115th Congress with Missing Votes"
-#| message: false
-#| warning: false
-#| fig-height: 6
-#| fig-width: 6
-#| include: false
-
-  un1_am <- readRDS("data/un1_am.rds")
-  un2_am <- readRDS("data/un2_am.rds")
-  un3_am <- readRDS("data/un3_am.rds")
-  gp_am <- readRDS("data/gp_am.rds")
-  rw_am <- readRDS("data/rw_am.rds")
-  ar_am <- readRDS("data/ar_am.rds")
-
-un1_am + un2_am + un3_am + ar_am + gp_am + rw_am + plot_layout(nrow=2,
-                                             guides="collect") + 
-  plot_annotation(caption="Posterior average values shown for 115th Congress legislator ideal points.\nItem discrimination for Republican party-line votes was constrained to be positive.") & theme(legend.position = "top",
-                                                                                                                                                                                                    plot.title=element_text(size=9))
-
-```
 
 We can next turn to estimation of legislator ideal points for the 115th Congress when incorporating strategic abstention. To provide context of abstention in the U.S. House, Figures 3 and 4 in the SI provide descriptive information about absence rates in the U.S. House from 1990 to 2018 measured for each rollcall vote. The figures reveal that while absence rates are stable over time, they tend to increase towards the end of the legislative session. This within-session variation in absence rates implies that a time-varying model that incorporates this missing data mechanism—i.e. to discover whether legislators tend to show up for rollcall votes that are more or less polarized—could likewise capture new insights into the study of strategic legislative absence [@cloléry2023; @battaglini2023; @rothenberg2000].
 
-@fig-alldist2 shows that there is justification for this belief in the 115th Congress. The spline models show interesting heterogeneity at the end of the session. In general, the more complex models show even more over-time variation, though the movements are so large as to be implausible and are another reason that simpler splines should be preferred given the nature of the theoretical construct. There is also some evidence of increasing overlap in the distributions between parties at the end of the session which is not apparent in the observed data distribution in @fig-alldist. This could be evidence that at the end of the session there is increased opportunity for deal-making.
+SI Figure 13 shows that there is justification for this belief in the 115th Congress. The spline models show interesting heterogeneity at the end of the session. In general, the more complex models show even more over-time variation, though the movements are so large as to be implausible and are another reason that simpler splines should be preferred given the nature of the theoretical construct. There is also some evidence of increasing overlap in the distributions between parties at the end of the session which is not apparent in the observed data distribution in SI Figure 10. This could be evidence that at the end of the session there is increased opportunity for deal-making.
 
-We can examine the ideal point trajectories for then-Representative Tim Walz, who in 2018 announced his run to be governor of Minnesota, as a legislator whose absences may have been strategic. I first plot in @fig-walzdist1 the monthly ideal points for Walz with only observed data and in @fig-walzdist2 the ideal points for Walz when incorporating a missing-data adjustment. In a similar manner to Amash, Walz shows a noticeable change in ideal point trajectory towards the end of the session, but in this case the movement is only apparent in the missing-data model in @fig-walzdist2. Furthermore, the models in @fig-walzdist2 show his ideal point moving in a clear negative or liberal direction. Once it became more costly for Walz to show up to vote, his pattern of voting became more similar to those who were on the left wing of the party. This behavior could correspond to Walz's need to appear more liberal in order to win the Democratic primary in the gubernatorial race, which occurred on August 15, 2018.
-
-```{r dists2}
-#| label: fig-alldist2
-#| fig-cap: "Comparison of Time-varying Ideal Point Methods for the 115th Congress with Missing Votes"
-#| message: false
-#| warning: false
-#| fig-height: 6
-#| fig-width: 6
-
-  un1m <- readRDS("data/un1m.rds")
-  un2m <- readRDS("data/un2m.rds")
-  un3m <- readRDS("data/un3m.rds")
-  rwm <- readRDS("data/rwm.rds")
-  arm <- readRDS("data/arm.rds")
-  gpm <- readRDS("data/gpm.rds")
-
-un1m + un2m + un3m + arm + gpm + rwm + plot_layout(nrow=2,
-                                             guides="collect") + 
-  plot_annotation(caption="Posterior average values shown for 115th Congress legislator ideal points.\nItem discrimination for Republican party-line votes was constrained to be positive.") & theme(legend.position = "top",
-                                                                                                                                                                                                    plot.title=element_text(size=9))
-
-```
-
-```{r distswalz1}
-#| label: fig-walzdist1
-#| fig-cap: "Comparison of Tim Walz Time-varying Ideal Points for the 115th Congress with Observed Votes"
-#| message: false
-#| warning: false
-#| fig-height: 6
-#| fig-width: 6
-
-  un1_tw <- readRDS("data/un1_tw.rds")
-  un2_tw <- readRDS("data/un2_tw.rds")
-  un3_tw <- readRDS("data/un3_tw.rds")
-  gp_tw <- readRDS("data/gp_tw.rds")
-  rw_tw <- readRDS("data/rw_tw.rds")
-  ar_tw <- readRDS("data/ar_tw.rds")
-
-un1_tw + un2_tw + un3_tw + ar_tw + gp_tw + rw_tw + plot_layout(nrow=2,
-                                             guides="collect") + 
-  plot_annotation(caption="Posterior average values shown for 115th Congress legislator ideal points.\nItem discrimination for Republican party-line votes was constrained to be positive.") & theme(legend.position = "top",
-                                                                                                                                                                                                    plot.title=element_text(size=9))
-
-```
+We can examine the ideal point trajectories for then-Representative Tim Walz, who in 2018 announced his run to be governor of Minnesota, as a legislator whose absences may have been strategic. In SI Figure 11 I plot the monthly ideal points for Walz with only observed data and in @fig-walzdist2 the ideal points for Walz when incorporating a missing-data adjustment. In a similar manner to Amash, Walz shows a noticeable change in ideal point trajectory towards the end of the session, but in this case the movement is only apparent in the missing-data model in @fig-walzdist2. Furthermore, the models in @fig-walzdist2 show his ideal point moving in a clear negative or liberal direction. Once it became more costly for Walz to show up to vote, his pattern of voting became more similar to those who were on the left wing of the party. This behavior could correspond to Walz's need to appear more liberal in order to win the Democratic primary in the gubernatorial race, which occurred on August 15, 2018.
 
 ```{r distswalz2}
 #| label: fig-walzdist2
 #| fig-cap: "Comparison of Tim Walz Time-varying Ideal Points for the 115th Congress with Missing Votes"
 #| message: false
 #| warning: false
-#| fig-height: 6
-#| fig-width: 6
 
   un1_twm <- readRDS("data/un1_twm.rds")
   un2_twm <- readRDS("data/un2_twm.rds")
@@ -964,7 +757,7 @@ un1_tw + un2_tw + un3_tw + ar_tw + gp_tw + rw_tw + plot_layout(nrow=2,
 
 un1_twm + un2_twm + un3_twm + ar_twm + gp_twm + rw_twm + plot_layout(nrow=2,
                                              guides="collect") + 
-  plot_annotation(caption="Posterior average values shown for 115th Congress legislator ideal points.\nItem discrimination for Republican party-line votes was constrained to be positive.") & theme(legend.position = "top",
+  plot_annotation(caption="Posterior average values shown for 115th Congress legislator ideal points.\nItem discrimination for Republican party-line votes was constrained to be positive.") & theme(legend.position = "none",
                                                                                                                                                                                                     plot.title=element_text(size=9))
 
 ```
@@ -972,7 +765,6 @@ un1_twm + un2_twm + un3_twm + ar_twm + gp_twm + rw_twm + plot_layout(nrow=2,
 ```{r legisx}
 #| label: fig-coef
 #| tbl-cap: Coefficients of GOP and District Unemployment Interaction by Model Type ($\phi$)
-#| fig-height: 5
 #| cache: true
 #| eval: false
 
@@ -1100,7 +892,7 @@ by_party %>%
 
 ## Full Trajectories of U.S. House from 1990 to 2018
 
-In this section, I apply the spline-based models to all House sessions from 1990 to 2018. The complete distributions for all legislators for both observed-data and missing-data models are shown in @fig-fulldist. These plots show a similar stability of over-time trends comparable to the much shorter time series in @fig-alldist, which indicates that Congressional ideal points do not change very rapidly. There does not appear to be significantly more or less movement as the degree of the spline increases. There is some additional movement in the missing-data models, though not of a very extreme nature.
+In this section, I apply the spline-based models to all House sessions from 1990 to 2018. The complete distributions for all legislators for both observed-data and missing-data models are shown in @fig-fulldist. These plots show a similar stability of over-time trends comparable to the much shorter time series in SI Figure 10, which indicates that Congressional ideal points do not change very rapidly. There does not appear to be significantly more or less movement as the degree of the spline increases. There is some additional movement in the missing-data models, though not of a very extreme nature.
 
 ![Monthly Ideal Points for U.S. House Legislators from 1990 to 2018](full_dist.pdf){#fig-fulldist}
 
@@ -1109,8 +901,7 @@ In @fig-sumbigdist I show the party-level ideal points for both Democrats and Re
 ```{r}
 #| fig-cap: Monthly Party-level Ideal Points for the U.S. House
 #| label: fig-sumbigdist
-#| fig-height: 5
-#| fig-width: 6
+#| fig-height: 4.5
 
 # load all these distributions, plot them 
 
@@ -1150,18 +941,18 @@ all_group_big %>%
 
 ```
 
-What is clear is that this plot departs noticeably from the DW-NOMINATE scores that generally show a GOP that is moving away from Democrats since 1990 [@carroll2009]. Instead, it would appear that Democrats were moving away from Republicans after 1990. This polarization reached a peak in 2012, and then moderated until the end of 2018. The missing-data models that incorporate strategic abstention show much greater moderation, which could be due to either increasing strategic abstention or the artificial end of the time series in 2018 (or a combination of both factors). However, despite these differences, both the observed data and missing-data models show a similar trajectory. Furthermore, there are very minor differences between the different spline models in terms of degrees and the flexibility of ideal points over time.
+# Discussion
 
-It is worth considering the differences between these scores and those of DW-NOMINATE. DW-NOMINATE party-level ideal points are based on legislator ideal points that vary linearly and are estimated once for each Congressional session. Furthermore, these ideal point trajectories are scaled to fit within a unit hypersphere for identification purposes [@carroll2009]. As such, there is considerable stretching of the ideal points to fit within these constraints. By contrast, in the `idealstan` model, constraints are placed on the item (vote) parameters while the ideal points are allowed to float with a weakly informative prior. As such, there is reason to believe that the trajectories in @fig-sumbigdist are closer to the actual political trajectories of the parties.
+What is clear is that @fig-sumbigdist departs noticeably from the DW-NOMINATE scores that generally show a GOP that is moving away from Democrats since 1990. Instead, it would appear that Democrats were moving away from Republicans after 1990. This polarization reached a peak in 2012, and then moderated until the end of 2018. The missing-data models that incorporate strategic abstention show much greater moderation, which could be due to either increasing strategic abstention or the artificial end of the time series in 2018 (or a combination of both factors). However, despite these differences, both the observed data and missing-data models show a similar trajectory. Furthermore, there are very minor differences between the different spline models in terms of degrees and the flexibility of ideal points over time.
+
+It is worth considering the differences between these scores and those of DW-NOMINATE. DW-NOMINATE party-level ideal points are based on legislator ideal points that vary linearly and are estimated once for each Congressional session. Furthermore, these ideal point trajectories are scaled to fit within a unit hypersphere for identification purposes [@poole1997]. As such, there is considerable stretching of the ideal points to fit within these constraints. By contrast, in the `idealstan` model, constraints are placed on the item (vote) parameters while the ideal points are allowed to float with a weakly informative prior. As such, there is reason to believe that the trajectories in @fig-sumbigdist are closer to the actual political trajectories of the parties.
 
 There are obviously many interesting hypotheses that can follow from these new party-level and individual-level measures for the U.S. House, and I leave these questions for scholars to pursue as these estimates will be available for further study.
 
-# Conclusion
+<!-- # Conclusion
 
 In this paper, I presented a generalization of the increasingly popular ideal point model in the Bayesian IRT framework. I extended the model with new modes of missing-data, time-varying processes, and mixed outcomes. The main contribution of this paper is an analytical tool that can extend the domain and applicability of ideal point models across the discipline as all of these models are available in a single R package, `idealstan`. Crucially, all of these methods build on each other so that missing data can be incorporated in time-varying models or in joint distributions and vice versa.
 
-The package `idealstan` is designed to automate the sometimes arduous process of preparing data for ideal point modeling, including identifying parameters. Furthermore, the use of a single R package for all models enables researchers to compare different models on the same data with ease. Parallelization of standard Bayesian inference is also incorporated in the package to enable estimation of the ever larger data sets available to political scientists.
-
-\newpage
+The package `idealstan` is designed to automate the sometimes arduous process of preparing data for ideal point modeling, including identifying parameters. Furthermore, the use of a single R package for all models enables researchers to compare different models on the same data with ease. Parallelization of standard Bayesian inference is also incorporated in the package to enable estimation of the ever larger data sets available to political scientists. -->
 
 # References

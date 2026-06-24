@@ -32,6 +32,13 @@ csl: apsr.csl
 
 ```{r setup, include=FALSE}
 
+# NOTE: The saved plot objects in data/*.rds (un1, ar, gp, rw, rhats,
+# Amash/Walz, etc.) were built with ggplot2 < 4.0 and cannot be combined with
+# patchwork or rebuilt under ggplot2 4.0 (ggplot objects became S7-based). This
+# project therefore pins ggplot2 3.5.x via renv (see renv.lock); rendering in
+# the project directory activates it automatically through .Rprofile. The
+# simulation plots are regenerated to match by running analyze_sims.R under the
+# same pinned ggplot2. Restore the environment with: renv::restore()
 require(dplyr)
 require(ggplot2)
 require(tidyr)
@@ -71,8 +78,8 @@ unemp1 <- rollcalls %>%
 
 check_bills <- group_by(unemp1,item,party_code,cast_code) %>% count %>% 
   group_by(item,party_code) %>% 
-  summarize(prop=n[cast_code==1] / sum(n),
-            n_vote=sum(n)) %>% 
+  summarize(prop=sum(n[cast_code==1], na.rm=TRUE) / sum(n),
+            n_vote=sum(n)) %>%
   ungroup %>% 
   mutate(prop=ifelse(prop==.5,
                           sample(c(.49,.51),1),
