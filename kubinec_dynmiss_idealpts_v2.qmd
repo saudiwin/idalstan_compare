@@ -752,6 +752,7 @@ The expected posterior distributions of the ideal point scores over time for eac
 ```{r dists}
 #| label: fig-alldist
 #| fig-cap: "Comparison of Time-varying Ideal Point Methods for the 115th Congress with Observed Votes"
+#| fig-height: 9
 #| message: false
 #| warning: false
 
