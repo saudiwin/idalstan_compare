@@ -1,12 +1,10 @@
 ---
 title: 'Generalized Ideal Point Models for Noisy Dynamic Measures in the Social Sciences'
-author: 
-  - name: "Robert Kubinec"
-    affiliations: 
-        - ref: usc
-affiliations:
-    - id: usc
-      name: "University of South Carolina"
+# author: 
+  # - name: ""
+# affiliations:
+#     - id: usc
+#       name: "University of South Carolina"
 date: last-modified
 execute: 
   cache: true
@@ -22,8 +20,8 @@ format:
       \usepackage{setspace}
     fig-height: 3.5
     fig-width: 6.5
-filters:
-  - authors-block
+# filters:
+#   - authors-block
 abstract: "This paper presents novel specifications for non-ignorable missingness and flexible time-series specifications  within a robust Bayesian framework. To do so, the paper develops computational techniques for massive parallel computation of dynamic ideal points using Stan, a state-of-the-art estimation engine for Bayesian models. The proposed specification is compared to existing dynamic ideal point models using Monte Carlo simulations to show that the model is able to minimize specification error arising from selection bias and time-series autocorrelation. To show the model's utility, I estimate monthly trajectories from 1990 to 2018 for all U.S. House Congresspeople that represents a 24-fold increase in the granularity of ideal points relative to existing session-level measures and are robust to strategic abstention from votes. WORD COUNT: {{< words-sum body-note >}}"
 bibliography: "BibTexDatabase.bib"
 fig-cap-location: top
@@ -98,6 +96,14 @@ num_days <- distinct(unemp1,bioname,date_month) %>%
   count(bioname)
 
 ```
+
+## Competing Interests Declaration
+
+I have no competing interests to declare.
+
+## AI Usage Declaration
+
+Claude Code (Opus 4.8) provided coding assistance for the models described in this paper. Claude Code (Opus 4.8) was also used to check the equations for correctness. No AI models were used for drafting the paper.
 
 \newpage
 
@@ -253,11 +259,11 @@ To employ the GP as a time process for ideal points, we use the time indices $x_
 
 $$\alpha_{i,\cdot} \sim N(0,\, K_i), \qquad [K_i]_{t,t'} = k(t,t')$$ {#eq-gprior}
 
-For time periods $t$ for which no votes are observed, either the missing-data inflation mechanism can be used as described elsewhere or the the ideal point $\alpha_{i,t}$ will simply default to the prior distribution.
+For time periods $t$ for which no votes are observed, either the missing-data inflation mechanism can be used as described elsewhere or the ideal point $\alpha_{i,t}$ will simply default to the prior distribution.
 
 This straightforward parameterization shows some of the power of Bayesian modeling. We can include virtually any time process by simply changing the definition of the prior distribution for the ideal points $\alpha_{it}$. Of course, different time series processes for $\alpha_{it}$ have varying levels of required information to find unique solutions.
 
-In summary, these different time series models can be understood in terms of order of complexity. Except for splines, all of the time series models require at least one parameter per time point $t$. The random walk is the simplest of these models as it only requires one additional parameter, $\sigma_i$, per person $i$. The AR(1) model is more complex as it introduces an additional parameter to control the decay rate in the series, $\psi_i$. The GP is the most complex as it has three separate parameters per person, $\sigma^2_{f}$, $l_i^2$ and $\sigma^2_{i,n}$, in addition to one estimate per time point $t$. For these reasons, the GP is the most demanding model to fit for a latent variable model as there needs to be a substantial amount of data per time point to estimate a flexible time trend while also separating out measurement noise.
+<!-- In summary, these different time series models can be understood in terms of order of complexity. Except for splines, all of the time series models require at least one parameter per time point $t$. The random walk is the simplest of these models as it only requires one additional parameter, $\sigma_i$, per person $i$. The AR(1) model is more complex as it introduces an additional parameter to control the decay rate in the series, $\psi_i$. The GP is the most complex as it has three separate parameters per person, $\sigma^2_{f}$, $l_i^2$ and $\sigma^2_{i,n}$, in addition to one estimate per time point $t$. For these reasons, the GP is the most demanding model to fit for a latent variable model as there needs to be a substantial amount of data per time point to estimate a flexible time trend while also separating out measurement noise. -->
 
 For these reasons, I argue that lower-dimensional time series methods like splines can be useful even given that functions like the GP (or even a random walk) are by nature more flexible. As the ideal point model is a measurement model, it can be difficult to separate measurement noise from the additional noise arising from flexible time series processes. In order for measurement to be successful, the time series specification should match the theoretical understanding of the latent construct of interest. I will illustrate these trade-offs later in this paper in the empirical section.
 
@@ -284,7 +290,7 @@ $$L(Y_{ijtr} \mid \alpha_{it},\gamma_j,\beta_j,\nu_j,\omega_j) =
 
 where $\zeta(\cdot)$ is the inverse-logit function and $p_{ijt} = logit^{-1}(\gamma_j\alpha_{it}-\beta_j)$ as in @eq-basic.
 
-I let $\zeta(\cdot)$ stand for the inverse logit function in the equation above. As can be seen, the selection model for missing data $\zeta(\alpha_i'\nu_j - \omega_j)$ is very similar to @eq-basic except that I have substituted a new set of discrimination $\nu_j$ and difficulty $\omega_j$ parameters. The ideal points $\alpha_{it}$ enter into both the selection model and the main ideal point model $L(Y_{ijtr}|\alpha_{it},\gamma_j,\beta_j)$. As such, the selection model is able to inflate or deflate the ideal points by taking into account a first stage process. The inclusion of $\nu_j$ and $\omega_j$ in the first-stage selection model creates a new "missingness" space where person $i$ first chooses whether she will cast a vote, send a tweet or answer a survey question, as the case may be. Only if the item is close to person $i$ in this missingness space will person $i$ then also decide to participate and provide information $Y_{ijtr=1}$ that is informative of their ideal point. This model can be interpreted as a censoring model where persons may choose to self-censor their ideal points.
+As can be seen, the selection model for missing data $\zeta(\alpha_i'\nu_j - \omega_j)$ is very similar to @eq-basic except that I have substituted a new set of discrimination $\nu_j$ and difficulty $\omega_j$ parameters. The ideal points $\alpha_{it}$ enter into both the selection model and the main ideal point model $L(Y_{ijtr}|\alpha_{it},\gamma_j,\beta_j)$. As such, the selection model is able to inflate or deflate the ideal points by taking into account a first stage process. The inclusion of $\nu_j$ and $\omega_j$ in the first-stage selection model creates a new "missingness" space where person $i$ first chooses whether she will cast a vote, send a tweet or answer a survey question, as the case may be. Only if the item is close to person $i$ in this missingness space will person $i$ then also decide to participate and provide information $Y_{ijtr=1}$ that is informative of their ideal point. This model can be interpreted as a censoring model where persons may choose to self-censor their ideal points.
 
 The general form of the hurdle model--which is essentially a first-stage ideal point model--allows it to pick up a range of non-ignorable missingness patterns if missingness correlates with ideal points. The model does not make a priori assumptions about exactly why ideal points may determine missingness, and as such the model cannot provide such an interpretation a posteriori without taking time to interpret what the parameters of the selection model reveal about actors' intentions. The missingness discrimination parameter $\nu_j$ is very helpful for this purpose because it will indicate which set of items show correlation between missingness and one of the poles of the latent variable. For example, if the latent variable is constrained positive for liberal Senators, then high positive discrimination would indicate that more liberal Senators tend to be absent on a particular bill. A naive model that assumed that absences were ignorable would miss this pattern and treat these Senators as more moderate based solely on their observed voting record.
 
@@ -304,7 +310,7 @@ Even with these restrictions, though, this type of computation greatly expands t
 
 The advantage of HMC is that the algorithm can estimate the full posterior distribution, capturing complete uncertainty in the ideal point scores. Even with parallelization, however, this computational burden is non-trivial. To help address this issue, variational methods that approximate posterior distributions can be used as well in place of MCMC for the largest datasets, albeit with known deficiencies in terms of obtaining correct posterior estimates and uncertainty [@Grimmer2011]. @imaiFastEstimationIdeal2016 were the first to apply variational methods to ideal point estimation, demonstrating that the tool could achieve remarkable gains from speed with minimal losses due to bias. However, @imaiFastEstimationIdeal2016 had to derive a separate variational algorithm for each model, restricting the application of variational approximations to binary data in the case of dynamic ideal point modeling.
 
-To extend these approaches, `idealstan` implements two variational methods that integrate with Stan and allow for all of the time-varying methods mentioned previously to be estimated. The first is the Pathfinder method [@zhang2021], which employs a variational approximation designed to reduce HMC complexity into tractable distributions that still minimize bias relative to the true posterior. The second method is the Laplace approximation of the joint posterior distribution [@rue2009], which estimates the mode of the posterior distribution with optimization and then uses the Normal distribution to calculate uncertainty. The `idealstan` model can employ either approximation method fo
+To extend these approaches, `idealstan` implements two variational methods that integrate with Stan and allow for all of the time-varying methods mentioned previously to be estimated. The first is the Pathfinder method [@zhang2021], which employs a variational approximation designed to reduce HMC complexity into tractable distributions that still minimize bias relative to the true posterior. The second method is the Laplace approximation of the joint posterior distribution [@rue2009], which estimates the mode of the posterior distribution with optimization and then uses the Normal distribution to calculate uncertainty.
 
 Both of these methods are implemented in `idealstan` as both approximations may have utility depending on the particular measurement problem and the extent of bias caused by using an approximation to the true joint distribution. However, given that much is unknown about the performance of these algorithms with latent variable models and dynamic ideal point models specifically, I test them against MCMC in the simulation I describe in the next section.
 
