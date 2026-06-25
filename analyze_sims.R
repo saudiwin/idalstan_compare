@@ -132,7 +132,7 @@ p1a <- out_kendall %>% ggplot(aes(y=mean_est,
                       colour=missingness),
                   position=position_dodge(.5)) +
   facet_wrap(~time_process,scales="free_y") +
-  labs(y="RMSE",x="",
+  labs(y="Correlation",x="",
        caption=stringr::str_wrap("Plot shows the average Kendall-Tau estimate for the ranks of ideal points from each model relative to the true ranks. Higher values indicate rankings that are closer to the true rankings.",
                                  width=60)) + 
   scale_x_discrete(guide = guide_axis(n.dodge = 2)) +
@@ -279,8 +279,7 @@ p3m <-  out_m_err %>%
   scale_linetype(name="Missingness") +
   scale_colour_viridis_d(name="Missingness")
 
-saveRDS(p3m,"data/plot_m_errors.rds") +
-  theme(plot.caption = element_text(size=8))
+saveRDS(p3m,"data/plot_m_errors.rds")
 
 ggsave("plots/m_errors.png",plot=p3m)
 
